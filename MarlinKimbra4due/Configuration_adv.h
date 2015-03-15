@@ -283,7 +283,7 @@
 
 // Microstep setting (Only functional when stepper driver microstep pins are connected to MCU.
 // Alligator Board support 16 or 32 only value
-#define MICROSTEP_MODES {16,16,16,16,16} // [1,2,4,8,16,32]
+#define MICROSTEP_MODES {32, 32, 32, 32} // [1,2,4,8,16,32]
 
 // Motor Current setting (Only functional when motor driver current ref pins are connected to a digital trimpot on supported boards)
 #define DIGIPOT_MOTOR_CURRENT {1, 1, 1, 1} // Values 0 - 2.5 A
