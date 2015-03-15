@@ -398,7 +398,7 @@ void HAL_timer_isr_prologue (uint8_t timer_num)
 {
 	const tTimerConfig *pConfig = &TimerConfig [timer_num];
   uint32_t dummy;
-	dummy = pConfig->pTimerRegs->TC_CHANNEL [pConfig->channel].TC_SR;
+  dummy = pConfig->pTimerRegs->TC_CHANNEL [pConfig->channel].TC_SR;
 }
 
 int HAL_timer_get_count (uint8_t timer_num)

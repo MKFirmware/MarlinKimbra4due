@@ -64,7 +64,8 @@ void ExternalDac::setValue(uint8_t channel, uint8_t value)
 {
   if(channel>=4)
     return;
-
+  channel = 3 - channel;
+  
   uint8_t externalDac_buf[2] = {0x10,0x00};
 
   externalDac_buf[0] |= (channel<<6);
