@@ -187,11 +187,11 @@ FORCE_INLINE unsigned long calc_timer(unsigned long step_rate) {
   
   if(step_rate >= (8*256)){ // higher step rate
     step_rate -= (32); // Correct for minimal speed (lookuptable for Due!)
-    unsigned long table_address = (unsigned long)&speed_lookuptable_fast[(unsigned int)(step_rate>>8)][0];
+    uint32_t* table_address = (uint32_t*)(&(speed_lookuptable_fast[(unsigned int)(step_rate>>8)][0]));
     unsigned long tmp_step_rate = (step_rate & 0x00ff);
-    unsigned long gain = (unsigned long)pgm_read_word_near(table_address+2);
+    unsigned long gain = *(table_address+2);
     MultiU16X8toH16(timer, tmp_step_rate, gain);
-    timer = (unsigned long)pgm_read_word_near(table_address) - timer;
+    timer = *table_address - timer;
   }
   else { // lower step rates
     timer = HAL_TIMER_RATE / step_rate;
@@ -1220,7 +1220,7 @@ void microstep_ms(uint8_t driver, int8_t ms1, int8_t ms2)
     case 2: digitalWrite( Z_MS1_PIN,ms1); break;
     case 3: digitalWrite(E0_MS1_PIN,ms1); break;
     #if defined(E1_MS1_PIN) && E1_MS1_PIN > -1
-    case 4: digitalWrite(E1_MS1_PIN,ms1); break;
+      case 4: digitalWrite(E1_MS1_PIN,ms1); break;
     #endif
   }
   if(ms2 > -1) switch(driver)
@@ -1230,7 +1230,7 @@ void microstep_ms(uint8_t driver, int8_t ms1, int8_t ms2)
     case 2: digitalWrite( Z_MS2_PIN,ms2); break;
     case 3: digitalWrite(E0_MS2_PIN,ms2); break;
     #if defined(E1_MS2_PIN) && E1_MS2_PIN > -1
-    case 4: digitalWrite(E1_MS2_PIN,ms2); break;
+      case 4: digitalWrite(E1_MS2_PIN,ms2); break;
     #endif
   }
 }
@@ -1244,6 +1244,9 @@ void microstep_mode(uint8_t driver, uint8_t stepping_mode)
     case 4: microstep_ms(driver,MICROSTEP4); break;
     case 8: microstep_ms(driver,MICROSTEP8); break;
     case 16: microstep_ms(driver,MICROSTEP16); break;
+    #if (MOTHERBOARD == 501)
+      case 32: microstep_ms(driver,MICROSTEP32); break;
+    #endif
   }
 }
 
