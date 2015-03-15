@@ -3,13 +3,13 @@
 ### THIS IS A BETA VERSION
 
 ### New features are:
-* Steprates up to 320.000 steps/s (top for 1/128 stepper driver)
+* Steprates up to 50.000 steps/s
  
 ### known issues:
-  * External DAC (ALLIAGTOR BOARD) is not well written
   * Watchdog doesn't work, don't activate it
   * Now only 1 extruder
-  * 
+  * Servo not tested
+  * EEprom not tested
 
 ---
 # MarlinKimbra4due 3D Printer Firmware
