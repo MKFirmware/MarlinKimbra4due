@@ -298,7 +298,7 @@ static const tTimerConfig TimerConfig [NUM_HARDWARE_TIMERS] =
     { TC2, 2, TC8_IRQn},
   };
 
-  
+
 /*
 	Timer_clock1: Prescaler 2 -> 42MHz
 	Timer_clock2: Prescaler 8 -> 10.5MHz
@@ -340,7 +340,6 @@ void HAL_step_timer_start()
   tc->TC_CHANNEL[channel].TC_IER = TC_IER_CPCS;
   tc->TC_CHANNEL[channel].TC_IDR =~ TC_IER_CPCS;
 }
-
 
 void HAL_temp_timer_start (uint8_t timer_num)
 {
@@ -398,9 +397,8 @@ void HAL_timer_set_count (uint8_t timer_num, uint32_t count)
 void HAL_timer_isr_prologue (uint8_t timer_num)
 {
 	const tTimerConfig *pConfig = &TimerConfig [timer_num];
-	
-	pConfig->pTimerRegs->TC_CHANNEL [pConfig->channel].TC_SR;
-	// TC_GetStatus (pConfig->pTimerRegs, pConfig->channel);
+  uint32_t dummy;
+	dummy = pConfig->pTimerRegs->TC_CHANNEL [pConfig->channel].TC_SR;
 }
 
 int HAL_timer_get_count (uint8_t timer_num)
