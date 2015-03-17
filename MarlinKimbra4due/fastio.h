@@ -11,6 +11,14 @@
 // --------------------------------------------------------------------------
 // magic I/O routines
 // --------------------------------------------------------------------------
+#ifndef MASK
+  #define MASK(PIN)  (1 << PIN)
+#endif
+
+/*
+  magic I/O routines
+  now you can simply SET_OUTPUT(STEP); WRITE(STEP, 1); WRITE(STEP, 0);
+*/
 
 /// Read a pin
 #define     READ(IO)        digitalRead(IO)
@@ -34,8 +42,6 @@
 #define    TOGGLE(IO)      WRITE(IO, !READ(IO))
 
 // Shorthand
-//#define PULLUP(IO,v)     { pinMode(IO, (v!=LOW ? INPUT_PULLUP : INPUT)); }
-#define PULLUP(IO, v)    WRITE(IO, v)
 #define OUT_WRITE(IO, v) { SET_OUTPUT(IO); WRITE(IO, v); }
 
 #endif	//_FASTIO_H

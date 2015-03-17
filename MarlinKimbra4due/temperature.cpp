@@ -574,17 +574,17 @@ inline void _temp_error(int e, const char *msg1, const char *msg2) {
 
 void max_temp_error(uint8_t e) {
   disable_heater();
-  _temp_error(e, MSG_MAXTEMP_EXTRUDER_OFF, MSG_ERR_MAXTEMP);
+  _temp_error(e, PSTR(MSG_MAXTEMP_EXTRUDER_OFF), PSTR(MSG_ERR_MAXTEMP));
 }
 void min_temp_error(uint8_t e) {
   disable_heater();
-  _temp_error(e, MSG_MINTEMP_EXTRUDER_OFF, MSG_ERR_MINTEMP);
+  _temp_error(e, PSTR(MSG_MINTEMP_EXTRUDER_OFF), PSTR(MSG_ERR_MINTEMP));
 }
 void bed_max_temp_error(void) {
   #if HAS_HEATER_BED
     WRITE_HEATER_BED(0);
   #endif
-  _temp_error(-1, MSG_MAXTEMP_BED_OFF, MSG_ERR_MAXTEMP_BED);
+  _temp_error(-1, PSTR(MSG_MAXTEMP_BED_OFF), PSTR(MSG_ERR_MAXTEMP_BED));
 }
 
 void manage_heater() {
@@ -1220,12 +1220,12 @@ void disable_heater() {
     max6675_temp = 0;
 
     #ifdef PRR
-      PRR &= ~(1<<PRSPI);
+      PRR &= ~BIT(PRSPI);
     #elif defined(PRR0)
-      PRR0 &= ~(1<<PRSPI);
+      PRR0 &= ~BIT(PRSPI);
     #endif
 
-    SPCR = (1<<MSTR) | (1<<SPE) | (1<<SPR0);
+    SPCR = BIT(MSTR) | BIT(SPE) | BIT(SPR0);
 
     // enable TT_MAX6675
     WRITE(MAX6675_SS, 0);
@@ -1236,13 +1236,13 @@ void disable_heater() {
 
     // read MSB
     SPDR = 0;
-    for (;(SPSR & (1<<SPIF)) == 0;);
+    for (;(SPSR & BIT(SPIF)) == 0;);
     max6675_temp = SPDR;
     max6675_temp <<= 8;
 
     // read LSB
     SPDR = 0;
-    for (;(SPSR & (1<<SPIF)) == 0;);
+    for (;(SPSR & BIT(SPIF)) == 0;);
     max6675_temp |= SPDR;
 
     // disable TT_MAX6675
@@ -1279,7 +1279,7 @@ enum TempState {
 
 // Timer 0 is shared with millies
 HAL_TEMP_TIMER_ISR {
-  //these variables are only accesible from the ISR, but static, so they don't lose their value
+  //these variables are only accessible from the ISR, but static, so they don't lose their value
   static unsigned char temp_count = 0;
   static unsigned long raw_temp_0_value = 0;
   static unsigned long raw_temp_1_value = 0;
@@ -1287,7 +1287,7 @@ HAL_TEMP_TIMER_ISR {
   static unsigned long raw_temp_3_value = 0;
   static unsigned long raw_temp_bed_value = 0;
   static TempState temp_state = StartupDelay;
-  static unsigned char pwm_count = (1 << SOFT_PWM_SCALE);
+  static unsigned char pwm_count = BIT(SOFT_PWM_SCALE);
   static int max_temp[5] = { 0 };
   static int min_temp[5] = { 123000 };
   static int temp_read = 0;
@@ -1398,7 +1398,7 @@ HAL_TEMP_TIMER_ISR {
       if (soft_pwm_fan < pwm_count) WRITE_FAN(0);
     #endif
     
-    pwm_count += (1 << SOFT_PWM_SCALE);
+    pwm_count += BIT(SOFT_PWM_SCALE);
     pwm_count &= 0x7f;
   
   #else // SLOW_PWM_HEATERS
@@ -1483,7 +1483,7 @@ HAL_TEMP_TIMER_ISR {
       if (soft_pwm_fan < pwm_count) WRITE_FAN(0);
     #endif //FAN_SOFT_PWM
 
-    pwm_count += (1 << SOFT_PWM_SCALE);
+    pwm_count += BIT(SOFT_PWM_SCALE);
     pwm_count &= 0x7f;
 
     // increment slow_pwm_count only every 64 pwm_count circa 65.5ms

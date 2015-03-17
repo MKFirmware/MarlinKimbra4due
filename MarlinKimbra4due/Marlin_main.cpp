@@ -54,7 +54,7 @@
   #include "Servo.h"
 #endif
 
-#if defined(DIGIPOTSS_PIN) && DIGIPOTSS_PIN > -1
+#if HAS_DIGIPOTSS
   #include <SPI.h>
 #endif
 
@@ -142,9 +142,9 @@ M150 - Set BlinkM Color Output R: Red<0-255> U(!): Green<0-255> B: Blue<0-255> o
 M190 - Sxxx Wait for bed current temp to reach target temp. Waits only when heating
        Rxxx Wait for bed current temp to reach target temp. Waits when heating and cooling
 M200 D<millimeters>- set filament diameter and set E axis units to cubic millimeters (use S0 to set back to millimeters).
-M201 - Set max acceleration in units/s^2 for print moves (M201 X1000 Y1000)
-M203 - Set maximum feedrate that your machine can sustain (M203 X200 Y200 Z300 E10000) in mm/sec
-M204 - Set default acceleration: S normal moves T filament only moves (M204 S3000 T7000) in mm/sec^2  also sets minimum segment time in ms (B20000) to prevent buffer under-runs and M20 minimum feedrate
+M201 - Set max acceleration in units/s^2 for print moves (M201 X1000 Y1000 Z1000 E0 S1000 E1 S1000 E2 S1000 E3 S1000).
+M203 - Set maximum feedrate that your machine can sustain (M203 X200 Y200 Z300 E0 S1000 E1 S1000 E2 S1000 E3 S1000) in mm/sec
+M204 - Set Accelerations in mm/sec^2: S printing moves, R Retract moves(only E), T travel moves (M204 P1200 R3000 T2500) im mm/sec^2  also sets minimum segment time in ms (B20000) to prevent buffer underruns and M20 minimum feedrate
 M205 -  advanced settings:  minimum travel speed S=while printing T=travel only,  B=minimum segment time X= maximum xy jerk, Z=maximum Z jerk, E=maximum E jerk
 M206 - set additional homing offset
 M207 - set retract length S[positive mm] F[feedrate mm/min] Z[additional zlift/hop], stays in mm regardless of M200 setting
@@ -452,7 +452,7 @@ static uint8_t tmp_extruder;
 #endif
 
 bool Stopped = false;
-#if defined(PAUSE_PIN) && PAUSE_PIN > -1
+#ifdef FILAMENT_END_SWITCH
   bool paused = false;
   bool printing = false;
 #endif
@@ -597,14 +597,15 @@ bool enquecommand(const char *cmd)
   return true;
 }
 
-#if (MOTHERBOARD == 501 )
-  void setup_alligator_board()
-  {
+
+void setup_alligator_board()
+{
+  #if (MOTHERBOARD == 501 )
     // Init Expansion Port Voltage logic Selector
     SET_OUTPUT(EXP_VOLTAGE_LEVEL_PIN);
     WRITE(EXP_VOLTAGE_LEVEL_PIN,UI_VOLTAGE_LEVEL);
-  }
-#endif
+  #endif
+}
 
 void setup_killpin()
 {
@@ -754,9 +755,7 @@ void setup()
   // loads data from EEPROM if available else uses defaults (and resets step acceleration rate)
   Config_RetrieveSettings();
 
-  #if (MOTHERBOARD == 501 )
-    setup_alligator_board();
-  #endif
+  setup_alligator_board();// Initialize Alligator Board
   tp_init();              // Initialize temperature loop
   plan_init();            // Initialize planner;
   watchdog_init();
@@ -1167,6 +1166,24 @@ bool extruder_duplication_enabled = false; // used in mode 2
     #endif // SCARA
   }
 
+  static void do_blocking_move_to(float x, float y, float z) {
+    float oldFeedRate = feedrate;
+    feedrate = homing_feedrate[Z_AXIS];
+
+    current_position[Z_AXIS] = z;
+    plan_buffer_line(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS], feedrate/60, active_extruder);
+    st_synchronize();
+
+    feedrate = XY_TRAVEL_SPEED;
+
+    current_position[X_AXIS] = x;
+    current_position[Y_AXIS] = y;
+    plan_buffer_line(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS], feedrate/60, active_extruder);
+    st_synchronize();
+
+    feedrate = oldFeedRate;
+  }
+    
   #ifdef ENABLE_AUTO_BED_LEVELING
     #ifdef AUTO_BED_LEVELING_GRID
       static void set_bed_level_equation_lsq(double *plane_equation_coefficients) {
@@ -1251,24 +1268,6 @@ bool extruder_duplication_enabled = false; // used in mode 2
       current_position[Z_AXIS] = st_get_position_mm(Z_AXIS);
       // make sure the planner knows where we are as it may be a bit different than we last said to move to
       plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
-    }
-
-    static void do_blocking_move_to(float x, float y, float z) {
-      float oldFeedRate = feedrate;
-      feedrate = homing_feedrate[Z_AXIS];
-
-      current_position[Z_AXIS] = z;
-      plan_buffer_line(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS], feedrate/60, active_extruder);
-      st_synchronize();
-
-      feedrate = xy_travel_speed;
-
-      current_position[X_AXIS] = x;
-      current_position[Y_AXIS] = y;
-      plan_buffer_line(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS], feedrate/60, active_extruder);
-      st_synchronize();
-
-      feedrate = oldFeedRate;
     }
 
     static void do_blocking_move_relative(float offset_x, float offset_y, float offset_z) {
@@ -2356,66 +2355,107 @@ inline void gcode_G28(boolean home_x=false, boolean home_y=false) {
 
     #if Z_HOME_DIR < 0  // If homing towards BED do Z last
       #ifndef Z_SAFE_HOMING
-        if (code_seen('M') && !(home_x || home_y)) {  // Manual G28
+        if (code_seen('M') && !(home_x || home_y)) {
+          // Manual G28 bed level
           #ifdef ULTIPANEL
-            if(home_all_axis) {
-              boolean zig = true;
-              int xGridSpacing = (RIGHT_PROBE_BED_POSITION - LEFT_PROBE_BED_POSITION);
-              int yGridSpacing = (BACK_PROBE_BED_POSITION - FRONT_PROBE_BED_POSITION);
-              for (int yProbe=FRONT_PROBE_BED_POSITION; yProbe <= BACK_PROBE_BED_POSITION; yProbe += yGridSpacing) {
-                int xProbe, xInc;
-                if (zig) { // zig
-                  xProbe = LEFT_PROBE_BED_POSITION;
-                  xInc = xGridSpacing;
-                  zig = false;
-                } 
-                else // zag
-                {
-                  xProbe = RIGHT_PROBE_BED_POSITION;
-                  xInc = -xGridSpacing;
-                  zig = true;
-                }
-                for (int xCount=0; xCount < 2; xCount++) {
-                  destination[X_AXIS] = xProbe;
-                  destination[Y_AXIS] = yProbe;
-                  destination[Z_AXIS] = 5 * home_dir(Z_AXIS) * (-1);
-                  feedrate = XY_TRAVEL_SPEED;
-                  current_position[Z_AXIS] = 0;
-                  plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
-                  plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], feedrate/60, active_extruder);
-                  st_synchronize();
-                  current_position[X_AXIS] = destination[X_AXIS];
-                  current_position[Y_AXIS] = destination[Y_AXIS];
-                  HOMEAXIS(Z);
-                  lcd_setstatus("Press button       ");
-                  boolean beepbutton=true;
-                  while(!lcd_clicked()) {
-                    manage_heater();
-                    manage_inactivity();
-                    lcd_update();
-                    if(beepbutton) {
-                      #if BEEPER > 0
-                        SET_OUTPUT(BEEPER);
-                        WRITE(BEEPER,HIGH);
-                        delay(100);
-                        WRITE(BEEPER,LOW);
-                        delay(3);
-                      #else
-                        #if !defined(LCD_FEEDBACK_FREQUENCY_HZ) || !defined(LCD_FEEDBACK_FREQUENCY_DURATION_MS)
-                          lcd_buzz(1000/6,100);
-                        #else
-                          lcd_buzz(LCD_FEEDBACK_FREQUENCY_DURATION_MS,LCD_FEEDBACK_FREQUENCY_HZ);
-                        #endif
-                      #endif
-                      beepbutton=false;
-                    }
-                  }
-                  xProbe += xInc;
-                }
-              }
-              lcd_setstatus("Finish           ");
-              enquecommands_P(PSTR("G28 X0 Y0\nG4 P0\nG4 P0\nG4 P0"));
+            SERIAL_ECHOLN(" --LEVEL PLATE SCRIPT--");
+            set_ChangeScreen(true);
+            while(!lcd_clicked()) {
+              set_pageShowInfo(0);
+              lcd_update();
             }
+            saved_feedrate = feedrate;
+            saved_feedmultiply = feedmultiply;
+            feedmultiply = 100;
+            previous_millis_cmd = millis();
+
+            enable_endstops(true);
+            for(int8_t i=0; i < NUM_AXIS; i++) {
+              destination[i] = current_position[i];
+            }
+            feedrate = 0.0;
+            #if Z_HOME_DIR > 0  // If homing away from BED do Z first
+              HOMEAXIS(Z);
+            #endif
+            HOMEAXIS(X);
+            HOMEAXIS(Y);
+            #if Z_HOME_DIR < 0
+              HOMEAXIS(Z);
+            #endif
+            plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+
+            #ifdef ENDSTOPS_ONLY_FOR_HOMING
+              enable_endstops(false);
+            #endif
+
+            feedrate = saved_feedrate;
+            feedmultiply = saved_feedmultiply;
+            previous_millis_cmd = millis();
+            endstops_hit_on_purpose();
+
+            plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+
+            do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS], Z_MIN_POS + 5);
+
+            // PROBE FIRST POINT
+            set_pageShowInfo(1);
+            set_ChangeScreen(true);
+            do_blocking_move_to(LEFT_PROBE_BED_POSITION, FRONT_PROBE_BED_POSITION, current_position[Z_AXIS]);
+            do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS], Z_MIN_POS);
+            while(!lcd_clicked()) {          
+              manage_heater();
+              manage_inactivity();
+            }
+
+            // PROBE SECOND POINT
+            set_ChangeScreen(true);
+            set_pageShowInfo(2);
+            do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS],Z_MIN_POS + 5);
+            do_blocking_move_to(RIGHT_PROBE_BED_POSITION, FRONT_PROBE_BED_POSITION, current_position[Z_AXIS]);
+            do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS],Z_MIN_POS);
+            while(!lcd_clicked()) {
+              manage_heater();
+              manage_inactivity();
+            }
+
+            // PROBE THIRD POINT
+            set_ChangeScreen(true);
+            set_pageShowInfo(3);
+            do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS],Z_MIN_POS + 5);
+            do_blocking_move_to(RIGHT_PROBE_BED_POSITION, BACK_PROBE_BED_POSITION, current_position[Z_AXIS]);
+            do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS],Z_MIN_POS);
+            while(!lcd_clicked()) {
+              manage_heater();
+              manage_inactivity();
+            }     
+
+            // PROBE FOURTH POINT
+            set_ChangeScreen(true);
+            set_pageShowInfo(4);
+            do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS],Z_MIN_POS + 5);
+            do_blocking_move_to(LEFT_PROBE_BED_POSITION, BACK_PROBE_BED_POSITION, current_position[Z_AXIS]);
+            do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS],Z_MIN_POS);
+            while(!lcd_clicked()) {
+              manage_heater();
+              manage_inactivity();
+            }
+
+            // PROBE CENTER
+            set_ChangeScreen(true);
+            set_pageShowInfo(5);
+            do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS],Z_MIN_POS + 5);
+            do_blocking_move_to((X_MAX_POS-X_MIN_POS)/2, (Y_MAX_POS-Y_MIN_POS)/2, current_position[Z_AXIS]);
+            do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS],Z_MIN_POS);
+            while(!lcd_clicked()) {
+              manage_heater();
+              manage_inactivity();
+            }
+
+            // FINISH MANUAL BED LEVEL
+            set_ChangeScreen(true);
+            set_pageShowInfo(6);
+            do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS],Z_MIN_POS + 5);
+            enquecommands_P(PSTR("G28 X0 Y0\nG4 P0\nG4 P0\nG4 P0"));
           #endif // ULTIPANEL
         }
         else if((home_all_axis) || (code_seen(axis_codes[Z_AXIS])))
@@ -2584,12 +2624,6 @@ inline void gcode_G28(boolean home_x=false, boolean home_y=false) {
    *     Usage: "G29 E" or "G29 e"
    *
    */
-
-  // Use one of these defines to specify the origin
-  // for a topographical map to be printed for your bed.
-  enum { OriginBackLeft, OriginFrontLeft, OriginBackRight, OriginFrontRight };
-  #define TOPO_ORIGIN OriginFrontLeft
-
   inline void gcode_G29() {
 
     // Prevent user from running a G29 without first homing in X and Y
@@ -2615,7 +2649,7 @@ inline void gcode_G28(boolean home_x=false, boolean home_y=false) {
 
     #ifdef AUTO_BED_LEVELING_GRID
 
-      bool topo_flag = verbose_level > 2 || code_seen('T') || code_seen('t');
+      bool topo_flag = code_seen('T') || code_seen('t');
 
       if (verbose_level > 0) SERIAL_PROTOCOLPGM("G29 Auto Bed Leveling\n");
 
@@ -2759,14 +2793,15 @@ inline void gcode_G28(boolean home_x=false, boolean home_y=false) {
 
       if (verbose_level) {
         SERIAL_PROTOCOLPGM("Eqn coefficients: a: ");
-        SERIAL_PROTOCOL(plane_equation_coefficients[0] + 0.0001);
+        SERIAL_PROTOCOL_F(plane_equation_coefficients[0], 8);
         SERIAL_PROTOCOLPGM(" b: ");
-        SERIAL_PROTOCOL(plane_equation_coefficients[1] + 0.0001);
+        SERIAL_PROTOCOL_F(plane_equation_coefficients[1], 8);
         SERIAL_PROTOCOLPGM(" d: ");
-        SERIAL_PROTOCOLLN(plane_equation_coefficients[2] + 0.0001);
+        SERIAL_PROTOCOL_F(plane_equation_coefficients[2], 8);
+        SERIAL_EOL;
         if (verbose_level > 2) {
           SERIAL_PROTOCOLPGM("Mean of sampled points: ");
-          SERIAL_PROTOCOL_F(mean, 6);
+          SERIAL_PROTOCOL_F(mean, 8);
           SERIAL_EOL;
         }
       }
@@ -2777,15 +2812,20 @@ inline void gcode_G28(boolean home_x=false, boolean home_y=false) {
 
         SERIAL_PROTOCOLPGM(" \nBed Height Topography: \n");
         #if TOPO_ORIGIN == OriginFrontLeft
+          SERIAL_PROTOCOLPGM("+-----------+\n");
+          SERIAL_PROTOCOLPGM("|...Back....|\n");
+          SERIAL_PROTOCOLPGM("|Left..Right|\n");
+          SERIAL_PROTOCOLPGM("|...Front...|\n");
+          SERIAL_PROTOCOLPGM("+-----------+\n");
           for (yy = auto_bed_leveling_grid_points - 1; yy >= 0; yy--)
         #else
           for (yy = 0; yy < auto_bed_leveling_grid_points; yy++)
         #endif
           {
             #if TOPO_ORIGIN == OriginBackRight
-              for (xx = auto_bed_leveling_grid_points - 1; xx >= 0; xx--)
-            #else
               for (xx = 0; xx < auto_bed_leveling_grid_points; xx++)
+            #else
+              for (xx = auto_bed_leveling_grid_points - 1; xx >= 0; xx--)
             #endif
               {
                 int ind =
@@ -3744,7 +3784,7 @@ inline void gcode_G92() {
 #endif // ENABLE_AUTO_BED_LEVELING && Z_PROBE_REPEATABILITY_TEST
 
 /*
- * M204: Set Accelerations in mm/sec^2 (M204 P1200 R3000 T3000)
+ * M204: Set Accelerations in mm/sec^2 (M204 P1200 R3000 T2500)
  *
  *    P = Printing moves
  *    R = Retract only (no X, Y, Z) moves
@@ -3908,7 +3948,7 @@ inline void gcode_M204() {
       else target[E_AXIS] -= FILAMENTCHANGE_FINALRETRACT;
     #endif
 
-    #if defined(PAUSE_PIN) && PAUSE_PIN > -1
+    #ifdef FILAMENT_END_SWITCH
       paused = false;
     #endif
 
@@ -4750,7 +4790,7 @@ void process_commands()
           SERIAL_PROTOCOLPGM(MSG_E_MIN);
           SERIAL_PROTOCOLLN(((READ(E_MIN_PIN)^E_MIN_ENDSTOP_INVERTING)?MSG_ENDSTOP_HIT:MSG_ENDSTOP_OPEN));
         #endif
-        #if defined(PAUSE_PIN) && PAUSE_PIN > -1
+        #if defined(FILAMENT_END_SWITCH) && defined(PAUSE_PIN) && PAUSE_PIN > -1
           SERIAL_PROTOCOLPGM(MSG_PAUSE_PIN);
           SERIAL_PROTOCOLLN(((READ(PAUSE_PIN)^PAUSE_PIN_INVERTING)?MSG_ENDSTOP_HIT:MSG_ENDSTOP_OPEN));
         #endif
@@ -4905,9 +4945,20 @@ void process_commands()
       {
         for(int8_t i=0; i < NUM_AXIS; i++)
         {
+          int e = 0;
           if(code_seen(axis_codes[i]))
           {
-            max_acceleration_units_per_sq_second[i] = code_value();
+            if (i == 3)
+            {
+              e = (int)code_value();
+              if(code_seen('S'))
+              {
+                if (e < EXTRUDERS) max_acceleration_units_per_sq_second[e + 3] = code_value();
+              }
+            }
+            else {
+              max_acceleration_units_per_sq_second[i] = code_value();
+            }
           }
         }
         // steps per sq second need to be updated to agree with the units per sq second (as they are what is used in the planner)
@@ -4918,7 +4969,21 @@ void process_commands()
       {
         for(int8_t i=0; i < NUM_AXIS; i++)
         {
-          if(code_seen(axis_codes[i])) max_feedrate[i] = code_value();
+          int e = 0;
+          if(code_seen(axis_codes[i]))
+          {
+            if (i == 3)
+            {
+              e = (int)code_value();
+              if(code_seen('S'))
+              {
+                if (e < EXTRUDERS) max_feedrate[e+3] = code_value();
+              }
+            }
+            else {
+              max_feedrate[i] = code_value();
+            }
+          }
         }
       }
       break;
@@ -5653,7 +5718,7 @@ void process_commands()
       
       case 907: // M907 Set digital trim pot motor current using axis codes.
       {
-        #if defined(DIGIPOTSS_PIN) && DIGIPOTSS_PIN > -1
+        #if HAS_DIGIPOTSS
           for(int i=0;i<NUM_AXIS;i++) if(code_seen(axis_codes[i])) digipot_current(i,code_value());
           if(code_seen('B')) digipot_current(4,code_value());
           if(code_seen('S')) for(int i=0;i<=4;i++) digipot_current(i,code_value());
@@ -5677,7 +5742,7 @@ void process_commands()
       break;
       case 908: // M908 Control digital trimpot directly.
       {
-        #if defined(DIGIPOTSS_PIN) && DIGIPOTSS_PIN > -1
+        #if HAS_DIGIPOTSS
           uint8_t channel,current;
           if(code_seen('P')) channel=code_value();
           if(code_seen('S')) current=code_value();

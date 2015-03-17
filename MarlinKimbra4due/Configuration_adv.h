@@ -226,7 +226,7 @@
 #define MAX_STEP_FREQUENCY 10000 // Max step frequency for Toshiba Stepper Controllers
 #define DOUBLE_STEP_FREQUENCY 10000
 #else
-#define MAX_STEP_FREQUENCY 320000    // Max step frequency for Ultimaker (5000 pps / half step)
+#define MAX_STEP_FREQUENCY 320000
 #define DOUBLE_STEP_FREQUENCY 96000  //96kHz is close to maximum for an Arduino Due
 #endif
 //By default pololu step drivers require an active high signal. However, some high power drivers require an active low signal as step.
