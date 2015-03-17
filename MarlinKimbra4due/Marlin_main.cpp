@@ -4227,7 +4227,7 @@ void process_commands()
         break;
       #endif //LASERBEAM
 
-      #if defined(PAUSE_PIN) && PAUSE_PIN > -1
+      #ifdef FILAMENT_END_SWITCH
         case 11: //M11 - Start printing
         {
           printing = true;
@@ -5236,7 +5236,7 @@ void process_commands()
       }
       break;
 
-      #ifdef DOGLCD
+      #if defined(DOGLCD) && LCD_CONTRAST >= 0
         case 250: //M250  Set LCD contrast value: C<value> (value 0..63)
         {
           if (code_seen('C')) lcd_setcontrast(((int)code_value())&63);

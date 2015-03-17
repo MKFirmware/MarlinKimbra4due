@@ -14,7 +14,7 @@
   void lcd_reset_alert_level();
   bool lcd_detected(void);
 
-#ifdef DOGLCD
+#if defined(DOGLCD) && LCD_CONTRAST >= 0
   extern int lcd_contrast;
   void lcd_setcontrast(uint8_t value);
 #endif
