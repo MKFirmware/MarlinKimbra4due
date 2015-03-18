@@ -208,13 +208,13 @@ void st_wake_up() {
 
 FORCE_INLINE unsigned long calc_timer(unsigned long step_rate) {
   unsigned long timer;
-  if(step_rate > MAX_STEP_FREQUENCY) step_rate = MAX_STEP_FREQUENCY;
+  if (step_rate > MAX_STEP_FREQUENCY) step_rate = MAX_STEP_FREQUENCY;
 
-  if(step_rate > (2 * DOUBLE_STEP_FREQUENCY)) { // If steprate > 2*DOUBLE_STEP_FREQUENCY >> step 4 times (config_adv ~ 96kHz)
+  if (step_rate > (2 * DOUBLE_STEP_FREQUENCY)) { // If steprate > 2*DOUBLE_STEP_FREQUENCY >> step 4 times (config_adv ~ 96kHz)
     step_rate = (step_rate >> 2);
     step_loops = 4;
   }
-  else if(step_rate > DOUBLE_STEP_FREQUENCY) { // If steprate > DOUBLE_STEP_FREQUENCY >> step 2 times
+  else if (step_rate > DOUBLE_STEP_FREQUENCY) { // If steprate > DOUBLE_STEP_FREQUENCY >> step 2 times
     step_rate = (step_rate >> 1);
     step_loops = 2;
   }
@@ -223,9 +223,9 @@ FORCE_INLINE unsigned long calc_timer(unsigned long step_rate) {
   }
 
   if(step_rate < (32)) step_rate = (32);
+  step_rate -= (32); // Correct for minimal speed (lookuptable for Due!)
   
-  if(step_rate >= (8*256)){ // higher step rate
-    step_rate -= (32); // Correct for minimal speed (lookuptable for Due!)
+  if (step_rate >= (8 * 256)) { // higher step rate
     uint32_t* table_address = (uint32_t*)(&(speed_lookuptable_fast[(unsigned int)(step_rate>>8)][0]));
     unsigned long tmp_step_rate = (step_rate & 0x00ff);
     unsigned long gain = *(table_address+2);
@@ -234,7 +234,7 @@ FORCE_INLINE unsigned long calc_timer(unsigned long step_rate) {
   }
   else { // lower step rates
     timer = HAL_TIMER_RATE / step_rate;
-    // unsigned short table_address = (unsigned short)&speed_lookuptable_slow[0][0];
+    // uint32_t* table_address = (uint32_t*)(&(speed_lookuptable_slow[0][0]);
     // table_address += ((step_rate)>>1) & 0xfffc;
     // timer = (unsigned short)pgm_read_word_near(table_address);
     // timer -= (((unsigned short)pgm_read_word_near(table_address+2) * (unsigned char)(step_rate & 0x0007))>>3);
@@ -297,7 +297,7 @@ HAL_STEP_TIMER_ISR {
       #endif
 
       // #ifdef ADVANCE
-      //   e_steps[current_block->active_driver] = 0;
+      //   e_steps[current_block->active_extruder] = 0;
       // #endif
     }
     else {
@@ -434,7 +434,7 @@ HAL_STEP_TIMER_ISR {
         counter_e += current_block->steps_e;
         if (counter_e > 0) {
           counter_e -= current_block->step_event_count;
-          e_steps[current_block->active_driver] += TEST(out_bits, E_AXIS) ? -1 : 1;
+          e_steps[current_block->active_extruder] += TEST(out_bits, E_AXIS) ? -1 : 1;
         }
       #endif //ADVANCE
 
@@ -543,7 +543,7 @@ HAL_STEP_TIMER_ISR {
         }
         if (advance < final_advance) advance = final_advance;
         // Do E steps + advance steps
-        e_steps[current_block->active_driver] += ((advance >>8) - old_advance);
+        e_steps[current_block->active_extruder] += ((advance >>8) - old_advance);
         old_advance = advance >>8;
       #endif //ADVANCE
     }
@@ -572,7 +572,7 @@ HAL_STEP_TIMER_ISR {
     // Set E direction (Depends on E direction + advance)
     for(unsigned char i=0; i<4;i++) {
       if (e_steps[0] != 0) {
-        E0_STEP_WRITE( INVERT_E_STEP_PIN);
+        E0_STEP_WRITE(INVERT_E_STEP_PIN);
         if (e_steps[0] < 0) {
           E0_DIR_WRITE(INVERT_E0_DIR);
           e_steps[0]++;
@@ -903,7 +903,7 @@ void quickStop() {
         uint8_t old_pin = AXIS ##_DIR_READ; \
         AXIS ##_APPLY_DIR(INVERT_## AXIS ##_DIR^direction^INVERT, true); \
         AXIS ##_APPLY_STEP(!INVERT_## AXIS ##_STEP_PIN, true); \
-        _delay_us(1U); \
+        delayMicroseconds(1U); \
         AXIS ##_APPLY_STEP(INVERT_## AXIS ##_STEP_PIN, true); \
         AXIS ##_APPLY_DIR(old_pin, true); \
       }
@@ -942,7 +942,9 @@ void quickStop() {
           X_STEP_WRITE(!INVERT_X_STEP_PIN);
           Y_STEP_WRITE(!INVERT_Y_STEP_PIN);
           Z_STEP_WRITE(!INVERT_Z_STEP_PIN);
-          _delay_us(1U);
+
+          delayMicroseconds(1U); // wait 1 microsecond
+
           X_STEP_WRITE(INVERT_X_STEP_PIN); 
           Y_STEP_WRITE(INVERT_Y_STEP_PIN); 
           Z_STEP_WRITE(INVERT_Z_STEP_PIN);
