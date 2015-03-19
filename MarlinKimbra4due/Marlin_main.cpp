@@ -370,6 +370,7 @@ uint8_t debugLevel = 0;
 
 #ifdef SCARA
   float axis_scaling[3] = { 1, 1, 1 };    // Build size scaling, default to 1
+  static float delta[3] = { 0, 0, 0 };
 #endif //SCARA
 
 #ifdef FILAMENT_SENSOR
@@ -600,7 +601,7 @@ bool enquecommand(const char *cmd)
 
 void setup_alligator_board()
 {
-  #if (MOTHERBOARD == 501 )
+  #if MB(ALLIGATOR)
     // Init Expansion Port Voltage logic Selector
     SET_OUTPUT(EXP_VOLTAGE_LEVEL_PIN);
     WRITE(EXP_VOLTAGE_LEVEL_PIN,UI_VOLTAGE_LEVEL);
@@ -2708,7 +2709,7 @@ inline void gcode_G28(boolean home_x=false, boolean home_y=false) {
     //corrected_position.debug("position before G29");
     plan_bed_level_matrix.set_to_identity();
     vector_3 uncorrected_position = plan_get_position();
-    //uncorrected_position.debug("position durring G29");
+    //uncorrected_position.debug("position during G29");
     current_position[X_AXIS] = uncorrected_position.x;
     current_position[Y_AXIS] = uncorrected_position.y;
     current_position[Z_AXIS] = uncorrected_position.z;
@@ -2720,8 +2721,8 @@ inline void gcode_G28(boolean home_x=false, boolean home_y=false) {
     #ifdef AUTO_BED_LEVELING_GRID
 
       // probe at the points of a lattice grid
-      int xGridSpacing = (right_probe_bed_position - left_probe_bed_position) / (auto_bed_leveling_grid_points - 1);
-      int yGridSpacing = (back_probe_bed_position - front_probe_bed_position) / (auto_bed_leveling_grid_points - 1);
+      const int xGridSpacing = (right_probe_bed_position - left_probe_bed_position) / (auto_bed_leveling_grid_points - 1);
+      const int yGridSpacing = (back_probe_bed_position - front_probe_bed_position) / (auto_bed_leveling_grid_points - 1);
 
       // solve the plane equation ax + by + d = z
       // A is the matrix with rows [x y 1] for all the probed points
@@ -2738,19 +2739,34 @@ inline void gcode_G28(boolean home_x=false, boolean home_y=false) {
       int probePointCounter = 0;
       bool zig = true;
 
-      for (int yProbe = front_probe_bed_position; yProbe <= back_probe_bed_position; yProbe += yGridSpacing) {
-        int xProbe, xInc;
+      for (int yCount=0; yCount < auto_bed_leveling_grid_points; yCount++)
+      {
+        double yProbe = front_probe_bed_position + yGridSpacing * yCount;
+        int xStart, xStop, xInc;
 
         if (zig)
-          xProbe = left_probe_bed_position, xInc = xGridSpacing;
+        {
+          xStart = 0;
+          xStop = auto_bed_leveling_grid_points;
+          xInc = 1;
+          zig = false;
+        }
         else
-          xProbe = right_probe_bed_position, xInc = -xGridSpacing;
+        {
+          xStart = auto_bed_leveling_grid_points - 1;
+          xStop = -1;
+          xInc = -1;
+          zig = true;
+        }
+
 
         // If topo_flag is set then don't zig-zag. Just scan in one direction.
         // This gets the probe points in more readable order.
         if (!topo_flag) zig = !zig;
+        for (int xCount=xStart; xCount != xStop; xCount += xInc)
+        {
+          double xProbe = left_probe_bed_position + xGridSpacing * xCount;
 
-        for (int xCount = 0; xCount < auto_bed_leveling_grid_points; xCount++) {
           // raise extruder
           float measured_z,
                 z_before = probePointCounter == 0 ? Z_RAISE_BEFORE_PROBING : current_position[Z_AXIS] + Z_RAISE_BETWEEN_PROBINGS;
@@ -2778,10 +2794,7 @@ inline void gcode_G28(boolean home_x=false, boolean home_y=false) {
           eqnAMatrix[probePointCounter + 2 * abl2] = 1;
 
           probePointCounter++;
-          xProbe += xInc;
-
         } //xProbe
-
       } //yProbe
 
       clean_up_after_endstop_move();
@@ -2866,15 +2879,16 @@ inline void gcode_G28(boolean home_x=false, boolean home_y=false) {
         z_at_pt_3 = probe_pt(ABL_PROBE_PT_3_X, ABL_PROBE_PT_3_Y, current_position[Z_AXIS] + Z_RAISE_BETWEEN_PROBINGS, ProbeRetract, verbose_level);
       }
       else {
-        z_at_pt_1 = probe_pt(ABL_PROBE_PT_1_X, ABL_PROBE_PT_1_Y, Z_RAISE_BEFORE_PROBING, verbose_level);
-        z_at_pt_2 = probe_pt(ABL_PROBE_PT_2_X, ABL_PROBE_PT_2_Y, current_position[Z_AXIS] + Z_RAISE_BETWEEN_PROBINGS, verbose_level);
-        z_at_pt_3 = probe_pt(ABL_PROBE_PT_3_X, ABL_PROBE_PT_3_Y, current_position[Z_AXIS] + Z_RAISE_BETWEEN_PROBINGS, verbose_level);
+        z_at_pt_1 = probe_pt(ABL_PROBE_PT_1_X, ABL_PROBE_PT_1_Y, Z_RAISE_BEFORE_PROBING, verbose_level=verbose_level);
+        z_at_pt_2 = probe_pt(ABL_PROBE_PT_2_X, ABL_PROBE_PT_2_Y, current_position[Z_AXIS] + Z_RAISE_BETWEEN_PROBINGS, verbose_level=verbose_level);
+        z_at_pt_3 = probe_pt(ABL_PROBE_PT_3_X, ABL_PROBE_PT_3_Y, current_position[Z_AXIS] + Z_RAISE_BETWEEN_PROBINGS, verbose_level=verbose_level);
       }
       clean_up_after_endstop_move();
       set_bed_level_equation_3pts(z_at_pt_1, z_at_pt_2, z_at_pt_3);
 
     #endif // !AUTO_BED_LEVELING_GRID
 
+    do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS], Z_RAISE_AFTER_PROBING);
     st_synchronize();
 
     if (verbose_level > 0)
@@ -6273,7 +6287,7 @@ void manage_inactivity(bool ignore_stepper_queue/*=false*/) //default argument s
 {
   #if defined(KILL_PIN) && KILL_PIN > -1
     static int killCount = 0;   // make the inactivity button a bit less responsive
-    const int KILL_DELAY = 10000;
+    const int KILL_DELAY = 750;
   #endif
 
   #if defined(HOME_PIN) && HOME_PIN > -1
@@ -6348,9 +6362,9 @@ void manage_inactivity(bool ignore_stepper_queue/*=false*/) //default argument s
     }
   #endif
 
-  #if defined(PAUSE_PIN) && PAUSE_PIN > -1
+  #if defined(FILAMENT_END_SWITCH) && defined(PAUSE_PIN) && PAUSE_PIN > -1
     pause();
-  #endif //defined(PAUSE_PIN) && PAUSE_PIN > -1
+  #endif
 
   #if defined(CONTROLLERFAN_PIN) && CONTROLLERFAN_PIN > -1
     controllerFan(); //Check if fan should be turned on to cool stepper drivers down
@@ -6420,13 +6434,13 @@ void kill()
 
 void pause()
 {
-  #if defined(PAUSE_PIN) && PAUSE_PIN > -1
+  #if defined(FILAMENT_END_SWITCH) && defined(PAUSE_PIN) && PAUSE_PIN > -1
     if ((READ(PAUSE_PIN)^PAUSE_PIN_INVERTING) && printing && !paused)
     {
       paused = true;
       enquecommands_P(PSTR("M600\nG4 P0\nG4 P0\nG4 P0"));
     }
-  #endif // defined(PAUSE_PIN) && PAUSE_PIN > -1
+  #endif
 }
 
 void Stop()

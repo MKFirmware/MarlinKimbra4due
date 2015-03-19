@@ -457,10 +457,10 @@ HAL_STEP_TIMER_ISR {
         #endif
 
         #define STEP_IF_COUNTER(axis, AXIS) \
-          if (counter_## axis > 0) {
+          if (counter_## axis > 0) { \
             counter_## axis -= current_block->step_event_count; \
             count_position[AXIS ##_AXIS] += count_direction[AXIS ##_AXIS]; \
-            AXIS ##_STEP_WRITE(LOW);
+            AXIS ##_STEP_WRITE(LOW); \
           }
 
         STEP_IF_COUNTER(x, X);
@@ -996,7 +996,7 @@ void digipot_init() {
     //Set timer5 to 31khz so the PWM of the motor power is as constant as possible. (removes a buzzing noise)
     TCCR5B = (TCCR5B & ~(_BV(CS50) | _BV(CS51) | _BV(CS52))) | _BV(CS50);
   #endif
-  #if (MOTHERBOARD == 500) || (MOTHERBOARD == 501)
+  #if MB(ALLIGATOR)
     ExternalDac::begin(); //initialize ExternalDac
     const float digipot_motor_current[] = DIGIPOT_MOTOR_CURRENT;
     unsigned int digipot_motor = 0;
@@ -1004,7 +1004,7 @@ void digipot_init() {
       digipot_motor = 255 * (digipot_motor_current[i] / 2.5);
       ExternalDac::setValue(i, digipot_motor);
     }
-  #endif//(MOTHERBOARD==500) || (MOTHERBOARD==501)
+  #endif//MB(ALLIGATOR)
 }
 
 void digipot_current(uint8_t driver, int current) {
@@ -1070,7 +1070,7 @@ void microstep_mode(uint8_t driver, uint8_t stepping_mode) {
     case 4: microstep_ms(driver,MICROSTEP4); break;
     case 8: microstep_ms(driver,MICROSTEP8); break;
     case 16: microstep_ms(driver,MICROSTEP16); break;
-    #if (MOTHERBOARD == 501)
+    #if MB(ALLIGATOR)
       case 32: microstep_ms(driver,MICROSTEP32); break;
     #endif
   }

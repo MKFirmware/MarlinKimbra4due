@@ -13,6 +13,8 @@
 #ifndef PINS_H
 #define PINS_H
 
+#include "boards.h"
+
 // Preset optional pins
 #define X_MS1_PIN     -1
 #define X_MS2_PIN     -1
@@ -28,12 +30,13 @@
 #define LCD_CONTRAST  -1
 
 
+
 /****************************************************************************************
 * Arduino Due pin assignment
 *
 * for RADDS
 ****************************************************************************************/
-#if MOTHERBOARD == 402
+#if MB(RADDS)
 #define KNOWN_BOARD 1
 //
 #ifndef __SAM3X8E__
@@ -158,12 +161,14 @@
 #endif //RADDS
 /****************************************************************************************/
 
+
+
 /****************************************************************************************
 * 403 - 404
 * Arduino Due pin assignment
 * Ramps - FD v1 & v2
 ****************************************************************************************/
-#if MOTHERBOARD == 403 || MOTHERBOARD == 404
+#if MB(RAMPS_FD_V1) || MB(RAMPS_FD_V2)
 #define KNOWN_BOARD 1
 
 #ifndef __SAM3X8E__
@@ -172,7 +177,8 @@
 
 
 //
-#if MOTHERBOARD == 403
+#if MB(RAMPS_FD_V1)
+  #define INVERTED_HEATER_PINS
   #define RAMPS_FD_V1
   #define INVERTED_HEATER_PINS
   // No EEPROM
@@ -187,13 +193,13 @@
 #define X_DIR_PIN          62
 #define X_ENABLE_PIN       48
 #define X_MIN_PIN          22
-#define X_MAX_PIN           -1   //2 //Max endstops default to disabled "-1", set to commented value to enable.
+#define X_MAX_PIN           2
 
 #define Y_STEP_PIN         65
 #define Y_DIR_PIN          64
 #define Y_ENABLE_PIN       46
 #define Y_MIN_PIN          24
-#define Y_MAX_PIN          -1   //15
+#define Y_MAX_PIN          15
 
 #define Z_STEP_PIN         67
 #define Z_DIR_PIN          66
@@ -261,7 +267,6 @@
     #endif
   #endif
 
-
   #ifdef ULTRA_LCD
 
     #ifdef NEWPANEL
@@ -311,7 +316,7 @@
 * Arduino Due pin assignment
 * Alligator R2
 ****************************************************************************************/
-#if MOTHERBOARD == 501
+#if MB(ALLIGATOR)
 #define KNOWN_BOARD 1
 
 #ifndef __SAM3X8E__
@@ -322,38 +327,38 @@
 #define SPI_CHAN_DAC 1
 
 // X AXIS
-#define X_STEP_PIN      96 // PB24
-#define X_DIR_PIN        2 // PB25
-#define X_ENABLE_PIN    24 // PA15, motor RESET pin
-#define X_MIN_PIN       34 // PC2
-#define X_MAX_PIN       33 // PC1
-#define X_MS1_PIN       99 // PC10
+#define X_STEP_PIN      96  // PB24
+#define X_DIR_PIN        2  // PB25
+#define X_ENABLE_PIN    24  // PA15, motor RESET pin
+#define X_MIN_PIN       34  // PC2
+#define X_MAX_PIN       33  // PC1
+#define X_MS1_PIN       99  // PC10
 
 // Y AXIS
-#define Y_STEP_PIN      94 // PB22
-#define Y_DIR_PIN       95 // PB23
-#define Y_ENABLE_PIN    24 // PA15, motor RESET pin
-#define Y_MIN_PIN       37 // PC5
-#define Y_MAX_PIN       35 // PC3
-#define Y_MS1_PIN       10 // PC29
+#define Y_STEP_PIN      94  // PB22
+#define Y_DIR_PIN       95  // PB23
+#define Y_ENABLE_PIN    24  // PA15, motor RESET pin
+#define Y_MIN_PIN       37  // PC5
+#define Y_MAX_PIN       35  // PC3
+#define Y_MS1_PIN       10  // PC29
 
 // Z AXIS
-#define Z_STEP_PIN      98 // PC27
-#define Z_DIR_PIN        3 // PC28
-#define Z_ENABLE_PIN    24 // PA15, motor RESET pin
-#define Z_MIN_PIN       39 // PC7
-#define Z_MAX_PIN       38 // PC6
-#define Z_MS1_PIN       44 // PC19
+#define Z_STEP_PIN      98  // PC27
+#define Z_DIR_PIN        3  // PC28
+#define Z_ENABLE_PIN    24  // PA15, motor RESET pin
+#define Z_MIN_PIN       39  // PC7
+#define Z_MAX_PIN       38  // PC6
+#define Z_MS1_PIN       44  // PC19
 
 // E AXIS
 #define E0_STEP_PIN      5  // PC25
 #define E0_DIR_PIN       4  // PC26
-#define E0_ENABLE_PIN   24 // PA15, motor RESET pin
-#define E0_MS1_PIN      45 // PC18
+#define E0_ENABLE_PIN   24  // PA15, motor RESET pin
+#define E0_MS1_PIN      45  // PC18
 
 /*
-#define E1_STEP_PIN     28 // PD3 on piggy
-#define E1_DIR_PIN      27 // PD2 on piggy
+#define E1_STEP_PIN     28  // PD3 on piggy
+#define E1_DIR_PIN      27  // PD2 on piggy
 #define E1_ENABLE_PIN   -1
 #define E1_MS1_PIN      -1
 
@@ -424,6 +429,7 @@
 
 #endif //ALLIGATOR
 /****************************************************************************************/
+
 
 
 /****************************************************************************************

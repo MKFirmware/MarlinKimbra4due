@@ -32,6 +32,11 @@
   #define BLEN_C 2 
   #define EN_C BIT(BLEN_C) 
 #endif 
+
+#if defined(BTN_BACK) && BTN_BACK > -1
+  #define BLEN_D 3
+  #define EN_D BIT(BLEN_D)
+#endif
   
 //
 // Setup other button mappings of each panel
@@ -101,6 +106,9 @@
 
 #elif defined(NEWPANEL)
   #define LCD_CLICKED (buttons&EN_C)
+  #if defined(BTN_BACK) && BTN_BACK > -1
+    #define LCD_BACK_CLICKED (buttons&EN_D)
+  #endif
   
 #else // old style ULTIPANEL
   //bits in the shift register that carry the buttons for:
@@ -407,6 +415,11 @@ static void lcd_implementation_init(
       lcd.backlight();
     
 #else
+  #if (LCD_PINS_RS != -1) && (LCD_PINS_ENABLE != -1)
+      // required for RAMPS-FD, but does no harm for other targets
+      SET_OUTPUT(LCD_PINS_RS);
+      SET_OUTPUT(LCD_PINS_ENABLE);
+	#endif
     lcd.begin(LCD_WIDTH, LCD_HEIGHT);
 #endif
 

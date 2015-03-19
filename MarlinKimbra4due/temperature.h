@@ -25,8 +25,8 @@
 #include "planner.h"
 #include "stepper.h"
 
-#define MIN(a, b) ((a < b) ? a : b)
-#define MAX(a, b) ((a > b) ? a : b)
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 // for smoother temperature
 #define MEDIAN_COUNT 10

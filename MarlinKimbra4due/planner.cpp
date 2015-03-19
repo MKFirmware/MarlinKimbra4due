@@ -716,75 +716,57 @@ block->steps_y = labs((target[X_AXIS]-position[X_AXIS]) - (target[Y_AXIS]-positi
   // Enable extruder(s)
   if(block->steps_e != 0)
   {
-    #if !defined(MKR4) && !defined(NPR2)
-      if (DISABLE_INACTIVE_EXTRUDER) //enable only selected extruder
-      {
+    if (DISABLE_INACTIVE_EXTRUDER) //enable only selected extruder
+    {
 
-        if(g_uc_extruder_last_move[0] > 0) g_uc_extruder_last_move[0]--;
-        if(g_uc_extruder_last_move[1] > 0) g_uc_extruder_last_move[1]--;
-        if(g_uc_extruder_last_move[2] > 0) g_uc_extruder_last_move[2]--;
-        if(g_uc_extruder_last_move[3] > 0) g_uc_extruder_last_move[3]--;
+      if(g_uc_extruder_last_move[0] > 0) g_uc_extruder_last_move[0]--;
+      if(g_uc_extruder_last_move[1] > 0) g_uc_extruder_last_move[1]--;
+      if(g_uc_extruder_last_move[2] > 0) g_uc_extruder_last_move[2]--;
+      if(g_uc_extruder_last_move[3] > 0) g_uc_extruder_last_move[3]--;
 
-        switch(extruder)
-        {
-          case 0:
-            enable_e0();
-            g_uc_extruder_last_move[0] = BLOCK_BUFFER_SIZE*2;
-
-            if(g_uc_extruder_last_move[1] == 0) disable_e1();
-            if(g_uc_extruder_last_move[2] == 0) disable_e2();
-            if(g_uc_extruder_last_move[3] == 0) disable_e3();
-          break;
-          case 1:
-            enable_e1();
-            g_uc_extruder_last_move[1] = BLOCK_BUFFER_SIZE*2;
-
-            if(g_uc_extruder_last_move[0] == 0) disable_e0();
-            if(g_uc_extruder_last_move[2] == 0) disable_e2();
-            if(g_uc_extruder_last_move[3] == 0) disable_e3();
-          break;
-          case 2:
-            enable_e2();
-            g_uc_extruder_last_move[2] = BLOCK_BUFFER_SIZE*2;
-
-            if(g_uc_extruder_last_move[0] == 0) disable_e0();
-            if(g_uc_extruder_last_move[1] == 0) disable_e1();
-            if(g_uc_extruder_last_move[3] == 0) disable_e3();
-          break;
-          case 3:
-            enable_e3();
-            g_uc_extruder_last_move[3] = BLOCK_BUFFER_SIZE*2;
-
-            if(g_uc_extruder_last_move[0] == 0) disable_e0();
-            if(g_uc_extruder_last_move[1] == 0) disable_e1();
-            if(g_uc_extruder_last_move[2] == 0) disable_e2();
-          break;
-        }
-      }
-      else //enable all
-      {
-        enable_e0();
-        enable_e1();
-        enable_e2();
-        enable_e3();
-      }
-    #else //MKR4 or NPr2
       switch(extruder)
       {
         case 0:
           enable_e0();
+          g_uc_extruder_last_move[0] = BLOCK_BUFFER_SIZE * 2;
+
+          if(g_uc_extruder_last_move[1] == 0) disable_e1();
+          if(g_uc_extruder_last_move[2] == 0) disable_e2();
+          if(g_uc_extruder_last_move[3] == 0) disable_e3();
         break;
         case 1:
           enable_e1();
+          g_uc_extruder_last_move[1] = BLOCK_BUFFER_SIZE * 2;
+
+          if(g_uc_extruder_last_move[0] == 0) disable_e0();
+          if(g_uc_extruder_last_move[2] == 0) disable_e2();
+          if(g_uc_extruder_last_move[3] == 0) disable_e3();
         break;
         case 2:
-          enable_e0();
+          enable_e2();
+          g_uc_extruder_last_move[2] = BLOCK_BUFFER_SIZE * 2;
+
+          if(g_uc_extruder_last_move[0] == 0) disable_e0();
+          if(g_uc_extruder_last_move[1] == 0) disable_e1();
+          if(g_uc_extruder_last_move[3] == 0) disable_e3();
         break;
         case 3:
-          enable_e1();
+          enable_e3();
+          g_uc_extruder_last_move[3] = BLOCK_BUFFER_SIZE * 2;
+
+          if(g_uc_extruder_last_move[0] == 0) disable_e0();
+          if(g_uc_extruder_last_move[1] == 0) disable_e1();
+          if(g_uc_extruder_last_move[2] == 0) disable_e2();
         break;
       }
-    #endif //!MKR4 && !NPR2
+    }
+    else //enable all
+    {
+      enable_e0();
+      enable_e1();
+      enable_e2();
+      enable_e3();
+    }
   }
 
   if (block->steps_e == 0)

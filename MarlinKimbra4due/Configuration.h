@@ -12,8 +12,9 @@
 // Choose your board type.
 // Either an numeric ID or name defined in boards.h is valid.
 // See: https://github.com/MagoKimbra/MarlinKimbra/blob/master/Documentation/Hardware.md
+#include "boards.h"
 #ifndef MOTHERBOARD
-  #define MOTHERBOARD 501
+  #define MOTHERBOARD BOARD_ALLIGATOR
 #endif
 
 // User-specified version info of this build to display in [Pronterface, etc] terminal window during
@@ -173,7 +174,7 @@
 
 //=============================== PID settings ==============================
 // Comment the following line to disable PID and enable bang-bang.
-//#define PIDTEMP
+#define PIDTEMP
 #define BANG_MAX 255      // limits current to nozzle while in bang-bang mode; 255=full current
 #define PID_MAX BANG_MAX  // limits current to nozzle while PID is active (see PID_FUNCTIONAL_RANGE below); 255=full current
 
@@ -496,7 +497,7 @@ your extruder heater takes 2 minutes to hit the target on heating.
  0 = Voltage level 3.3V
  1 = Voltage level 5V
  */
-#if MOTHERBOARD == 501
+#if MB(ALLIGATOR)
   #define UI_VOLTAGE_LEVEL 0 // Set 5 o 3.3 V
 #endif
 

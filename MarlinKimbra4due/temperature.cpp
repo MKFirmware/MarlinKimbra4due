@@ -242,6 +242,12 @@ static void updateTemperaturesFromRawValues();
   static int read_max6675();
 #endif
 
+#ifdef INVERTED_HEATER_PINS
+  #define WRITE_HEATER(pin,value) WRITE(pin,!value)
+#else
+  #define WRITE_HEATER(pin,value) WRITE(pin,value)
+#endif
+
 //===========================================================================
 //=============================   functions      ============================
 //===========================================================================
@@ -523,24 +529,24 @@ void checkExtruderAutoFans()
   #if !HAS_HEATER_0
     #error HEATER_0_PIN not defined for this board
   #endif
-  #define WRITE_HEATER_0P(v) WRITE(HEATER_0_PIN, v)
+  #define WRITE_HEATER_0P(v) WRITE_HEATER(HEATER_0_PIN, v)
 #endif
 #ifndef SINGLENOZZLE
   #if EXTRUDERS > 1 || defined(HEATERS_PARALLEL)
     #if !HAS_HEATER_1
       #error HEATER_1_PIN not defined for this board
     #endif
-    #define WRITE_HEATER_1(v) WRITE(HEATER_1_PIN, v)
+    #define WRITE_HEATER_1(v) WRITE_HEATER(HEATER_1_PIN, v)
     #if EXTRUDERS > 2
       #if !HAS_HEATER_2
         #error HEATER_2_PIN not defined for this board
       #endif
-      #define WRITE_HEATER_2(v) WRITE(HEATER_2_PIN, v)
+      #define WRITE_HEATER_2(v) WRITE_HEATER(HEATER_2_PIN, v)
       #if EXTRUDERS > 3
         #if !HAS_HEATER_3
           #error HEATER_3_PIN not defined for this board
         #endif
-        #define WRITE_HEATER_3(v) WRITE(HEATER_3_PIN, v)
+        #define WRITE_HEATER_3(v) WRITE_HEATER(HEATER_3_PIN, v)
       #endif
     #endif
   #endif
@@ -867,7 +873,7 @@ static float analog2tempBed(int raw) {
     {
       if (PGM_RD_W(BEDTEMPTABLE[i][0]) > raw)
       {
-        celsius  = PGM_RD_W(BEDTEMPTABLE[i-1][1]) +
+        celsius = PGM_RD_W(BEDTEMPTABLE[i-1][1]) +
           (raw - PGM_RD_W(BEDTEMPTABLE[i-1][0])) *
           (float)(PGM_RD_W(BEDTEMPTABLE[i][1]) - PGM_RD_W(BEDTEMPTABLE[i-1][1])) /
           (float)(PGM_RD_W(BEDTEMPTABLE[i][0]) - PGM_RD_W(BEDTEMPTABLE[i-1][0]));
@@ -1517,23 +1523,22 @@ HAL_TEMP_TIMER_ISR {
       temp_state = MeasureTemp_0;
       break;
     case MeasureTemp_0:
-      #if defined(TEMP_0_PIN) && (TEMP_0_PIN > -1)
+      #if HAS_TEMP_0
         temp_read = analogRead (TEMP_0_PIN);
         raw_temp_0_value += temp_read;
 
         max_temp[0] = MAX(max_temp[0], temp_read);
         min_temp[0] = MIN(min_temp[0], temp_read);
       #endif
-      temp_state = MeasureTemp_BED;
+      temp_state = PrepareTemp_BED;
       break;
     case PrepareTemp_BED:
 
       lcd_buttons_update();
-      temp_state = MeasureTemp_1;
       temp_state = MeasureTemp_BED;
       break;
     case MeasureTemp_BED:
-      #if defined(TEMP_BED_PIN) && (TEMP_BED_PIN > -1)
+      #if HAS_TEMP_BED
         temp_read =  analogRead (TEMP_BED_PIN);
         raw_temp_bed_value += temp_read;
 
@@ -1547,7 +1552,7 @@ HAL_TEMP_TIMER_ISR {
       temp_state = MeasureTemp_1;
       break;
     case MeasureTemp_1:
-      #if defined(TEMP_1_PIN) && (TEMP_1_PIN > -1)
+      #if HAS_TEMP_1
         temp_read = analogRead (TEMP_1_PIN);
         raw_temp_1_value += temp_read;
 
@@ -1562,7 +1567,7 @@ HAL_TEMP_TIMER_ISR {
       temp_state = MeasureTemp_2;
       break;
     case MeasureTemp_2:
-      #if defined(TEMP_2_PIN) && (TEMP_2_PIN > -1)
+      #if HAS_TEMP_2
         temp_read = analogRead (TEMP_2_PIN);
         raw_temp_2_value += temp_read;
 
@@ -1577,7 +1582,7 @@ HAL_TEMP_TIMER_ISR {
       temp_state = MeasureTemp_3;
       break;
     case MeasureTemp_3:
-      #if defined(TEMP_3_PIN) && (TEMP_3_PIN > -1)
+      #if HAS_TEMP_3
         temp_read = analogRead (TEMP_3_PIN);
         raw_temp_3_value += temp_read;
 

@@ -1,32 +1,8 @@
-/*
-   Contributors:
-   Copyright (c) 2014 Bob Cousins bobcousins42@googlemail.com
-*/
-
-/*
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
-
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
 // **************************************************************************
 //
 // Description:          *** HAL for Arduino Due ***
 //
 // **************************************************************************
-
-// --------------------------------------------------------------------------
-// Includes
-// --------------------------------------------------------------------------
 
 #include "HAL.h"
 #include "Configuration.h"
@@ -34,44 +10,8 @@
 
 #include <Wire.h>
 
-// --------------------------------------------------------------------------
-// Externals
-// --------------------------------------------------------------------------
-
-// --------------------------------------------------------------------------
-// Local defines
-// --------------------------------------------------------------------------
-
-// --------------------------------------------------------------------------
-// Types
-// --------------------------------------------------------------------------
-
-// --------------------------------------------------------------------------
-// Variables
-// --------------------------------------------------------------------------
-
-// --------------------------------------------------------------------------
-// Public Variables
-// --------------------------------------------------------------------------
-
 uint8_t MCUSR;
 uint8_t HAL_step_timer_RC;
-
-// --------------------------------------------------------------------------
-// Private Variables
-// --------------------------------------------------------------------------
-
-// --------------------------------------------------------------------------
-// Function prototypes
-// --------------------------------------------------------------------------
-
-// --------------------------------------------------------------------------
-// Private functions
-// --------------------------------------------------------------------------
-
-// --------------------------------------------------------------------------
-// Public functions
-// --------------------------------------------------------------------------
 
 // disable interrupts
 void cli(void)
@@ -111,7 +51,6 @@ int freeMemory()
     free_memory = ((int)&free_memory) - heap_end;
 
   return free_memory;
-
 }
 
 
@@ -144,7 +83,7 @@ void spiBegin()
     SPI_Configure(SPI0, ID_SPI0, SPI_MR_MSTR | SPI_MR_MODFDIS | SPI_MR_PS);
     SPI_Enable(SPI0);
    
-    #if (MOTHERBOARD==500) || (MOTHERBOARD==501)
+    #if MB(ALLIGATOR)
       // Init Motor Fault
       pinMode( MOTOR_FAULT_PIN, INPUT);
       pinMode( DAC_SYNC, OUTPUT);
@@ -158,7 +97,7 @@ void spiBegin()
       digitalWrite( SPI_FLASH_CS , HIGH );
       digitalWrite( SDSS , HIGH );
       //pinMode( SPI_PIN, OUTPUT);
-    #endif//(MOTHERBOARD==500) || (MOTHERBOARD==501)
+    #endif//MB(ALLIGATOR)
 
     PIO_Configure(
        g_APinDescription[SPI_PIN].pPort,
@@ -175,14 +114,14 @@ void spiInit(uint8_t spiClock)
   if(spiInitMaded == false)
   {
     if(spiClock>4) spiClock = 1;
-    #if (MOTHERBOARD==500) || (MOTHERBOARD==501)
+    #if MB(ALLIGATOR)
       // Set SPI mode 1, clock, select not active after transfer, with delay between transfers  
       SPI_ConfigureNPCS(SPI0, SPI_CHAN_DAC, SPI_CSR_CSAAT |
         SPI_CSR_SCBR(spiDueDividors[spiClock]) | SPI_CSR_DLYBCT(1));
       // Set SPI mode 0, clock, select not active after transfer, with delay between transfers 
       SPI_ConfigureNPCS(SPI0, SPI_CHAN_EEPROM1,SPI_CSR_NCPHA | SPI_CSR_CSAAT |
         SPI_CSR_SCBR(spiDueDividors[spiClock]) | SPI_CSR_DLYBCT(1));
-    #endif// (MOTHERBOARD==500) || (MOTHERBOARD==501)
+    #endif//MB(ALLIGATOR)
 
     // Set SPI mode 0, clock, select not active after transfer, with delay between transfers
     SPI_ConfigureNPCS(SPI0, SPI_CHAN, SPI_CSR_NCPHA | SPI_CSR_CSAAT |
@@ -253,7 +192,6 @@ void eeprom_write_byte(unsigned char *pos, unsigned char value)
 	// this could be done more efficiently with "acknowledge polling"
 	delay(5);
 }
-
 
 unsigned char eeprom_read_byte(unsigned char *pos)
 {
@@ -407,14 +345,3 @@ int HAL_timer_get_count (uint8_t timer_num)
 	uint32_t channel = TimerConfig [timer_num].channel;
 	return tc->TC_CHANNEL[channel].TC_RC;
 }
-
-// --------------------------------------------------------------------------
-//
-// --------------------------------------------------------------------------
-
-// --------------------------------------------------------------------------
-//! @brief
-//! @param[in]
-//! @param[out]
-//! @return
-// --------------------------------------------------------------------------
