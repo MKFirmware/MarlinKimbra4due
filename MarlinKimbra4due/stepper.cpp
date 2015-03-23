@@ -47,6 +47,7 @@ block_t *current_block;  // A pointer to the block currently being traced
 
 // Variables used by The Stepper Driver Interrupt
 static unsigned char out_bits;        // The next stepping-bits to be output
+static unsigned int cleaning_buffer_counter;  
 
 // Counter variables for the bresenham line tracer
 static long counter_x, counter_y, counter_z, counter_e;
@@ -87,8 +88,8 @@ static bool old_x_min_endstop = false,
 
 static bool check_endstops = true;
 
-volatile long count_position[NUM_AXIS] = { 0 };
-volatile signed char count_direction[NUM_AXIS] = { 1 };
+volatile long count_position[NUM_AXIS] = { 0, 0, 0, 0 };
+volatile signed char count_direction[NUM_AXIS] = { 1, 1, 1, 1 };
 
 
 //===========================================================================
@@ -101,11 +102,8 @@ volatile signed char count_direction[NUM_AXIS] = { 1 };
       X_DIR_WRITE(v); \
       X2_DIR_WRITE(v); \
     } \
-    else{ \
-      if (current_block->active_extruder) \
-        X2_DIR_WRITE(v); \
-      else \
-        X_DIR_WRITE(v); \
+    else { \
+      if (current_block->active_extruder) X2_DIR_WRITE(v); else X_DIR_WRITE(v); \
     }
   #define X_APPLY_STEP(v,ALWAYS) \
     if (extruder_duplication_enabled || ALWAYS) { \
@@ -113,10 +111,7 @@ volatile signed char count_direction[NUM_AXIS] = { 1 };
       X2_STEP_WRITE(v); \
     } \
     else { \
-      if (current_block->active_extruder != 0) \
-        X2_STEP_WRITE(v); \
-      else \
-        X_STEP_WRITE(v); \
+      if (current_block->active_extruder != 0) X2_STEP_WRITE(v); else X_STEP_WRITE(v); \
     }
 #else
   #define X_APPLY_DIR(v,Q) X_DIR_WRITE(v)
@@ -124,16 +119,16 @@ volatile signed char count_direction[NUM_AXIS] = { 1 };
 #endif
 
 #ifdef Y_DUAL_STEPPER_DRIVERS
-  #define Y_APPLY_DIR(v,Q) Y_DIR_WRITE(v), Y2_DIR_WRITE((v) != INVERT_Y2_VS_Y_DIR)
-  #define Y_APPLY_STEP(v,Q) Y_STEP_WRITE(v), Y2_STEP_WRITE(v)
+  #define Y_APPLY_DIR(v,Q) { Y_DIR_WRITE(v); Y2_DIR_WRITE((v) != INVERT_Y2_VS_Y_DIR); }
+  #define Y_APPLY_STEP(v,Q) { Y_STEP_WRITE(v); Y2_STEP_WRITE(v); }
 #else
   #define Y_APPLY_DIR(v,Q) Y_DIR_WRITE(v)
   #define Y_APPLY_STEP(v,Q) Y_STEP_WRITE(v)
 #endif
 
 #ifdef Z_DUAL_STEPPER_DRIVERS
-  #define Z_APPLY_DIR(v,Q) Z_DIR_WRITE(v), Z2_DIR_WRITE(v)
-  #define Z_APPLY_STEP(v,Q) Z_STEP_WRITE(v), Z2_STEP_WRITE(v)
+  #define Z_APPLY_DIR(v,Q) { Z_DIR_WRITE(v); Z2_DIR_WRITE(v); }
+  #define Z_APPLY_STEP(v,Q) { Z_STEP_WRITE(v); Z2_STEP_WRITE(v); }
 #else
   #define Z_APPLY_DIR(v,Q) Z_DIR_WRITE(v)
   #define Z_APPLY_STEP(v,Q) Z_STEP_WRITE(v)
@@ -277,6 +272,17 @@ FORCE_INLINE void trapezoid_generator_reset() {
 // It pops blocks from the block_buffer and executes them by pulsing the stepper pins appropriately.
 HAL_STEP_TIMER_ISR {
   HAL_timer_isr_prologue (STEP_TIMER_NUM);
+  
+  if(cleaning_buffer_counter)
+  {
+    current_block = NULL;
+    plan_discard_current_block();
+    if ((cleaning_buffer_counter == 1) && (SD_FINISHED_STEPPERRELEASE)) enquecommands_P(PSTR(SD_FINISHED_RELEASECOMMAND));
+    cleaning_buffer_counter--;
+    HAL_timer_set_count (STEP_TIMER_NUM, HAL_TIMER_RATE / 200); //5ms wait
+    return;
+  }
+  
   // If there is no current block, attempt to pop one from the buffer
   if (!current_block) {
     // Anything in the buffer?
@@ -344,7 +350,8 @@ HAL_STEP_TIMER_ISR {
       #else
         // Head direction in -X axis for CoreXY bots.
         // If DeltaX == -DeltaY, the movement is only in Y axis
-        if (TEST(out_bits, X_HEAD) && (current_block->steps_x != current_block->steps_y || (TEST(out_bits, X_AXIS) == TEST(out_bits, Y_AXIS))))
+        if (current_block->steps_x != current_block->steps_y || (TEST(out_bits, X_AXIS) == TEST(out_bits, Y_AXIS)))      
+            if (TEST(out_bits, X_HEAD))
       #endif
         { // -direction
           #ifdef DUAL_X_CARRIAGE
@@ -374,7 +381,8 @@ HAL_STEP_TIMER_ISR {
         #else
           // Head direction in -Y axis for CoreXY bots.
           // If DeltaX == DeltaY, the movement is only in X axis
-          if (TEST(out_bits, Y_HEAD) && (current_block->steps_x != current_block->steps_y || (TEST(out_bits, X_AXIS) != TEST(out_bits, Y_AXIS))))
+          if (current_block->steps_x != current_block->steps_y || (TEST(out_bits, X_AXIS) != TEST(out_bits, Y_AXIS)))
+            if (TEST(out_bits, Y_HEAD))
         #endif
         { // -direction
           #if defined(Y_MIN_PIN) && Y_MIN_PIN >= 0
@@ -646,7 +654,6 @@ void st_init() {
     L6470_init();
   #endif
   
-  
   // Initialize Dir Pins
   #if defined(X_DIR_PIN) && X_DIR_PIN >= 0
     X_DIR_INIT;
@@ -698,7 +705,6 @@ void st_init() {
 	  if (!Y_ENABLE_ON) Y2_ENABLE_WRITE(HIGH);
 	#endif
   #endif
-
   #if defined(Z_ENABLE_PIN) && Z_ENABLE_PIN >= 0
     Z_ENABLE_INIT;
     if (!Z_ENABLE_ON) Z_ENABLE_WRITE(HIGH);
@@ -814,7 +820,7 @@ void st_init() {
   HAL_step_timer_start();
   ENABLE_STEPPER_DRIVER_INTERRUPT();
 
-  #if 0 // old AVR-stuff; needs rework
+#if 0 // old AVR-stuff; needs rework
   #ifdef ADVANCE
     #if defined(TCCR0A) && defined(WGM01)
       TCCR0A &= ~BIT(WGM01);
@@ -826,7 +832,7 @@ void st_init() {
     e_steps[3] = 0;
     TIMSK0 |= BIT(OCIE0A);
   #endif //ADVANCE
-  #endif
+#endif
 
   enable_endstops(true); // Start with endstops active. After homing they can be disabled
   sei();
@@ -886,6 +892,7 @@ void finishAndDisableSteppers() {
 }
 
 void quickStop() {
+  cleaning_buffer_counter = 5000;
   DISABLE_STEPPER_DRIVER_INTERRUPT();
   while (blocks_queued()) plan_discard_current_block();
   current_block = NULL;

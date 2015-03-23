@@ -75,6 +75,11 @@
 // This is used for single nozzle and multiple extrusion configuration
 // Uncomment below to enable (One Hotend)
 //#define SINGLENOZZLE
+#ifdef SINGLENOZZLE
+  #define HOTENDS 1
+#else
+  #define HOTENDS EXTRUDERS
+#endif
 
 
 // The following define selects which power supply you have. Please choose the one that matches your setup
@@ -109,7 +114,7 @@
 //   10 is 100k RS thermistor 198-961 (4.7k pullup)
 //   11 is 100k beta 3950 1% thermistor (4.7k pullup)
 //   12 is 100k 0603 SMD Vishay NTCS0603E3104FXT (4.7k pullup) (calibrated for Makibox hot bed)
-//   13 is 100k Hisens 3950  1% up to 300�C for hotend "Simple ONE " & "Hotend "All In ONE" 
+//   13 is 100k Hisens 3950  1% up to 300 degC for hotend "Simple ONE " & "Hotend "All In ONE" 
 //   20 is the PT100 circuit found in the Ultimainboard V2.x
 //   60 is 100k Maker's Tool Works Kapton Bed Thermistor beta=3950
 // 1047 is Pt1000 with 4k7 pullup
@@ -171,8 +176,11 @@
 // If you want the M105 heater power reported in watts, define the BED_WATTS, and (shared for all hotend) HOTEND_WATTS
 //#define HOTEND_WATTS (12.0*12.0/6.7)  //  P=I^2/R
 //#define BED_WATTS (12.0*12.0/1.1)     // P=I^2/R
+//===========================================================================
+//============================= PID Settings ================================
+//===========================================================================
+// PID Tuning Guide here: http://reprap.org/wiki/PID_Tuning
 
-//=============================== PID settings ==============================
 // Comment the following line to disable PID and enable bang-bang.
 #define PIDTEMP
 #define BANG_MAX 255      // limits current to nozzle while in bang-bang mode; 255=full current

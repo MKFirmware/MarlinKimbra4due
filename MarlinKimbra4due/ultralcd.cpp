@@ -134,68 +134,88 @@ static void menu_action_setting_edit_callback_long5(const char* pstr, unsigned l
 
 
 /* Helper macros for menus */
+
+/**
+ * START_MENU generates the init code for a menu function
+ */
 #define START_MENU() do { \
-	encoderRateMultiplierEnabled = false; \
-    if (encoderPosition > 0x8000) encoderPosition = 0; \
-    if (encoderPosition / ENCODER_STEPS_PER_MENU_ITEM < currentMenuViewOffset) currentMenuViewOffset = encoderPosition / ENCODER_STEPS_PER_MENU_ITEM;\
-    uint8_t _lineNr = currentMenuViewOffset, _menuItemNr; \
-    bool wasClicked = LCD_CLICKED;\
-    for(uint8_t _drawLineNr = 0; _drawLineNr < LCD_HEIGHT; _drawLineNr++, _lineNr++) { \
-        _menuItemNr = 0;
+  encoderRateMultiplierEnabled = false; \
+  if (encoderPosition > 0x8000) encoderPosition = 0; \
+  uint8_t encoderLine = encoderPosition / ENCODER_STEPS_PER_MENU_ITEM; \
+  if (encoderLine < currentMenuViewOffset) currentMenuViewOffset = encoderLine; \
+  uint8_t _lineNr = currentMenuViewOffset, _menuItemNr; \
+  bool wasClicked = LCD_CLICKED, itemSelected; \
+  if (wasClicked) lcd_quick_feedback(); \
+  for (uint8_t _drawLineNr = 0; _drawLineNr < LCD_HEIGHT; _drawLineNr++, _lineNr++) { \
+    _menuItemNr = 0;
+
+/**
+ * MENU_ITEM generates draw & handler code for a menu item, potentially calling:
+ *
+ *   lcd_implementation_drawmenu_[type](sel, row, label, arg3...)
+ *   menu_action_[type](arg3...)
+ *
+ * Examples:
+ *   MENU_ITEM(back, MSG_WATCH, lcd_status_screen)
+ *     lcd_implementation_drawmenu_back(sel, row, PSTR(MSG_WATCH), lcd_status_screen)
+ *     menu_action_back(lcd_status_screen)
+ *
+ *   MENU_ITEM(function, MSG_PAUSE_PRINT, lcd_sdcard_pause)
+ *     lcd_implementation_drawmenu_function(sel, row, PSTR(MSG_PAUSE_PRINT), lcd_sdcard_pause)
+ *     menu_action_function(lcd_sdcard_pause)
+ *
+ *   MENU_ITEM_EDIT(int3, MSG_SPEED, &feedmultiply, 10, 999)
+ *   MENU_ITEM(setting_edit_int3, MSG_SPEED, PSTR(MSG_SPEED), &feedmultiply, 10, 999)
+ *     lcd_implementation_drawmenu_setting_edit_int3(sel, row, PSTR(MSG_SPEED), PSTR(MSG_SPEED), &feedmultiply, 10, 999)
+ *     menu_action_setting_edit_int3(PSTR(MSG_SPEED), &feedmultiply, 10, 999)
+ *
+ */
 #define MENU_ITEM(type, label, args...) do { \
-    if (_menuItemNr == _lineNr) { \
-        if (lcdDrawUpdate) { \
-            const char* _label_pstr = PSTR(label); \
-            if ((encoderPosition / ENCODER_STEPS_PER_MENU_ITEM) == _menuItemNr) { \
-                lcd_implementation_drawmenu_ ## type ## _selected (_drawLineNr, _label_pstr , ## args ); \
-            }else{\
-                lcd_implementation_drawmenu_ ## type (_drawLineNr, _label_pstr , ## args ); \
-            }\
-        }\
-        if (wasClicked && (encoderPosition / ENCODER_STEPS_PER_MENU_ITEM) == _menuItemNr) {\
-            lcd_quick_feedback(); \
-            menu_action_ ## type ( args ); \
-            return;\
-        }\
-    }\
-    _menuItemNr++;\
+  if (_menuItemNr == _lineNr) { \
+    itemSelected = encoderLine == _menuItemNr; \
+    if (lcdDrawUpdate) \
+      lcd_implementation_drawmenu_ ## type(itemSelected, _drawLineNr, PSTR(label), ## args); \
+    if (wasClicked && itemSelected) { \
+      menu_action_ ## type(args); \
+      return; \
+    } \
+  } \
+  _menuItemNr++; \
 } while(0)
+
 #ifdef ENCODER_RATE_MULTIPLIER
+  /**
+   * MENU_MULTIPLIER_ITEM generates drawing and handling code for a multiplier menu item
+   */
   #define MENU_MULTIPLIER_ITEM(type, label, args...) do { \
     if (_menuItemNr == _lineNr) { \
-      if (lcdDrawUpdate) { \
-        const char* _label_pstr = PSTR(label); \
-        if ((encoderPosition / ENCODER_STEPS_PER_MENU_ITEM) == _menuItemNr) { \
-          lcd_implementation_drawmenu_ ## type ## _selected (_drawLineNr, _label_pstr , ## args ); \
-        } \
-        else { \
-          lcd_implementation_drawmenu_ ## type (_drawLineNr, _label_pstr , ## args ); \
-        } \
-      } \
-      if (wasClicked && (encoderPosition / ENCODER_STEPS_PER_MENU_ITEM) == _menuItemNr) { \
-        lcd_quick_feedback(); \
+      itemSelected = encoderLine == _menuItemNr; \
+      if (lcdDrawUpdate) \
+        lcd_implementation_drawmenu_ ## type(itemSelected, _drawLineNr, PSTR(label), ## args); \
+      if (wasClicked && itemSelected) { \
         encoderRateMultiplierEnabled = true; \
         lastEncoderMovementMillis = 0; \
-        menu_action_ ## type ( args ); \
+        menu_action_ ## type(args); \
         return; \
       } \
     } \
     _menuItemNr++; \
   } while(0)
 #endif //ENCODER_RATE_MULTIPLIER
+
 #define MENU_ITEM_DUMMY() do { _menuItemNr++; } while(0)
-#define MENU_ITEM_EDIT(type, label, args...) MENU_ITEM(setting_edit_ ## type, label, PSTR(label) , ## args )
-#define MENU_ITEM_EDIT_CALLBACK(type, label, args...) MENU_ITEM(setting_edit_callback_ ## type, label, PSTR(label) , ## args )
+#define MENU_ITEM_EDIT(type, label, args...) MENU_ITEM(setting_edit_ ## type, label, PSTR(label), ## args)
+#define MENU_ITEM_EDIT_CALLBACK(type, label, args...) MENU_ITEM(setting_edit_callback_ ## type, label, PSTR(label), ## args)
 #ifdef ENCODER_RATE_MULTIPLIER
-  #define MENU_MULTIPLIER_ITEM_EDIT(type, label, args...) MENU_MULTIPLIER_ITEM(setting_edit_ ## type, label, PSTR(label) , ## args )
-  #define MENU_MULTIPLIER_ITEM_EDIT_CALLBACK(type, label, args...) MENU_MULTIPLIER_ITEM(setting_edit_callback_ ## type, label, PSTR(label) , ## args )
+  #define MENU_MULTIPLIER_ITEM_EDIT(type, label, args...) MENU_MULTIPLIER_ITEM(setting_edit_ ## type, label, PSTR(label), ## args)
+  #define MENU_MULTIPLIER_ITEM_EDIT_CALLBACK(type, label, args...) MENU_MULTIPLIER_ITEM(setting_edit_callback_ ## type, label, PSTR(label), ## args)
 #else //!ENCODER_RATE_MULTIPLIER
-  #define MENU_MULTIPLIER_ITEM_EDIT(type, label, args...) MENU_ITEM(setting_edit_ ## type, label, PSTR(label) , ## args )
-  #define MENU_MULTIPLIER_ITEM_EDIT_CALLBACK(type, label, args...) MENU_ITEM(setting_edit_callback_ ## type, label, PSTR(label) , ## args )
+  #define MENU_MULTIPLIER_ITEM_EDIT(type, label, args...) MENU_ITEM(setting_edit_ ## type, label, PSTR(label), ## args)
+  #define MENU_MULTIPLIER_ITEM_EDIT_CALLBACK(type, label, args...) MENU_ITEM(setting_edit_callback_ ## type, label, PSTR(label), ## args)
 #endif //!ENCODER_RATE_MULTIPLIER
 #define END_MENU() \
-    if (encoderPosition / ENCODER_STEPS_PER_MENU_ITEM >= _menuItemNr) encoderPosition = _menuItemNr * ENCODER_STEPS_PER_MENU_ITEM - 1; \
-    if ((uint8_t)(encoderPosition / ENCODER_STEPS_PER_MENU_ITEM) >= currentMenuViewOffset + LCD_HEIGHT) { currentMenuViewOffset = (encoderPosition / ENCODER_STEPS_PER_MENU_ITEM) - LCD_HEIGHT + 1; lcdDrawUpdate = 1; _lineNr = currentMenuViewOffset - 1; _drawLineNr = -1; } \
+    if (encoderLine >= _menuItemNr) encoderPosition = _menuItemNr * ENCODER_STEPS_PER_MENU_ITEM - 1; encoderLine = encoderPosition / ENCODER_STEPS_PER_MENU_ITEM;\
+    if (encoderLine >= currentMenuViewOffset + LCD_HEIGHT) { currentMenuViewOffset = encoderLine - LCD_HEIGHT + 1; lcdDrawUpdate = 1; _lineNr = currentMenuViewOffset - 1; _drawLineNr = -1; } \
     } } while(0)
 
 /** Used variables to keep track of the menu */
@@ -365,16 +385,11 @@ static void lcd_sdcard_pause() { card.pauseSDPrint(); }
 static void lcd_sdcard_resume() { card.startFileprint(); }
 
 static void lcd_sdcard_stop() {
+  quickStop();
   card.sdprinting = false;
   card.closefile();
-  quickStop();
-  if (SD_FINISHED_STEPPERRELEASE) {
-    enquecommands_P(PSTR(SD_FINISHED_RELEASECOMMAND));
-  }
   autotempShutdown();
-
   cancel_heatup = true;
-
   lcd_setstatus(MSG_PRINT_ABORTED);
 }
 
@@ -431,7 +446,7 @@ static void lcd_main_menu() {
 void lcd_set_home_offsets() {
   for(int8_t i=0; i < NUM_AXIS; i++) {
     if (i != E_AXIS) {
-      add_homing[i] -= current_position[i];
+      home_offset[i] -= current_position[i];
       current_position[i] = 0.0;
     }
   }
@@ -956,21 +971,21 @@ static void lcd_control_temperature_menu() {
   #if TEMP_SENSOR_0 != 0
     MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE, &target_temperature[0], 0, HEATER_0_MAXTEMP - 15);
   #endif
-  #if EXTRUDERS > 1
+  #if HOTENDS > 1
     #if TEMP_SENSOR_1 != 0
       MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 2", &target_temperature[1], 0, HEATER_1_MAXTEMP - 15);
     #endif
-    #if EXTRUDERS > 2
+    #if HOTENDS > 2
       #if TEMP_SENSOR_2 != 0
         MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 3", &target_temperature[2], 0, HEATER_2_MAXTEMP - 15);
       #endif
-      #if EXTRUDERS > 3
+      #if HOTENDS > 3
         #if TEMP_SENSOR_3 != 0
           MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 4", &target_temperature[3], 0, HEATER_3_MAXTEMP - 15);
         #endif
-      #endif //EXTRUDERS > 3
-    #endif //EXTRUDERS > 2
-  #endif //EXTRUDERS > 1
+      #endif //HOTENDS > 3
+    #endif //HOTENDS > 2
+  #endif //HOTENDS > 1
   #if TEMP_SENSOR_BED != 0
     MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_BED, &target_temperature_bed, 0, BED_MAXTEMP - 15);
   #endif
@@ -989,35 +1004,33 @@ static void lcd_control_temperature_menu() {
     // i is typically a small value so allows values below 1
     MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_I, &raw_Ki, 0.01, 9990, copy_and_scalePID_i);
     MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_D, &raw_Kd, 1, 9990, copy_and_scalePID_d);
-    #ifndef SINGLENOZZLE
-      #if EXTRUDERS > 1
-        // set up temp variables - undo the default scaling
-        raw_Ki = unscalePID_i(Ki[1]);
-      	raw_Kd = unscalePID_d(Kd[1]);
-      	MENU_ITEM_EDIT(float52, MSG_PID_P " E2", &Kp[1], 1, 9990);
-        // i is typically a small value so allows values below 1
-        MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_I " E2", &raw_Ki, 0.01, 9990, copy_and_scalePID_i);
-        MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_D " E2", &raw_Kd, 1, 9990, copy_and_scalePID_d);
-      #endif //EXTRUDERS > 1
-      #if EXTRUDERS > 2
-        // set up temp variables - undo the default scaling
-        raw_Ki = unscalePID_i(Ki[2]);
-      	raw_Kd = unscalePID_d(Kd[2]);
-        MENU_ITEM_EDIT(float52, MSG_PID_P " E3", &Kp[2], 1, 9990);
-        // i is typically a small value so allows values below 1
-        MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_I " E3", &raw_Ki, 0.01, 9990, copy_and_scalePID_i);
-        MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_D " E3", &raw_Kd, 1, 9990, copy_and_scalePID_d);
-      #endif //EXTRUDERS > 2
-      #if EXTRUDERS > 3
-        // set up temp variables - undo the default scaling
-        raw_Ki = unscalePID_i(Ki[3]);
-      	raw_Kd = unscalePID_d(Kd[3]);
-        MENU_ITEM_EDIT(float52, MSG_PID_P " E4", &Kp[3], 1, 9990);
-        // i is typically a small value so allows values below 1
-        MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_I " E4", &raw_Ki, 0.01, 9990, copy_and_scalePID_i);
-        MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_D " E4", &raw_Kd, 1, 9990, copy_and_scalePID_d);
-      #endif //EXTRUDERS > 2
-    #endif //SINGLENOZZLE
+    #if HOTENDS > 1
+      // set up temp variables - undo the default scaling
+      raw_Ki = unscalePID_i(Ki[1]);
+      raw_Kd = unscalePID_d(Kd[1]);
+      MENU_ITEM_EDIT(float52, MSG_PID_P " E2", &Kp[1], 1, 9990);
+      // i is typically a small value so allows values below 1
+      MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_I " E2", &raw_Ki, 0.01, 9990, copy_and_scalePID_i);
+      MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_D " E2", &raw_Kd, 1, 9990, copy_and_scalePID_d);
+    #endif //HOTENDS > 1
+    #if HOTENDS > 2
+      // set up temp variables - undo the default scaling
+      raw_Ki = unscalePID_i(Ki[2]);
+      raw_Kd = unscalePID_d(Kd[2]);
+      MENU_ITEM_EDIT(float52, MSG_PID_P " E3", &Kp[2], 1, 9990);
+      // i is typically a small value so allows values below 1
+      MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_I " E3", &raw_Ki, 0.01, 9990, copy_and_scalePID_i);
+      MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_D " E3", &raw_Kd, 1, 9990, copy_and_scalePID_d);
+    #endif //HOTENDS > 2
+    #if HOTENDS > 3
+      // set up temp variables - undo the default scaling
+      raw_Ki = unscalePID_i(Ki[3]);
+      raw_Kd = unscalePID_d(Kd[3]);
+      MENU_ITEM_EDIT(float52, MSG_PID_P " E4", &Kp[3], 1, 9990);
+      // i is typically a small value so allows values below 1
+      MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_I " E4", &raw_Ki, 0.01, 9990, copy_and_scalePID_i);
+      MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_D " E4", &raw_Kd, 1, 9990, copy_and_scalePID_d);
+    #endif //HOTENDS > 2
   #endif //PIDTEMP
   MENU_ITEM(submenu, MSG_PREHEAT_PLA_SETTINGS, lcd_control_temperature_preheat_pla_settings_menu);
   MENU_ITEM(submenu, MSG_PREHEAT_ABS_SETTINGS, lcd_control_temperature_preheat_abs_settings_menu);
