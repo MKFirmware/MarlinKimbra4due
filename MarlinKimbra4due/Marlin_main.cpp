@@ -292,19 +292,19 @@ float lastpos[4];
 // Hotend offset
 #if HOTENDS > 1  
   #ifndef DUAL_X_CARRIAGE
-    #define NUM_EXTRUDER_OFFSETS 2 // only in XY plane
+    #define NUM_HOTENDS_OFFSETS 2 // only in XY plane
   #else
-    #define NUM_EXTRUDER_OFFSETS 3 // supports offsets in XYZ plane
+    #define NUM_HOTENDS_OFFSETS 3 // supports offsets in XYZ plane
   #endif
-  float hotend_offset[NUM_EXTRUDER_OFFSETS][HOTENDS] = {
-    #if defined(EXTRUDER_OFFSET_X)
-      EXTRUDER_OFFSET_X
+  float hotend_offset[NUM_HOTENDS_OFFSETS][HOTENDS] = {
+    #if defined(HOTEND_OFFSET_X)
+      HOTEND_OFFSET_X
     #else
       0
     #endif
     ,
-    #if defined(EXTRUDER_OFFSET_Y)
-      EXTRUDER_OFFSET_Y
+    #if defined(HOTEND_OFFSET_Y)
+      HOTEND_OFFSET_Y
     #else
       0
     #endif
@@ -1075,7 +1075,7 @@ static float x_home_pos(int extruder) {
     // second X-carriage offset when homed - otherwise X2_HOME_POS is used.
     // This allow soft recalibration of the second extruder offset position without firmware reflash
     // (through the M218 command).
-    return (extruder_offset[X_AXIS][1] > 0) ? extruder_offset[X_AXIS][1] : X2_HOME_POS;
+    return (hotend_offset[X_AXIS][1] > 0) ? hotend_offset[X_AXIS][1] : X2_HOME_POS;
 }
 
 static int x_home_dir(int extruder) {
@@ -5827,12 +5827,8 @@ void process_commands()
           #else
             // Offset hotend (only by XY)
             #if HOTENDS > 1
-              for(int i = 0; i < 2; i++)
-              {
-                current_position[i] = current_position[i] -
-                  hotend_offset[i][active_extruder] +
-                  hotend_offset[i][tmp_extruder];
-              }
+              for (int i=X_AXIS; i<=Y_AXIS; i++)
+                current_position[i] += hotend_offset[i][tmp_extruder] - hotend_offset[i][active_extruder];
             #endif // HOTENDS > 1
           #endif // end no DUAL_X_CARRIAGE
 
@@ -5849,7 +5845,7 @@ void process_commands()
             prepare_move();
           }
         }
-      #endif // HOTENDS > 1
+      #endif // EXTRUDERS > 1
     }
   }
   else

@@ -131,8 +131,6 @@ static volatile bool temp_meas_ready = false;
   static float pid_error[HOTENDS];
   static float temp_iState_min[HOTENDS];
   static float temp_iState_max[HOTENDS];
-  // static float pid_input[EXTRUDERS];
-  // static float pid_output[EXTRUDERS];
   static bool pid_reset[HOTENDS];
 #endif //PIDTEMP
 #ifdef PIDTEMPBED
@@ -209,7 +207,8 @@ static void updateTemperaturesFromRawValues();
 //=============================   functions      ============================
 //===========================================================================
 
-void PID_autotune(float temp, int hotend, int ncycles) {
+void PID_autotune(float temp, int hotend, int ncycles)
+{
   float input = 0.0;
   int cycles = 0;
   bool heating = true;
@@ -367,7 +366,7 @@ void PID_autotune(float temp, int hotend, int ncycles) {
 
 void updatePID() {
   #ifdef PIDTEMP
-    for(int e = 0; e < HOTENDS; e++) {
+    for (int e = 0; e < HOTENDS; e++) {
       temp_iState_max[e] = PID_INTEGRAL_DRIVE_MAX / Ki[e];
     }
   #endif
@@ -450,12 +449,12 @@ int getHeaterPower(int heater) {
     // update extruder auto fan states
     #if HAS_AUTO_FAN_0
       setExtruderAutoFanState(EXTRUDER_0_AUTO_FAN_PIN, (fanState & 1) != 0);
-    #endif 
+    #endif
 
     #if HAS_AUTO_FAN_1
       if (EXTRUDER_1_AUTO_FAN_PIN != EXTRUDER_0_AUTO_FAN_PIN)
         setExtruderAutoFanState(EXTRUDER_1_AUTO_FAN_PIN, (fanState & 2) != 0);
-    #endif 
+    #endif
     #if HAS_AUTO_FAN_2
       if (EXTRUDER_2_AUTO_FAN_PIN != EXTRUDER_0_AUTO_FAN_PIN
           && EXTRUDER_2_AUTO_FAN_PIN != EXTRUDER_1_AUTO_FAN_PIN)
@@ -650,7 +649,7 @@ void manage_heater() {
         _temp_error(-1, MSG_EXTRUDER_SWITCHED_OFF, MSG_ERR_REDUNDANT_TEMP);
       }
     #endif //TEMP_SENSOR_1_AS_REDUNDANT
-  } // Extruders Loop
+  } // Hotends Loop
 
   #if HAS_AUTO_FAN
     if (ms > extruder_autofan_last_check + 2500) { // only need to check fan state very infrequently
@@ -744,8 +743,8 @@ void manage_heater() {
   #ifdef FILAMENT_SENSOR
     if (filament_sensor) {
       meas_shift_index = delay_index1 - meas_delay_cm;
-		  if (meas_shift_index < 0) meas_shift_index += MAX_MEASUREMENT_DELAY + 1;  //loop around buffer if needed
-		  
+      if (meas_shift_index < 0) meas_shift_index += MAX_MEASUREMENT_DELAY + 1;  //loop around buffer if needed
+
       // Get the delayed info and add 100 to reconstitute to a percent of
       // the nominal filament diameter then square it to get an area
       meas_shift_index = constrain(meas_shift_index, 0, MAX_MEASUREMENT_DELAY);
@@ -802,7 +801,7 @@ static float analog2temp(int raw, uint8_t e) {
 
     return celsius;
   }
-  return (raw * ((3.3 * 100) / 1024) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN + TEMP_SENSOR_AD595_OFFSET;
+  return ((raw * ((3.3 * 100) / 1024) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN) + TEMP_SENSOR_AD595_OFFSET;
 }
 
 // Derived from RepRap FiveD extruder::getTemperature()
@@ -829,7 +828,7 @@ static float analog2tempBed(int raw) {
 
     return celsius;
   #elif defined BED_USES_AD595
-    return ((raw * ((3.3 * 100.0) / 1024.0) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN) + TEMP_SENSOR_AD595_OFFSET;
+    return ((raw * ((3.3 * 100) / 1024) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN) + TEMP_SENSOR_AD595_OFFSET;
   #else //NO BED_USES_THERMISTOR
     return 0;
   #endif //BED_USES_THERMISTOR
@@ -879,6 +878,7 @@ static void updateTemperaturesFromRawValues() {
   }
 
 #endif
+
 
 void tp_init()
 {
