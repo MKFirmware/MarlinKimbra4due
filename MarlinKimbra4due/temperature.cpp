@@ -145,7 +145,7 @@ static volatile bool temp_meas_ready = false;
   static float temp_iState_min_bed;
   static float temp_iState_max_bed;
 #else //PIDTEMPBED
-	static unsigned long  previous_millis_bed_heater;
+  static unsigned long  previous_millis_bed_heater;
 #endif //PIDTEMPBED
 
 static unsigned char soft_pwm[HOTENDS];
@@ -483,17 +483,17 @@ int getHeaterPower(int heater) {
   #if !HAS_HEATER_1
     #error HEATER_1_PIN not defined for this board
   #endif
-  #define WRITE_HEATER_1(v) WRITE(HEATER_1_PIN, v)
+  #define WRITE_HEATER_1(v) WRITE_HEATER(HEATER_1_PIN, v)
   #if HOTENDS > 2
     #if !HAS_HEATER_2
       #error HEATER_2_PIN not defined for this board
     #endif
-    #define WRITE_HEATER_2(v) WRITE(HEATER_2_PIN, v)
+    #define WRITE_HEATER_2(v) WRITE_HEATER(HEATER_2_PIN, v)
     #if HOTENDS > 3
       #if !HAS_HEATER_3
         #error HEATER_3_PIN not defined for this board
       #endif
-      #define WRITE_HEATER_3(v) WRITE(HEATER_3_PIN, v)
+      #define WRITE_HEATER_3(v) WRITE_HEATER(HEATER_3_PIN, v)
     #endif
   #endif
 #endif
@@ -865,7 +865,7 @@ static void updateTemperaturesFromRawValues() {
 
   // Convert raw Filament Width to millimeters
   float analog2widthFil() {
-    return current_raw_filwidth / 16383.0 * 5.0;
+    return current_raw_filwidth / (1024 * OVERSAMPLENR) * 5.0;
     //return current_raw_filwidth;
   }
 
