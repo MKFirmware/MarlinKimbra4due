@@ -208,7 +208,7 @@
 
 #if defined(LCD_PROGRESS_BAR) && defined(SDSUPPORT)
   static uint16_t progressBarTick = 0;
-  #if PROGRESS_BAR_MSG_EXPIRE > 0
+  #if PROGRESS_MSG_EXPIRE > 0
     static uint16_t messageTick = 0;
   #endif
   #define LCD_STR_PROGRESS  "\x03\x04\x05"
@@ -392,14 +392,14 @@ static void lcd_implementation_init (
   #if defined(LCD_PROGRESS_BAR) && defined(SDSUPPORT)
     bool progress_bar_set = true
   #endif
-){
+) {
 
   #if defined(LCD_I2C_TYPE_PCF8575)
     lcd.begin(LCD_WIDTH, LCD_HEIGHT);
-  #ifdef LCD_I2C_PIN_BL
-    lcd.setBacklightPin(LCD_I2C_PIN_BL,POSITIVE);
-    lcd.setBacklight(HIGH);
-  #endif
+    #ifdef LCD_I2C_PIN_BL
+      lcd.setBacklightPin(LCD_I2C_PIN_BL,POSITIVE);
+      lcd.setBacklight(HIGH);
+    #endif
 
   #elif defined(LCD_I2C_TYPE_MCP23017)
     lcd.setMCPType(LTI_TYPE_MCP23017);
@@ -416,9 +416,9 @@ static void lcd_implementation_init (
   #endif
 
   lcd_set_custom_characters(
-      #if defined(LCD_PROGRESS_BAR) && defined(SDSUPPORT)
-          progress_bar_set
-      #endif
+    #if defined(LCD_PROGRESS_BAR) && defined(SDSUPPORT)
+      progress_bar_set
+    #endif
   );
 
   lcd.clear();
@@ -429,7 +429,8 @@ static void lcd_implementation_clear() {
 }
 
 /* Arduino < 1.0.0 is missing a function to print PROGMEM strings, so we need to implement our own */
-static void lcd_printPGM(const char* str) {
+static void lcd_printPGM(const char* str)
+{
   char c;
   while((c = pgm_read_byte(str++)) != '\0')
   {
@@ -466,7 +467,8 @@ Possible status screens:
        |Status line.........|
 */
 
-static void lcd_implementation_status_screen() {
+static void lcd_implementation_status_screen()
+{
   int tHotend=int(degHotend(0) + 0.5);
   int tTarget=int(degTargetHotend(0) + 0.5);
 
@@ -625,18 +627,37 @@ static void lcd_implementation_status_screen() {
   #endif //LCD_PROGRESS_BAR
 
   //Display both Status message line and Filament display on the last line
-  #ifdef FILAMENT_LCD_DISPLAY
-    if (message_millis + 5000 <= millis()) {  //display any status for the first 5 sec after screen is initiated
-      lcd_printPGM(PSTR("Dia "));
-      lcd.print(ftostr12ns(filament_width_meas));
-      lcd_printPGM(PSTR(" V"));
-      lcd.print(itostr3(100.0*volumetric_multiplier[FILAMENT_SENSOR_EXTRUDER_NUM]));
-      lcd.print('%');
-      return;
+  #if (defined(FILAMENT_SENSOR) && defined(FILWIDTH_PIN) && FILWIDTH_PIN >= 0) && defined(FILAMENT_LCD_DISPLAY) || (defined(POWER_CONSUMPTION) && defined(POWER_CONSUMPTION_PIN) && POWER_CONSUMPTION_PIN >= 0) && defined(POWER_CONSUMPTION_LCD_DISPLAY)
+    if (millis() < message_millis + 5000) {  //Display both Status message line and Filament display on the last line
+      lcd.print(lcd_status_message);
     }
-  #endif //FILAMENT_LCD_DISPLAY
-
-  lcd.print(lcd_status_message);
+    #if defined(POWER_CONSUMPTION) && defined(POWER_CONSUMPTION_PIN) && (POWER_CONSUMPTION_PIN >= 0) && defined(POWER_CONSUMPTION_LCD_DISPLAY)
+      #if defined(FILAMENT_SENSOR) && defined(FILWIDTH_PIN) && (FILWIDTH_PIN >= 0) && defined(FILAMENT_LCD_DISPLAY)
+        else if (millis() < message_millis + 10000)
+      #else
+        else
+      #endif
+      {
+        lcd_printPGM(PSTR("P:"));
+        lcd.print(ftostr31(power_consumption_meas));
+        lcd_printPGM(PSTR("W C:"));
+        lcd.print(ltostr7(power_consumption_hour));
+        lcd_printPGM(PSTR("Wh"));
+      }
+    #endif
+    #if defined(FILAMENT_SENSOR) && defined(FILWIDTH_PIN) && (FILWIDTH_PIN >= 0) && defined(FILAMENT_LCD_DISPLAY)
+      else {
+        lcd_printPGM(PSTR("D:"));
+        lcd.print(ftostr12ns(filament_width_meas));
+        lcd_printPGM(PSTR("mm F:"));
+        lcd.print(itostr3(100.0 * volumetric_multiplier[FILAMENT_SENSOR_EXTRUDER_NUM]));
+        lcd.print('%');
+        return;
+      }
+    #endif
+  #else
+    lcd.print(lcd_status_message);
+  #endif
 }
 
 static void lcd_implementation_drawmenu_generic(bool sel, uint8_t row, const char* pstr, char pre_char, char post_char) {

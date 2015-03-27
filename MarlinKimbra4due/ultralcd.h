@@ -33,32 +33,30 @@
   #define LCD_TIMEOUT_TO_STATUS 15000
 
   #ifdef ULTIPANEL
-  void lcd_buttons_update();
-  extern volatile uint8_t buttons;  //the last checked buttons in a bit array.
-  #ifdef REPRAPWORLD_KEYPAD
-    extern volatile uint8_t buttons_reprapworld_keypad; // to store the keypad shift register values
-  #endif
+    void lcd_buttons_update();
+    extern volatile uint8_t buttons;  //the last checked buttons in a bit array.
+    #ifdef REPRAPWORLD_KEYPAD
+      extern volatile uint8_t buttons_reprapworld_keypad; // to store the keypad shift register values
+    #endif
   #else
-  FORCE_INLINE void lcd_buttons_update() {}
+    FORCE_INLINE void lcd_buttons_update() {}
   #endif
 
   extern int plaPreheatHotendTemp;
   extern int plaPreheatHPBTemp;
   extern int plaPreheatFanSpeed;
-
   extern int absPreheatHotendTemp;
   extern int absPreheatHPBTemp;
   extern int absPreheatFanSpeed;
-  
   extern int gumPreheatHotendTemp;
   extern int gumPreheatHPBTemp;
   extern int gumPreheatFanSpeed;
 
   extern bool cancel_heatup;
   
-#ifdef FILAMENT_LCD_DISPLAY
-  extern unsigned long message_millis;
-#endif
+  #if (defined(FILAMENT_SENSOR) && defined(FILWIDTH_PIN) && FILWIDTH_PIN >= 0) && defined(FILAMENT_LCD_DISPLAY) || (defined(POWER_CONSUMPTION) && defined(POWER_CONSUMPTION_PIN) && POWER_CONSUMPTION_PIN >= 0) && defined(POWER_CONSUMPTION_LCD_DISPLAY)
+    extern unsigned long message_millis;
+  #endif
 
   void lcd_buzz(long duration,uint16_t freq);
   bool lcd_clicked();
@@ -71,10 +69,6 @@
     #define EN_A BIT(BLEN_A)
 
     #define LCD_CLICKED (buttons&EN_C)
-    #if defined(BTN_BACK) && BTN_BACK > 0
-      #define EN_D BIT(BLEN_D)
-      #define LCD_BACK_CLICKED (buttons&EN_D)
-    #endif
     #ifdef REPRAPWORLD_KEYPAD
   	  #define EN_REPRAPWORLD_KEYPAD_F3 BIT(BLEN_REPRAPWORLD_KEYPAD_F3)
   	  #define EN_REPRAPWORLD_KEYPAD_F2 BIT(BLEN_REPRAPWORLD_KEYPAD_F2)

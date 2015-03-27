@@ -98,8 +98,18 @@ void digipot_current(uint8_t driver, int current);
 void microstep_init();
 void microstep_readings();
 
+#ifdef Z_DUAL_ENDSTOPS
+  void In_Homing_Process(bool state);
+  void Lock_z_motor(bool state);
+  void Lock_z2_motor(bool state);
+#endif
+
 #ifdef BABYSTEPPING
   void babystep(const uint8_t axis,const bool direction); // perform a short step with a single stepper motor, outside of any convention
 #endif //BABYSTEPPING
+
+#ifdef NPR2 //Multiextruder
+  void colorstep(long csteps,const bool direction);
+#endif //NPR2
 
 #endif //stepper_h

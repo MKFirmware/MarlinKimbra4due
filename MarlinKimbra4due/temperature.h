@@ -35,12 +35,18 @@
 void tp_init();  //initialize the heating
 void manage_heater(); //it is critical that this is called periodically.
 
-#ifdef FILAMENT_SENSOR
-// For converting raw Filament Width to milimeters 
- float analog2widthFil(); 
- 
-// For converting raw Filament Width to an extrusion ratio 
- int widthFil_to_size_ratio();
+#if HAS_FILAMENT_SENSOR
+  // For converting raw Filament Width to milimeters 
+  float analog2widthFil(); 
+
+  // For converting raw Filament Width to an extrusion ratio 
+  int widthFil_to_size_ratio();
+#endif
+
+#if HAS_POWER_CONSUMPTION_SENSOR
+  // For converting raw Power Consumption to watt
+  float analog2current();
+  float analog2power();
 #endif
 
 // low level conversion routines
@@ -63,7 +69,8 @@ extern float current_temperature_bed;
 #endif
 
 #ifdef PIDTEMP
-  extern float Kp[HOTENDS],Ki[HOTENDS],Kd[HOTENDS];
+  extern float Kp[HOTENDS], Ki[HOTENDS], Kd[HOTENDS];
+  #define PID_PARAM(param,e) param[e] // use macro to point to array value
   float scalePID_i(float i);
   float scalePID_d(float d);
   float unscalePID_i(float i);
@@ -93,7 +100,7 @@ FORCE_INLINE float degBed() { return current_temperature_bed; }
 #ifdef SHOW_TEMP_ADC_VALUES
   FORCE_INLINE float rawHotendTemp(uint8_t hotend) { return current_temperature_raw[HOTEND_ARG]; }
   FORCE_INLINE float rawBedTemp() { return current_temperature_bed_raw; }
-#endif //SHOW_TEMP_ADC_VALUES
+#endif
 
 FORCE_INLINE float degTargetHotend(uint8_t hotend) { return target_temperature[HOTEND_ARG]; }
 
@@ -144,7 +151,7 @@ FORCE_INLINE bool isCoolingBed() { return target_temperature_bed < current_tempe
   #define setTargetHotend3(_celsius) do{}while(0)
 #endif
 #if HOTENDS > 4
-  #error Invalid number of hotend
+  #error Invalid number of hotends
 #endif
 
 int getHeaterPower(int heater);

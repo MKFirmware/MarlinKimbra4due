@@ -431,60 +431,6 @@
 /****************************************************************************************/
 
 
-
-/****************************************************************************************
-********************************* END MOTHERBOARD ***************************************
-/****************************************************************************************/
-
-#ifndef KNOWN_BOARD
-  #error Unknown MOTHERBOARD value in configuration.h
-#endif
-
-
-/****************************************************************************************
-************************************* FEATURE *******************************************
-/****************************************************************************************/
-
-#ifdef SINGLENOZZLE
-  #undef HEATER_1_PIN
-  #undef HEATER_2_PIN
-  #undef HEATER_3_PIN
-  #define HEATER_1_PIN  -1
-  #define HEATER_2_PIN  -1
-  #define HEATER_3_PIN  -1
-  #undef TEMP_1_PIN
-  #undef TEMP_2_PIN
-  #undef TEMP_3_PIN
-  #define TEMP_1_PIN    -1
-  #define TEMP_2_PIN    -1
-  #define TEMP_3_PIN    -1
-#endif //SINGLENOZZLE
-
-#ifdef MKR4
-  #if (EXTRUDERS == 2) && (DRIVER_EXTRUDERS==1)     // Use this for one driver and two extruder
-    #define E0E1_CHOICE_PIN    5
-  #elif (EXTRUDERS == 3) && (DRIVER_EXTRUDERS==2)   // Use this for two driver and 3 extruder
-    #define E0E2_CHOICE_PIN    5
-  #elif (EXTRUDERS == 4) && (DRIVER_EXTRUDERS==2)   // Use this for two driver and 4 extruder
-    #define E0E2_CHOICE_PIN    5
-    #define E1E3_CHOICE_PIN    6
-  #endif //EXTRUDERS
-#endif //MKR4
-
-#ifdef NPR2
-  #define E_MIN_PIN           19
-#endif //NPR2
-
-#ifdef LASERBEAM
-  #define LASER_PWR_PIN	42
-  #define LASER_TTL_PIN	44
-#endif
-
-#ifdef FILAMENT_END_SWITCH
-  #define PAUSE_PIN           19
-#endif
-/****************************************************************************************/
-
 /****************************************************************************************
 *********** Available chip select pins for HW SPI are 4 10 52 ***************************
 /****************************************************************************************/
@@ -514,6 +460,14 @@
 #endif
 /****************************************************************************************/
 
+
+/****************************************************************************************
+********************************* END MOTHERBOARD ***************************************
+/****************************************************************************************/
+
+#ifndef KNOWN_BOARD
+  #error Unknown MOTHERBOARD value in configuration.h
+#endif
 
 #ifndef HEATER_1_PIN
   #define HEATER_1_PIN -1
@@ -583,30 +537,97 @@
     #define Z_MAX_PIN        -1
   #endif //Z_HOME_DIR > 0
 #endif //!DELTA
+/****************************************************************************************/
 
+
+
+/****************************************************************************************
+************************************* FEATURE *******************************************
+****************************************************************************************/
+
+#if HOTENDS == 1
+  #undef HEATER_1_PIN
+  #undef HEATER_2_PIN
+  #undef HEATER_3_PIN
+  #define HEATER_1_PIN  -1
+  #define HEATER_2_PIN  -1
+  #define HEATER_3_PIN  -1
+  #undef TEMP_1_PIN
+  #undef TEMP_2_PIN
+  #undef TEMP_3_PIN
+  #define TEMP_1_PIN    -1
+  #define TEMP_2_PIN    -1
+  #define TEMP_3_PIN    -1
+#elif HOTENDS == 2
+  #undef HEATER_2_PIN
+  #undef HEATER_3_PIN
+  #define HEATER_2_PIN  -1
+  #define HEATER_3_PIN  -1
+  #undef TEMP_2_PIN
+  #undef TEMP_3_PIN
+  #define TEMP_2_PIN    -1
+  #define TEMP_3_PIN    -1
+#elif HOTENDS == 3
+  #undef HEATER_3_PIN
+  #define HEATER_3_PIN  -1
+  #undef TEMP_3_PIN
+  #define TEMP_3_PIN    -1
+#endif
+
+#ifdef MKR4
+  #if (EXTRUDERS == 2) && (DRIVER_EXTRUDERS==1)     // Use this for one driver and two extruder
+    #define E0E1_CHOICE_PIN    5
+  #elif (EXTRUDERS == 3) && (DRIVER_EXTRUDERS==2)   // Use this for two driver and 3 extruder
+    #define E0E2_CHOICE_PIN    5
+  #elif (EXTRUDERS == 4) && (DRIVER_EXTRUDERS==2)   // Use this for two driver and 4 extruder
+    #define E0E2_CHOICE_PIN    5
+    #define E1E3_CHOICE_PIN    6
+  #endif //EXTRUDERS
+#endif //MKR4
+
+#ifdef NPR2
+  #define E_MIN_PIN           19
+#endif //NPR2
+
+#ifdef LASERBEAM
+  #define LASER_PWR_PIN	42
+  #define LASER_TTL_PIN	44
+#endif
+
+#ifdef FILAMENT_END_SWITCH
+  #define PAUSE_PIN           19
+#endif
+
+#ifdef POWER_CONSUMPTION
+  #define POWER_CONSUMPTION_PIN 4   // ANALOG NUMBERING
+#endif
+/****************************************************************************************/
+
+
+#include "pins2tool.h"
 
 //List of pins which to ignore when asked to change by gcode, 0 and 1 are RX and TX, do not mess with those!
 #define _E0_PINS E0_STEP_PIN, E0_DIR_PIN, E0_ENABLE_PIN, HEATER_0_PIN,
-#if DRIVER_EXTRUDERS > 1
+#if EXTRUDERS > 1
   #define _E1_PINS E1_STEP_PIN, E1_DIR_PIN, E1_ENABLE_PIN, HEATER_1_PIN,
 #else
   #define _E1_PINS
 #endif
-#if DRIVER_EXTRUDERS  > 2
+#if EXTRUDERS  > 2
   #define _E2_PINS E2_STEP_PIN, E2_DIR_PIN, E2_ENABLE_PIN, HEATER_2_PIN,
 #else
   #define _E2_PINS
 #endif
-#if DRIVER_EXTRUDERS > 3
+#if EXTRUDERS > 3
   #define _E3_PINS E3_STEP_PIN, E3_DIR_PIN, E3_ENABLE_PIN, HEATER_3_PIN,
 #else
   #define _E3_PINS
 #endif
 
-#define SENSITIVE_PINS  { 0, 1, X_STEP_PIN, X_DIR_PIN, X_ENABLE_PIN, X_MIN_PIN, X_MAX_PIN, Y_STEP_PIN, Y_DIR_PIN, Y_ENABLE_PIN, Y_MIN_PIN, Y_MAX_PIN, Z_STEP_PIN, Z_DIR_PIN, Z_ENABLE_PIN, Z_MIN_PIN, Z_MAX_PIN, PS_ON_PIN, \
-                          HEATER_BED_PIN, FAN_PIN, \
-                          _E0_PINS _E1_PINS _E2_PINS _E3_PINS \
-                          analogInputToDigitalPin(TEMP_0_PIN), analogInputToDigitalPin(TEMP_1_PIN), analogInputToDigitalPin(TEMP_2_PIN), analogInputToDigitalPin(TEMP_BED_PIN) }
+#define SENSITIVE_PINS { 0, 1, X_STEP_PIN, X_DIR_PIN, X_ENABLE_PIN, X_MIN_PIN, X_MAX_PIN, Y_STEP_PIN, Y_DIR_PIN, Y_ENABLE_PIN, Y_MIN_PIN, Y_MAX_PIN, Z_STEP_PIN, Z_DIR_PIN, Z_ENABLE_PIN, Z_MIN_PIN, Z_MAX_PIN, PS_ON_PIN, \
+                        HEATER_BED_PIN, FAN_PIN, \
+                        _E0_PINS _E1_PINS _E2_PINS _E3_PINS \
+                        analogInputToDigitalPin(TEMP_0_PIN), analogInputToDigitalPin(TEMP_1_PIN), analogInputToDigitalPin(TEMP_2_PIN), analogInputToDigitalPin(TEMP_3_PIN), analogInputToDigitalPin(TEMP_BED_PIN) }
 
 #define HAS_DIGIPOTSS (DIGIPOTSS_PIN >= 0)
 
