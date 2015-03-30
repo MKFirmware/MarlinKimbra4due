@@ -250,7 +250,7 @@ extern float home_offset[3];
   #else
     #define NUM_HOTEND_OFFSETS 3 // supports offsets in XYZ plane
   #endif
-  extern float hotend_offset[NUM_HOTEND_OFFSETS][HOTENDS];
+  extern float hotend_offset[HOTENDS][NUM_HOTEND_OFFSETS];
 #endif // HOTENDS > 1
 
 #ifdef NPR2
@@ -263,6 +263,8 @@ extern float home_offset[3];
   extern float tower_adj[6];
   extern float delta_radius;
   extern float delta_diagonal_rod;
+#elif defined(Z_DUAL_ENDSTOPS)
+extern float z_endstop_adj;
 #endif
 
 #ifdef SCARA
@@ -320,7 +322,6 @@ extern unsigned long stoptime;
 
 // Handling multiple extruders pins
 extern uint8_t active_extruder;
-extern uint8_t active_driver;
 
 #ifdef DIGIPOT_I2C
   extern void digipot_i2c_set_current( int channel, float current );

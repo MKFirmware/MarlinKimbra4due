@@ -160,6 +160,22 @@ void spiSend(uint32_t chan ,const uint8_t* buf , size_t n)
   spiSendByte(chan, buf[n-1]);
 }
 
+uint8_t spiReceive(uint32_t chan) {
+  uint8_t spirec_tmp;
+  // wait for transmit register empty
+  while ((SPI0->SPI_SR & SPI_SR_TDRE) == 0);
+  while ((SPI0->SPI_SR & SPI_SR_RDRF) == 1)
+    spirec_tmp =  SPI0->SPI_RDR;
+
+  // write dummy byte with address and end transmission flag
+  SPI0->SPI_TDR = 0x000000FF | SPI_PCS(chan) | SPI_TDR_LASTXFER;
+
+  // wait for receive register 
+  while ((SPI0->SPI_SR & SPI_SR_RDRF) == 0);
+  // get byte from receive register
+  return SPI0->SPI_RDR;
+}
+
 // --------------------------------------------------------------------------
 // eeprom
 // --------------------------------------------------------------------------
@@ -167,47 +183,99 @@ void spiSend(uint32_t chan ,const uint8_t* buf , size_t n)
 static bool eeprom_initialised = false;
 static uint8_t eeprom_device_address = 0x50;
 
-static void eeprom_init(void)
-{
-	if (!eeprom_initialised)
-	{
-		Wire.begin();
-		eeprom_initialised = true;
-	}
+static void eeprom_init(void) {
+#if (MOTHERBOARD == 500) || (MOTHERBOARD == 501)
+#else
+  if (!eeprom_initialised) {
+    Wire.begin();
+    eeprom_initialised = true;
+  }
+#endif// (MOTHERBOARD==500) || (MOTHERBOARD==501)
 }
 
-void eeprom_write_byte(unsigned char *pos, unsigned char value)
-{
-	unsigned eeprom_address = (unsigned) pos;
+#if (MOTHERBOARD==500) || (MOTHERBOARD==501)
+  static void eprBurnValue(unsigned int pos, int size, unsigned char * newvalue) {
+    uint8_t eeprom_temp[3];
 
-	eeprom_init();
+    /*write enable*/
+    eeprom_temp[0] = 6;//WREN
+    digitalWrite( SPI_EEPROM1_CS , LOW );
+    spiSend(SPI_CHAN_EEPROM1 ,eeprom_temp , 1);
+    digitalWrite( SPI_EEPROM1_CS , HIGH );
+    _delay_ms(1);
 
-	Wire.beginTransmission(eeprom_device_address);
-	Wire.write((int)(eeprom_address >> 8));   // MSB
-	Wire.write((int)(eeprom_address & 0xFF)); // LSB
+    /*write addr*/
+    eeprom_temp[0] = 2;//WRITE
+    eeprom_temp[1] = ((pos>>8) & 0xFF);//addrH
+    eeprom_temp[2] = (pos& 0xFF);//addrL
+    digitalWrite( SPI_EEPROM1_CS , LOW );
+    spiSend(SPI_CHAN_EEPROM1 ,eeprom_temp , 3);        
+
+    spiSend(SPI_CHAN_EEPROM1 ,newvalue , 1);
+    digitalWrite( SPI_EEPROM1_CS , HIGH );
+    _delay_ms(7);   // wait for page write to complete
+  }
+
+  // Read any data type from EEPROM that was previously written by eprBurnValue
+  static uint8_t eprGetValue(unsigned int pos) {
+    int i = 0;
+    uint8_t v;
+    uint8_t eeprom_temp[3];
+    // set read location
+    // begin transmission from device
+
+    eeprom_temp[0] = 3;//READ
+    eeprom_temp[1] = ((pos>>8) & 0xFF);//addrH
+    eeprom_temp[2] = (pos& 0xFF);//addrL
+    digitalWrite( SPI_EEPROM1_CS , HIGH );
+    digitalWrite( SPI_EEPROM1_CS , LOW );
+    spiSend(SPI_CHAN_EEPROM1 ,eeprom_temp , 3);
+
+    v = spiReceive(SPI_CHAN_EEPROM1); 
+    digitalWrite( SPI_EEPROM1_CS , HIGH );
+    return v;
+}
+
+#endif
+
+void eeprom_write_byte(unsigned char *pos, unsigned char value) {
+  #if (MOTHERBOARD==500) || (MOTHERBOARD==501)
+    eprBurnValue((unsigned) pos, 1, &value);
+  #else
+    
+unsigned eeprom_address = (unsigned) pos;
+    
+eeprom_init();
+    
+Wire.beginTransmission(eeprom_device_address);
+Wire.write((int)(eeprom_address > 8));   // MSB
+Wire.write((int)(eeprom_address & 0xFF)); // LSB
     Wire.write(value);
-	Wire.endTransmission();
-
-	// wait for write cycle to complete
-	// this could be done more efficiently with "acknowledge polling"
-	delay(5);
+Wire.endTransmission();
+    
+// wait for write cycle to complete
+// this could be done more efficiently with "acknowledge polling"
+delay(5);
+#endif// (MOTHERBOARD==500) || (MOTHERBOARD==501)
 }
 
-unsigned char eeprom_read_byte(unsigned char *pos)
-{
-	byte data = 0xFF;
-	unsigned eeprom_address = (unsigned) pos;
+unsigned char eeprom_read_byte(unsigned char *pos) {
+  #if (MOTHERBOARD==500) || (MOTHERBOARD==501)
+      return eprGetValue((unsigned) pos);
+  #else
+    byte data = 0xFF;
+    unsigned eeprom_address = (unsigned) pos;
 
-	eeprom_init ();
+    eeprom_init ();
 
-	Wire.beginTransmission(eeprom_device_address);
-	Wire.write((int)(eeprom_address >> 8));   // MSB
-	Wire.write((int)(eeprom_address & 0xFF)); // LSB
-	Wire.endTransmission();
-	Wire.requestFrom(eeprom_device_address, (byte)1);
-	if (Wire.available())
-		data = Wire.read();
-	return data;
+    Wire.beginTransmission(eeprom_device_address);
+    Wire.write((int)(eeprom_address > 8));   // MSB
+    Wire.write((int)(eeprom_address & 0xFF)); // LSB
+    Wire.endTransmission();
+    Wire.requestFrom(eeprom_device_address, (byte)1);
+    if (Wire.available()) data = Wire.read();
+    return data;
+  #endif// (MOTHERBOARD==500) || (MOTHERBOARD==501)
 }
 
 // --------------------------------------------------------------------------

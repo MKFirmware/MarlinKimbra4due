@@ -90,22 +90,36 @@ static volatile bool endstop_z_hit = false;
   int motor_current_setting[3] = DEFAULT_PWM_MOTOR_CURRENT;
 #endif
 
-static bool old_x_min_endstop = false,
-            old_x_max_endstop = false,
-            old_y_min_endstop = false,
-            old_y_max_endstop = false,
-            old_z_min_endstop = false,
-            #ifndef Z_DUAL_ENDSTOPS
-              old_z_max_endstop = false;
-            #else
-              old_z_max_endstop = false,
-              old_z2_min_endstop = false,
-              old_z2_max_endstop = false;
-            #endif
+#if defined(X_MIN_PIN) && X_MIN_PIN >= 0
+  static bool old_x_min_endstop = false;
+#endif
+#if defined(X_MAX_PIN) && X_MAX_PIN >= 0
+  static bool old_x_max_endstop = false;
+#endif
+#if defined(Y_MIN_PIN) && Y_MIN_PIN >= 0
+  static bool old_y_min_endstop = false;
+#endif
+#if defined(Y_MAX_PIN) && Y_MAX_PIN >= 0
+  static bool old_y_max_endstop = false;
+#endif
+#if defined(Z_MIN_PIN) && Z_MIN_PIN >= 0
+  static bool old_z_min_endstop = false;
+#endif
+#if defined(Z_MAX_PIN) && Z_MAX_PIN >= 0
+  static bool old_z_max_endstop = false;
+#endif
+#ifdef Z_DUAL_ENDSTOPS
+  #if defined(Z2_MIN_PIN) && Z2_MIN_PIN >= 0
+    static bool old_z2_min_endstop = false;
+  #endif
+  #if defined(Z2_MAX_PIN) && Z2_MAX_PIN >= 0
+    static bool old_z2_max_endstop = false;
+  #endif
+#endif
 
 static bool check_endstops = true;
 
-volatile long count_position[NUM_AXIS] = { 0, 0, 0, 0 };
+volatile long count_position[NUM_AXIS] = { 0 };
 volatile signed char count_direction[NUM_AXIS] = { 1, 1, 1, 1 };
 
 
@@ -160,7 +174,7 @@ volatile signed char count_direction[NUM_AXIS] = { 1, 1, 1, 1 };
       Z2_STEP_WRITE(v); \
     }
   #else
-    #define Z_APPLY_STEP(v,Q) Z_STEP_WRITE(v), Z2_STEP_WRITE(v)
+    #define Z_APPLY_STEP(v,Q) { Z_STEP_WRITE(v); Z2_STEP_WRITE(v); }
   #endif
 #else
   #define Z_APPLY_DIR(v,Q) Z_DIR_WRITE(v)
@@ -267,7 +281,7 @@ FORCE_INLINE unsigned long calc_timer(unsigned long step_rate) {
     // timer = (unsigned short)pgm_read_word_near(table_address);
     // timer -= (((unsigned short)pgm_read_word_near(table_address+2) * (unsigned char)(step_rate & 0x0007))>>3);
   }
-  if(timer < 100) { timer = 100; MYSERIAL.print(MSG_STEPPER_TOO_HIGH); MYSERIAL.println(step_rate); }//(420kHz this should never happen)
+  if (timer < 100) { timer = 100; MYSERIAL.print(MSG_STEPPER_TOO_HIGH); MYSERIAL.println(step_rate); }//(420kHz this should never happen)
   return timer;
 }
 
@@ -328,7 +342,7 @@ HAL_STEP_TIMER_ISR {
       step_events_completed = 0;
 
       #ifdef Z_LATE_ENABLE
-        if (current_block->steps_z > 0) {
+        if (current_block->steps[Z_AXIS] > 0) {
           enable_z();
           HAL_timer_set_count (STEP_TIMER_NUM, HAL_TIMER_RATE / 1000); //1ms wait
           return;
@@ -381,7 +395,7 @@ HAL_STEP_TIMER_ISR {
       #ifdef COREXY
         // Head direction in -X axis for CoreXY bots.
         // If DeltaX == -DeltaY, the movement is only in Y axis
-        if (current_block->steps[A_AXIS] != current_block->steps[B_AXIS] || (TEST(out_bits, A_AXIS) == TEST(out_bits, B_AXIS)))
+        if ((current_block->steps[A_AXIS] != current_block->steps[B_AXIS]) || (TEST(out_bits, A_AXIS) == TEST(out_bits, B_AXIS))) {
           if (TEST(out_bits, X_HEAD))
       #else
           if (TEST(out_bits, X_AXIS))   // stepping along -X axis (regular cartesians bot)
@@ -400,7 +414,7 @@ HAL_STEP_TIMER_ISR {
           else { // +direction
             #ifdef DUAL_X_CARRIAGE
               // with 2 x-carriages, endstops are only checked in the homing direction for the active extruder
-              if ((current_block->active_driver == 0 && X_HOME_DIR == 1) || (current_block->active_driver != 0 && X2_HOME_DIR == 1))
+              if ((current_block->active_extruder == 0 && X_HOME_DIR == 1) || (current_block->active_extruder != 0 && X2_HOME_DIR == 1))
             #endif
               {
                 #if defined(X_MAX_PIN) && X_MAX_PIN >= 0
@@ -409,9 +423,10 @@ HAL_STEP_TIMER_ISR {
               }
           }
       #ifdef COREXY
+        }
         // Head direction in -Y axis for CoreXY bots.
         // If DeltaX == DeltaY, the movement is only in X axis
-        if (current_block->steps[A_AXIS] != current_block->steps[B_AXIS] || (TEST(out_bits, A_AXIS) != TEST(out_bits, B_AXIS)))
+        if ((current_block->steps[A_AXIS] != current_block->steps[B_AXIS]) || (TEST(out_bits, A_AXIS) != TEST(out_bits, B_AXIS))) {
           if (TEST(out_bits, Y_HEAD))
       #else
           if (TEST(out_bits, Y_AXIS))   // -direction
@@ -426,6 +441,9 @@ HAL_STEP_TIMER_ISR {
               UPDATE_ENDSTOP(y, Y, max, MAX);
             #endif
           }
+      #ifdef COREXY
+        }
+      #endif
     }
 
     if (TEST(out_bits, Z_AXIS)) {   // -direction
@@ -524,7 +542,7 @@ HAL_STEP_TIMER_ISR {
         counter_e += current_block->steps[E_AXIS];
         if (counter_e > 0) {
           counter_e -= current_block->step_event_count;
-          e_steps[current_block->active_driver] += TEST(out_bits, E_AXIS) ? -1 : 1;
+          e_steps[current_block->active_extruder] += TEST(out_bits, E_AXIS) ? -1 : 1;
         }
       #endif //ADVANCE
 
@@ -846,6 +864,13 @@ void st_init() {
     #endif
   #endif
 
+  #if defined(E_MIN_PIN) && E_MIN_PIN >= 0
+    SET_INPUT(E_MIN_PIN);
+    #ifdef ENDSTOPPULLUP_EMIN
+      WRITE(E_MIN_PIN,HIGH);
+    #endif
+  #endif
+
   #if defined(X_MAX_PIN) && X_MAX_PIN >= 0
     SET_INPUT(X_MAX_PIN);
     #ifdef ENDSTOPPULLUP_XMAX
@@ -1142,8 +1167,6 @@ void digipot_current(uint8_t driver, int current) {
 }
 
 void microstep_init() {
-  const uint8_t microstep_modes[] = MICROSTEP_MODES;
-
   #if defined(E1_MS1_PIN) && E1_MS1_PIN >= 0
     pinMode(E1_MS1_PIN,OUTPUT);
     pinMode(E1_MS2_PIN,OUTPUT); 
@@ -1158,7 +1181,9 @@ void microstep_init() {
     pinMode(Z_MS2_PIN,OUTPUT);
     pinMode(E0_MS1_PIN,OUTPUT);
     pinMode(E0_MS2_PIN,OUTPUT);
-    for (int i = 0; i <= 4; i++) microstep_mode(i, microstep_modes[i]);
+    const uint8_t microstep_modes[] = MICROSTEP_MODES;
+    for (uint16_t i = 0; i < sizeof(microstep_modes) / sizeof(microstep_modes[0]); i++)
+      microstep_mode(i, microstep_modes[i]);
   #endif
 }
 

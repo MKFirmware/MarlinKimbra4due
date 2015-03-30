@@ -10,6 +10,7 @@
   * Now only 1 extruder
   * Servo not tested
   * EEprom not tested
+  * LCD not tested
 
 ---
 # MarlinKimbra4due 3D Printer Firmware
@@ -22,6 +23,8 @@
     * [Auto Bed Leveling](/Documentation/BedLeveling.md)
     * [Filament Sensor](/Documentation/FilamentSensor.md)
     * [Ramps Servo Power](/Documentation/RampsServoPower.md)
+    * [LCD Language - Font - System](Documentation/LCDLanguageFont.md)
+
 
 
 ## Quick Information
