@@ -887,7 +887,7 @@ float junction_deviation = 0.1;
  
   block->acceleration_st = acc_st;
   block->acceleration = acc_st / steps_per_mm;
-  block->acceleration_rate = (long)(acc_st * 16777216.0 / (F_CPU / 8.0));
+  block->acceleration_rate = (long)(acc_st * ( 16777216.0 / HAL_TIMER_RATE));
 
   #if 0  // Use old jerk for now
     // Compute path unit vector

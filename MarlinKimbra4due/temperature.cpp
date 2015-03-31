@@ -82,13 +82,18 @@ unsigned char soft_pwm_bed;
 
 #if HAS_FILAMENT_SENSOR
   int current_raw_filwidth = 0;  //Holds measured filament diameter - one extruder only
-#endif  
-#if defined (THERMAL_RUNAWAY_PROTECTION_PERIOD) && THERMAL_RUNAWAY_PROTECTION_PERIOD > 0
-  void thermal_runaway_protection(int *state, unsigned long *timer, float temperature, float target_temperature, int heater_id, int period_seconds, int hysteresis_degc);
-  static int thermal_runaway_state_machine[4]; // = {0,0,0,0};
-  static unsigned long thermal_runaway_timer[4]; // = {0,0,0,0};
+#endif
+
+#define HAS_HEATER_THERMAL_PROTECTION (defined(THERMAL_RUNAWAY_PROTECTION_PERIOD) && THERMAL_RUNAWAY_PROTECTION_PERIOD > 0)
+#define HAS_BED_THERMAL_PROTECTION (defined(THERMAL_RUNAWAY_PROTECTION_BED_PERIOD) && THERMAL_RUNAWAY_PROTECTION_BED_PERIOD > 0 && TEMP_SENSOR_BED != 0)
+#if HAS_HEATER_THERMAL_PROTECTION || HAS_BED_THERMAL_PROTECTION
   static bool thermal_runaway = false;
-  #if TEMP_SENSOR_BED != 0
+  void thermal_runaway_protection(int *state, unsigned long *timer, float temperature, float target_temperature, int heater_id, int period_seconds, int hysteresis_degc);
+  #if HAS_HEATER_THERMAL_PROTECTION
+    static int thermal_runaway_state_machine[4]; // = {0,0,0,0};
+    static unsigned long thermal_runaway_timer[4]; // = {0,0,0,0};
+  #endif
+  #if HAS_BED_THERMAL_PROTECTION
     static int thermal_runaway_bed_state_machine;
     static unsigned long thermal_runaway_bed_timer;
   #endif
@@ -643,7 +648,7 @@ void manage_heater() {
 
   #if TEMP_SENSOR_BED != 0
   
-    #if defined(THERMAL_RUNAWAY_PROTECTION_BED_PERIOD) && THERMAL_RUNAWAY_PROTECTION_BED_PERIOD > 0
+    #if HAS_BED_THERMAL_PROTECTION
       thermal_runaway_protection(&thermal_runaway_bed_state_machine, &thermal_runaway_bed_timer, current_temperature_bed, target_temperature_bed, 9, THERMAL_RUNAWAY_PROTECTION_BED_PERIOD, THERMAL_RUNAWAY_PROTECTION_BED_HYSTERESIS);
     #endif
 
@@ -987,7 +992,7 @@ void setWatch() {
   #endif
 }
 
-#if defined(THERMAL_RUNAWAY_PROTECTION_PERIOD) && THERMAL_RUNAWAY_PROTECTION_PERIOD > 0
+#if HAS_HEATER_THERMAL_PROTECTION || HAS_BED_THERMAL_PROTECTION
 void thermal_runaway_protection(int *state, unsigned long *timer, float temperature, float target_temperature, int heater_id, int period_seconds, int hysteresis_degc)
 {
 /*
@@ -1202,7 +1207,6 @@ HAL_TEMP_TIMER_ISR {
   static unsigned char temp_count = 0;
   static TempState temp_state = StartupDelay;
   static unsigned char pwm_count = BIT(SOFT_PWM_SCALE);
-
   static int max_temp[5] = { 0 };
   static int min_temp[5] = { 123000 };
   static int temp_read = 0;
@@ -1232,7 +1236,6 @@ HAL_TEMP_TIMER_ISR {
       #endif
     #endif
   #endif
-
   #if HAS_HEATER_BED
     ISR_STATICS(BED);
   #endif
@@ -1378,7 +1381,6 @@ HAL_TEMP_TIMER_ISR {
         #endif
       #endif
     #endif
-
     #if HAS_HEATER_BED
       PWM_OFF_ROUTINE(BED); // BED
     #endif
@@ -1410,7 +1412,6 @@ HAL_TEMP_TIMER_ISR {
           #endif
         #endif
       #endif
-
       #if HAS_HEATER_BED
         if (state_timer_heater_BED > 0) state_timer_heater_BED--;
       #endif
@@ -1430,7 +1431,9 @@ HAL_TEMP_TIMER_ISR {
     
   switch(temp_state) {
     case PrepareTemp_0:
-      
+      #if HAS_TEMP_0
+      // nothing todo for Due
+      #endif
       lcd_buttons_update();
       temp_state = MeasureTemp_0;
       break;
@@ -1440,7 +1443,11 @@ HAL_TEMP_TIMER_ISR {
       #endif
       temp_state = PrepareTemp_BED;
       break;
+
     case PrepareTemp_BED:
+      #if HAS_TEMP_BED
+      // nothing todo for Due
+      #endif
       lcd_buttons_update();
       temp_state = MeasureTemp_BED;
       break;
@@ -1450,7 +1457,11 @@ HAL_TEMP_TIMER_ISR {
       #endif
       temp_state = PrepareTemp_1;
       break;
+
     case PrepareTemp_1:
+      #if HAS_TEMP_1
+      // nothing todo for Due
+      #endif
       lcd_buttons_update();
       temp_state = MeasureTemp_1;
       break;
@@ -1460,7 +1471,11 @@ HAL_TEMP_TIMER_ISR {
       #endif
       temp_state = PrepareTemp_2;
       break;
+
     case PrepareTemp_2:
+      #if HAS_TEMP_2
+      // nothing todo for Due
+      #endif
       lcd_buttons_update();
       temp_state = MeasureTemp_2;
       break;
@@ -1470,7 +1485,11 @@ HAL_TEMP_TIMER_ISR {
       #endif
       temp_state = PrepareTemp_3;
       break;
+
     case PrepareTemp_3:
+      #if HAS_TEMP_3
+      // nothing todo for Due
+      #endif
       lcd_buttons_update();
       temp_state = MeasureTemp_3;
       break;
@@ -1480,7 +1499,11 @@ HAL_TEMP_TIMER_ISR {
       #endif
       temp_state = Prepare_FILWIDTH;
       break;
+
     case Prepare_FILWIDTH:
+      #if HAS_FILAMENT_SENSOR
+      // nothing todo for Due
+      #endif
       lcd_buttons_update();
       temp_state = Measure_FILWIDTH;
       break;
@@ -1496,6 +1519,9 @@ HAL_TEMP_TIMER_ISR {
       break;
 
     case Prepare_POWCONSUMPTION:
+      #if HAS_POWER_CONSUMPTION_SENSOR
+      // nothing todo for Due
+      #endif
       lcd_buttons_update();
       temp_state = Measure_POWCONSUMPTION;
       break;
@@ -1520,41 +1546,40 @@ HAL_TEMP_TIMER_ISR {
     //   SERIAL_ERRORLNPGM("Temp measurement error!");
     //   break;
   } // switch(temp_state)
-  
+
   #define SET_CURRENT_TEMP_RAW(temp_id) raw_median_temp[temp_id][median_counter] = (raw_temp_value[temp_id] - (min_temp[temp_id] + max_temp[temp_id])); \
     sum = 0; \
-	  for(int i = 0; i < MEDIAN_COUNT; i++) sum += raw_median_temp[temp_id][i]; \
+    for(int i = 0; i < MEDIAN_COUNT; i++) sum += raw_median_temp[temp_id][i]; \
     current_temperature_raw[temp_id] = (sum / MEDIAN_COUNT + 4) >> 2
       
   #define SET_CURRENT_BED_RAW(temp_id) raw_median_temp[temp_id][median_counter] = (raw_temp_bed_value - (min_temp[temp_id] + max_temp[temp_id])); \
     sum = 0; \
-	  for(int i = 0; i < MEDIAN_COUNT; i++) sum += raw_median_temp[temp_id][i]; \
+    for(int i = 0; i < MEDIAN_COUNT; i++) sum += raw_median_temp[temp_id][i]; \
     current_temperature_bed_raw = (sum / MEDIAN_COUNT + 4) >> 2
     
   #define SET_REDUNDANT_RAW(temp_id) raw_median_temp[temp_id][median_counter] = (raw_temp_bed_value - (min_temp[temp_id] + max_temp[temp_id])); \
     sum = 0; \
-	  for(int i = 0; i < MEDIAN_COUNT; i++) sum += raw_median_temp[temp_id][i]; \
+    for(int i = 0; i < MEDIAN_COUNT; i++) sum += raw_median_temp[temp_id][i]; \
     redundant_temperature_raw = (sum / MEDIAN_COUNT + 4) >> 2
   
   if(temp_count >= OVERSAMPLENR + 2) // 12 * 16 * 1/(16000000/64/256)  = 164ms.
   {
-    if (!temp_meas_ready) //Only update the raw values if they have been read. Else we could be updating them during reading.
-    {
-  	  unsigned long sum = 0;
+    if (!temp_meas_ready) { //Only update the raw values if they have been read. Else we could be updating them during reading.
+      unsigned long sum = 0;
       #ifndef HEATER_0_USES_MAX6675
         SET_CURRENT_TEMP_RAW(0);
       #endif
       #if HOTENDS > 1
         SET_CURRENT_TEMP_RAW(1);
+        #if HOTENDS > 2
+          SET_CURRENT_TEMP_RAW(2);
+          #if HOTENDS > 3
+            SET_CURRENT_TEMP_RAW(3);
+          #endif
+        #endif
       #endif
       #ifdef TEMP_SENSOR_1_AS_REDUNDANT
         SET_REDUNDANT_RAW(1);
-      #endif
-      #if HOTENDS > 2
-        SET_CURRENT_TEMP_RAW(2);
-      #endif
-      #if HOTENDS > 3
-        SET_CURRENT_TEMP_RAW(3);
       #endif
       SET_CURRENT_BED_RAW(4);
       
@@ -1563,8 +1588,7 @@ HAL_TEMP_TIMER_ISR {
         max_temp[i] = 0;
         min_temp[i] = 123000;
       }
-      
-    }
+    } //!temp_meas_ready
 
     // Filament Sensor - can be read any time since IIR filtering is used
     #if HAS_FILAMENT_SENSOR
@@ -1574,6 +1598,7 @@ HAL_TEMP_TIMER_ISR {
     median_counter++;
     if (median_counter >= MEDIAN_COUNT) median_counter = 0;
 
+    temp_meas_ready = true;
     temp_count = 0;
     for (int i = 0; i < 4; i++) raw_temp_value[i] = 0;
     raw_temp_bed_value = 0;

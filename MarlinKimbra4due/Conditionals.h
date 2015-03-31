@@ -47,6 +47,14 @@
     #define NEWPANEL
   #endif
 
+  #if defined(RADDS_DISPLAY)
+    #define ENCODER_PULSES_PER_STEP 2
+    #define ENCODER_STEPS_PER_MENU_ITEM 1
+  
+    #define ULTIPANEL
+    #define NEWPANEL
+  #endif
+
   #ifdef REPRAPWORLD_KEYPAD
     #define ULTIPANEL
     #define NEWPANEL
@@ -159,6 +167,27 @@
 
   #define CONDITIONALS_H
 
+  #if (ARDUINO >= 100)
+    #include "Arduino.h"
+  #else
+    #include "WProgram.h"
+  #endif
+
+  #include "pins.h"
+
+  /**
+   * ENDSTOPPULLUPS
+   */
+  #ifdef ENDSTOPPULLUPS
+    #define ENDSTOPPULLUP_XMAX
+    #define ENDSTOPPULLUP_YMAX
+    #define ENDSTOPPULLUP_ZMAX
+    #define ENDSTOPPULLUP_XMIN
+    #define ENDSTOPPULLUP_YMIN
+    #define ENDSTOPPULLUP_ZMIN
+    #define ENDSTOPPULLUP_EMIN
+  #endif
+
   /**
    * Firmware Test
    */
@@ -183,8 +212,6 @@
   #if !defined(MKR4) && !defined(NPR2)
     #define DRIVER_EXTRUDERS EXTRUDERS // This defines the number of Driver extruder
   #endif
-
-  #include "pins.h"
 
   /**
    * Axis lengths
@@ -251,7 +278,7 @@
     #define DOUBLE_STEP_FREQUENCY 10000
   #else
     #define MAX_STEP_FREQUENCY 320000
-    #define DOUBLE_STEP_FREQUENCY 96000  //96kHz is close to maximum for an Arduino Due
+    #define DOUBLE_STEP_FREQUENCY 90000  //96kHz is close to maximum for an Arduino Due
   #endif
 
   // MS1 MS2 Stepper Driver Microstepping mode table
@@ -275,7 +302,7 @@
   #endif
 
   #ifdef ULTIPANEL
-   #undef SDCARDDETECTINVERTED
+    #undef SDCARDDETECTINVERTED
   #endif
 
   // Power Signal Control Definitions
@@ -283,16 +310,14 @@
   #ifndef POWER_SUPPLY
     #define POWER_SUPPLY 0
   #endif
-  // 0 = Normal - 1 = ATX
-  #if (POWER_SUPPLY <= 1)
+  #if (POWER_SUPPLY == 1)     // 1 = ATX
     #define PS_ON_AWAKE  LOW
     #define PS_ON_ASLEEP HIGH
-  #endif
-  // 2 = X-Box 360 203W
-  #if (POWER_SUPPLY == 2)
+  #elif (POWER_SUPPLY == 2)   // 2 = X-Box 360 203W
     #define PS_ON_AWAKE  HIGH
     #define PS_ON_ASLEEP LOW
   #endif
+  #define HAS_POWER_SWITCH (POWER_SUPPLY > 0 && defined(PS_ON_PIN) && PS_ON_PIN >= 0)
 
   /**
    * Temp Sensor defines

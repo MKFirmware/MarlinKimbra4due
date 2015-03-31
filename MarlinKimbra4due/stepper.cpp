@@ -324,7 +324,9 @@ HAL_STEP_TIMER_ISR {
   {
     current_block = NULL;
     plan_discard_current_block();
-    if ((cleaning_buffer_counter == 1) && (SD_FINISHED_STEPPERRELEASE)) enquecommands_P(PSTR(SD_FINISHED_RELEASECOMMAND));
+    #ifdef SD_FINISHED_RELEASECOMMAND
+      if ((cleaning_buffer_counter == 1) && (SD_FINISHED_STEPPERRELEASE)) enquecommands_P(PSTR(SD_FINISHED_RELEASECOMMAND));
+    #endif
     cleaning_buffer_counter--;
     HAL_timer_set_count (STEP_TIMER_NUM, HAL_TIMER_RATE / 200); //5ms wait
     return;
@@ -447,74 +449,98 @@ HAL_STEP_TIMER_ISR {
     }
 
     if (TEST(out_bits, Z_AXIS)) {   // -direction
+
       Z_APPLY_DIR(INVERT_Z_DIR,0);
       count_direction[Z_AXIS] = -1;
-      if (check_endstops) 
-      {
-        #if defined(Z_MIN_PIN) && Z_MIN_PIN > -1
-          #ifndef Z_DUAL_ENDSTOPS
-            UPDATE_ENDSTOP(z, Z, min, MIN);
-          #else
-            bool z_min_endstop=(READ(Z_MIN_PIN) != Z_MIN_ENDSTOP_INVERTING);
-            #if defined(Z2_MIN_PIN) && Z2_MIN_PIN > -1
-              bool z2_min_endstop=(READ(Z2_MIN_PIN) != Z2_MIN_ENDSTOP_INVERTING);
-            #else
-              bool z2_min_endstop=z_min_endstop;
-            #endif
-            if(((z_min_endstop && old_z_min_endstop) || (z2_min_endstop && old_z2_min_endstop)) && (current_block->steps[Z_AXIS] > 0))
-            {
+
+      if (check_endstops) {
+
+        #if defined(Z_MIN_PIN) && Z_MIN_PIN >= 0
+
+          #ifdef Z_DUAL_ENDSTOPS
+
+            bool z_min_endstop = READ(Z_MIN_PIN) != Z_MIN_ENDSTOP_INVERTING,
+                z2_min_endstop =
+                  #if defined(Z2_MIN_PIN) && Z2_MIN_PIN >= 0
+                    READ(Z2_MIN_PIN) != Z2_MIN_ENDSTOP_INVERTING
+                  #else
+                    z_min_endstop
+                  #endif
+                ;
+
+            bool z_min_both = z_min_endstop && old_z_min_endstop,
+                z2_min_both = z2_min_endstop && old_z2_min_endstop;
+            if ((z_min_both || z2_min_both) && current_block->steps[Z_AXIS] > 0) {
               endstops_trigsteps[Z_AXIS] = count_position[Z_AXIS];
-              endstop_z_hit=true;
-              if (!(performing_homing) || ((performing_homing)&&(z_min_endstop && old_z_min_endstop)&&(z2_min_endstop && old_z2_min_endstop))) //if not performing home or if both endstops were trigged during homing...
-              {
+              endstop_z_hit = true;
+              if (!performing_homing || (performing_homing && z_min_both && z2_min_both)) //if not performing home or if both endstops were trigged during homing...
                 step_events_completed = current_block->step_event_count;
-              } 
             }
             old_z_min_endstop = z_min_endstop;
             old_z2_min_endstop = z2_min_endstop;
-          #endif
-        #endif
-      }
+
+          #else // !Z_DUAL_ENDSTOPS
+
+            UPDATE_ENDSTOP(z, Z, min, MIN);
+
+          #endif // !Z_DUAL_ENDSTOPS
+
+        #endif // Z_MIN_PIN
+
+      } // check_endstops
+
     }
     else { // +direction
+
       Z_APPLY_DIR(!INVERT_Z_DIR,0);
       count_direction[Z_AXIS] = 1;
+
       if (check_endstops) {
+
         #if defined(Z_MAX_PIN) && Z_MAX_PIN >= 0
-          #ifndef Z_DUAL_ENDSTOPS
-            UPDATE_ENDSTOP(z, Z, max, MAX);
-          #else
-            bool z_max_endstop=(READ(Z_MAX_PIN) != Z_MAX_ENDSTOP_INVERTING);
-            #if defined(Z2_MAX_PIN) && Z2_MAX_PIN > -1
-              bool z2_max_endstop=(READ(Z2_MAX_PIN) != Z2_MAX_ENDSTOP_INVERTING);
-            #else
-              bool z2_max_endstop=z_max_endstop;
-            #endif
-            if(((z_max_endstop && old_z_max_endstop) || (z2_max_endstop && old_z2_max_endstop)) && (current_block->steps[Z_AXIS] > 0))
-            {
+
+          #ifdef Z_DUAL_ENDSTOPS
+
+            bool z_max_endstop = READ(Z_MAX_PIN) != Z_MAX_ENDSTOP_INVERTING,
+                z2_max_endstop =
+                  #if defined(Z2_MAX_PIN) && Z2_MAX_PIN >= 0
+                    READ(Z2_MAX_PIN) != Z2_MAX_ENDSTOP_INVERTING
+                  #else
+                    z_max_endstop
+                  #endif
+                ;
+
+            bool z_max_both = z_max_endstop && old_z_max_endstop,
+                z2_max_both = z2_max_endstop && old_z2_max_endstop;
+            if ((z_max_both || z2_max_both) && current_block->steps[Z_AXIS] > 0) {
               endstops_trigsteps[Z_AXIS] = count_position[Z_AXIS];
-              endstop_z_hit=true;
+              endstop_z_hit = true;
 
-//              if (z_max_endstop && old_z_max_endstop) SERIAL_ECHOLN("z_max_endstop = true");
-//              if (z2_max_endstop && old_z2_max_endstop) SERIAL_ECHOLN("z2_max_endstop = true");
+             // if (z_max_both) SERIAL_ECHOLN("z_max_endstop = true");
+             // if (z2_max_both) SERIAL_ECHOLN("z2_max_endstop = true");
 
-            
-              if (!(performing_homing) || ((performing_homing)&&(z_max_endstop && old_z_max_endstop)&&(z2_max_endstop && old_z2_max_endstop))) //if not performing home or if both endstops were trigged during homing...
-              {
+              if (!performing_homing || (performing_homing && z_max_both && z2_max_both)) //if not performing home or if both endstops were trigged during homing...
                 step_events_completed = current_block->step_event_count;
-              } 
             }
             old_z_max_endstop = z_max_endstop;
             old_z2_max_endstop = z2_max_endstop;
-          #endif
-        #endif
-      }
-    }
+
+          #else // !Z_DUAL_ENDSTOPS
+
+            UPDATE_ENDSTOP(z, Z, max, MAX);
+
+          #endif // !Z_DUAL_ENDSTOPS
+
+        #endif // Z_MAX_PIN
+
+      } // check_endstops
+
+    } // +direction
 
     #ifndef ADVANCE
       if (TEST(out_bits, E_AXIS)) {  // -direction
         REV_E_DIR();
-        count_direction[E_AXIS]=-1;
+        count_direction[E_AXIS] = -1;
 	      #ifdef NPR2
           if (check_endstops) {
             #if defined(E_MIN_PIN) && E_MIN_PIN > -1
@@ -531,7 +557,7 @@ HAL_STEP_TIMER_ISR {
       }
       else { // +direction
         NORM_E_DIR();
-        count_direction[E_AXIS]=1;
+        count_direction[E_AXIS] = 1;
       }
     #endif //!ADVANCE
 
@@ -1048,7 +1074,7 @@ void quickStop() {
         uint8_t old_pin = AXIS ##_DIR_READ; \
         AXIS ##_APPLY_DIR(INVERT_## AXIS ##_DIR^direction^INVERT, true); \
         AXIS ##_APPLY_STEP(!INVERT_## AXIS ##_STEP_PIN, true); \
-        delayMicroseconds(1U); \
+        _delay_us(1U); \
         AXIS ##_APPLY_STEP(INVERT_## AXIS ##_STEP_PIN, true); \
         AXIS ##_APPLY_DIR(old_pin, true); \
       }
@@ -1087,9 +1113,7 @@ void quickStop() {
           X_STEP_WRITE(!INVERT_X_STEP_PIN);
           Y_STEP_WRITE(!INVERT_Y_STEP_PIN);
           Z_STEP_WRITE(!INVERT_Z_STEP_PIN);
-
-          delayMicroseconds(1U); // wait 1 microsecond
-
+          _delay_us(1U);
           X_STEP_WRITE(INVERT_X_STEP_PIN); 
           Y_STEP_WRITE(INVERT_Y_STEP_PIN); 
           Z_STEP_WRITE(INVERT_Z_STEP_PIN);
@@ -1142,7 +1166,6 @@ void digipot_init() {
     TCCR5B = (TCCR5B & ~(_BV(CS50) | _BV(CS51) | _BV(CS52))) | _BV(CS50);
   #endif
   #if MB(ALLIGATOR)
-    ExternalDac::begin(); //initialize ExternalDac
     const float digipot_motor_current[] = DIGIPOT_MOTOR_CURRENT;
     unsigned int digipot_motor = 0;
     for (uint8_t i = 0; i < 4; i++) {
