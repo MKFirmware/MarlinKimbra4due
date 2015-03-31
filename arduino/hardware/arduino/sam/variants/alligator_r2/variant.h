@@ -24,10 +24,10 @@
  *----------------------------------------------------------------------------*/
 
 /** Frequency of the board main oscillator */
-#define VARIANT_MAINOSC     12000000
+#define VARIANT_MAINOSC		12000000
 
 /** Master clock frequency */
-#define VARIANT_MCK         84000000
+#define VARIANT_MCK			84000000
 
 /*----------------------------------------------------------------------------
  *        Headers
@@ -61,24 +61,40 @@ extern "C"{
 
 #define digitalPinToPort(P)        ( g_APinDescription[P].pPort )
 #define digitalPinToBitMask(P)     ( g_APinDescription[P].ulPin )
-//#define digitalPinToTimer(P)       (  )
 //#define analogInPinToBit(P)        ( )
 #define portOutputRegister(port)   ( &(port->PIO_ODSR) )
 #define portInputRegister(port)    ( &(port->PIO_PDSR) )
-//#define portModeRegister(P)        (  )
 #define digitalPinHasPWM(P)        ( g_APinDescription[P].ulPWMChannel != NOT_ON_PWM || g_APinDescription[P].ulTCChannel != NOT_ON_TIMER )
+
+/*
+ * portModeRegister(..) should return a register to set pin mode
+ * INPUT or OUTPUT by setting the corresponding bit to 0 or 1.
+ * Unfortunately on SAM architecture the PIO_OSR register is
+ * read-only and can be set only through the enable/disable registers
+ * pair PIO_OER/PIO_ODR.
+ */
+// #define portModeRegister(port)   ( &(port->PIO_OSR) )
+
+/*
+ * digitalPinToTimer(..) is AVR-specific and is not defined for SAM
+ * architecture. If you need to check if a pin supports PWM you must
+ * use digitalPinHasPWM(..).
+ *
+ * https://github.com/arduino/Arduino/issues/1833
+ */
+// #define digitalPinToTimer(P)
 
 // Interrupts
 #define digitalPinToInterrupt(p)  ((p) < NUM_DIGITAL_PINS ? (p) : -1)
 
 // LEDs
-#define PIN_LED_13           (36u)
+#define PIN_LED_13           (13u)
 #define PIN_LED_RXL          (72u)
 #define PIN_LED_TXL          (73u)
 #define PIN_LED              PIN_LED_13
 #define PIN_LED2             PIN_LED_RXL
 #define PIN_LED3             PIN_LED_TXL
-#define LED_BUILTIN          36
+#define LED_BUILTIN          13
 
 /*
  * SPI Interfaces
@@ -102,13 +118,13 @@ extern "C"{
 #define BOARD_SPI_DEFAULT_SS BOARD_SPI_SS3
 
 #define BOARD_PIN_TO_SPI_PIN(x) \
-    (x==BOARD_SPI_SS0 ? PIN_SPI_SS0 : \
-    (x==BOARD_SPI_SS1 ? PIN_SPI_SS1 : \
-    (x==BOARD_SPI_SS2 ? PIN_SPI_SS2 : PIN_SPI_SS3 )))
+	(x==BOARD_SPI_SS0 ? PIN_SPI_SS0 : \
+	(x==BOARD_SPI_SS1 ? PIN_SPI_SS1 : \
+	(x==BOARD_SPI_SS2 ? PIN_SPI_SS2 : PIN_SPI_SS3 )))
 #define BOARD_PIN_TO_SPI_CHANNEL(x) \
-    (x==BOARD_SPI_SS0 ? 0 : \
-    (x==BOARD_SPI_SS1 ? 1 : \
-    (x==BOARD_SPI_SS2 ? 2 : 3)))
+	(x==BOARD_SPI_SS0 ? 0 : \
+	(x==BOARD_SPI_SS1 ? 1 : \
+	(x==BOARD_SPI_SS2 ? 2 : 3)))
 
 static const uint8_t SS   = BOARD_SPI_SS0;
 static const uint8_t SS1  = BOARD_SPI_SS1;
@@ -171,40 +187,40 @@ static const uint8_t A10 = 64;
 static const uint8_t A11 = 65;
 static const uint8_t DAC0 = 66;
 static const uint8_t DAC1 = 67;
-//static const uint8_t CANRX = 68;
-//static const uint8_t CANTX = 69;
-#define ADC_RESOLUTION      12
+static const uint8_t CANRX = 68;
+static const uint8_t CANTX = 69;
+#define ADC_RESOLUTION		12
 
 /*
  * Complementary CAN pins
  */
-//static const uint8_t CAN1RX = 88;
-//static const uint8_t CAN1TX = 89;
+static const uint8_t CAN1RX = 88;
+static const uint8_t CAN1TX = 89;
 
 // CAN0
-//#define PINS_CAN0            (90u)
+#define PINS_CAN0            (90u)
 // CAN1
-//#define PINS_CAN1            (91u)
+#define PINS_CAN1            (91u)
 
 
 /*
  * DACC
  */
-#define DACC_INTERFACE      DACC
-#define DACC_INTERFACE_ID   ID_DACC
-#define DACC_RESOLUTION     12
+#define DACC_INTERFACE		DACC
+#define DACC_INTERFACE_ID	ID_DACC
+#define DACC_RESOLUTION		12
 #define DACC_ISR_HANDLER    DACC_Handler
 #define DACC_ISR_ID         DACC_IRQn
 
 /*
  * PWM
  */
-#define PWM_INTERFACE       PWM
-#define PWM_INTERFACE_ID    ID_PWM
-#define PWM_FREQUENCY       1000
-#define PWM_MAX_DUTY_CYCLE  255
-#define PWM_MIN_DUTY_CYCLE  0
-#define PWM_RESOLUTION      8
+#define PWM_INTERFACE		PWM
+#define PWM_INTERFACE_ID	ID_PWM
+#define PWM_FREQUENCY		1000
+#define PWM_MAX_DUTY_CYCLE	255
+#define PWM_MIN_DUTY_CYCLE	0
+#define PWM_RESOLUTION		8
 
 /*
  * TC
@@ -214,7 +230,7 @@ static const uint8_t DAC1 = 67;
 #define TC_FREQUENCY        1000
 #define TC_MAX_DUTY_CYCLE   255
 #define TC_MIN_DUTY_CYCLE   0
-#define TC_RESOLUTION       8
+#define TC_RESOLUTION		8
 
 #ifdef __cplusplus
 }
