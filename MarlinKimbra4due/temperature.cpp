@@ -1531,7 +1531,11 @@ HAL_TEMP_TIMER_ISR {
 
     case StartupDelay:
       temp_state = PrepareTemp_0;
+<<<<<<< HEAD
       analogReadResolution(12); // Set 
+=======
+      analogReadResolution(12); //  ADC need some rework
+>>>>>>> origin/master
       break;
 
     // default:
