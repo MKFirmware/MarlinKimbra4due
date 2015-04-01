@@ -419,7 +419,7 @@ void checkExtruderAutoFans()
         fanState |= 8;
     }
   #endif
-  
+
   // update extruder auto fan states
   #if HAS_AUTO_FAN_0
     setExtruderAutoFanState(EXTRUDER_0_AUTO_FAN_PIN, (fanState & 1) != 0);
@@ -1068,9 +1068,7 @@ void disable_heater() {
   }
 
   #if HAS_TEMP_0
-    target_temperature[0] = 0;
-    soft_pwm[0] = 0;
-    WRITE_HEATER_0P(LOW); // Should HEATERS_PARALLEL apply here? Then change to DISABLE_HEATER(0)
+    DISABLE_HEATER(0);
   #endif
 
   #if HOTENDS > 1 && HAS_TEMP_1
@@ -1538,7 +1536,7 @@ HAL_TEMP_TIMER_ISR {
 
     case StartupDelay:
       temp_state = PrepareTemp_0;
-      analogReadResolution(14); //  ADC need some rework
+      analogReadResolution(12); //  ADC need some rework
       break;
 
     // default:
