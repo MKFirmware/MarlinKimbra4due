@@ -419,7 +419,7 @@ void checkExtruderAutoFans()
         fanState |= 8;
     }
   #endif
-  
+
   // update extruder auto fan states
   #if HAS_AUTO_FAN_0
     setExtruderAutoFanState(EXTRUDER_0_AUTO_FAN_PIN, (fanState & 1) != 0);
@@ -1068,9 +1068,7 @@ void disable_heater() {
   }
 
   #if HAS_TEMP_0
-    target_temperature[0] = 0;
-    soft_pwm[0] = 0;
-    WRITE_HEATER_0P(LOW); // Should HEATERS_PARALLEL apply here? Then change to DISABLE_HEATER(0)
+    DISABLE_HEATER(0);
   #endif
 
   #if HOTENDS > 1 && HAS_TEMP_1
@@ -1509,10 +1507,7 @@ HAL_TEMP_TIMER_ISR {
       break;
     case Measure_FILWIDTH:
       #if HAS_FILAMENT_SENSOR
-        // raw_filwidth_value += ADC;  //remove to use an IIR filter approach
-        if (ADC > 102) { //check that ADC is reading a voltage > 0.5 volts, otherwise don't take in the data.
-          raw_filwidth_value -= (raw_filwidth_value>>7);  //multiply raw_filwidth_value by 127/128
-          raw_filwidth_value += ((unsigned long)ADC<<7);  //add new ADC reading
+        raw_filwidth_value = analogRead (FILWIDTH_PIN);
         }
       #endif
       temp_state = Prepare_POWCONSUMPTION;
@@ -1527,9 +1522,7 @@ HAL_TEMP_TIMER_ISR {
       break;
     case Measure_POWCONSUMPTION:
       #if HAS_POWER_CONSUMPTION_SENSOR
-        if (ADC > 102) { //check that ADC is reading a voltage > 0.5 volts, otherwise don't take in the data.
-          raw_powconsumption_value -= (raw_powconsumption_value>>7);  //multiply raw_filwidth_value by 127/128
-          raw_powconsumption_value += ((unsigned long)ADC<<7);  //add new ADC reading
+        raw_powconsumption_value = analogRead(POWER_CONSUMPTION_PIN);
         }
       #endif
       temp_state = PrepareTemp_0;
@@ -1538,7 +1531,7 @@ HAL_TEMP_TIMER_ISR {
 
     case StartupDelay:
       temp_state = PrepareTemp_0;
-      analogReadResolution(14); //  ADC need some rework
+      analogReadResolution(12); // Set 
       break;
 
     // default:

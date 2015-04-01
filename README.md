@@ -3,14 +3,14 @@
 ### THIS IS A BETA VERSION
 
 ### New features are:
-* Steprates up to 50.000 steps/s
+* Steprates up to 320.000 steps/s
  
 ### known issues:
   * Watchdog doesn't work, don't activate it
   * Now only 1 extruder
   * Servo not tested
-  * EEprom not tested
   * LCD not tested
+  * SD not tested
 
 ---
 # MarlinKimbra4due 3D Printer Firmware

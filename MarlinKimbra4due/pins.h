@@ -598,6 +598,10 @@
   #define PAUSE_PIN           19
 #endif
 
+#ifdef FILAMENT_SENSOR
+  #define FILWIDTH_PIN          5   // ANALOG NUMBERING
+#endif
+  
 #ifdef POWER_CONSUMPTION
   #define POWER_CONSUMPTION_PIN 4   // ANALOG NUMBERING
 #endif
