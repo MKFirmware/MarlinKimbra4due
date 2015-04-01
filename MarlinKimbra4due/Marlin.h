@@ -232,6 +232,7 @@ void refresh_cmd_timeout(void);
   #define CRITICAL_SECTION_END    SREG = _sreg;
 #endif //CRITICAL_SECTION_START
 
+extern unsigned long baudrate;
 extern float homing_feedrate[];
 extern bool axis_relative_modes[];
 extern int feedmultiply;
