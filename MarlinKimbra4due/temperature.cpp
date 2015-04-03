@@ -82,18 +82,13 @@ unsigned char soft_pwm_bed;
 
 #if HAS_FILAMENT_SENSOR
   int current_raw_filwidth = 0;  //Holds measured filament diameter - one extruder only
-#endif
-
-#define HAS_HEATER_THERMAL_PROTECTION (defined(THERMAL_RUNAWAY_PROTECTION_PERIOD) && THERMAL_RUNAWAY_PROTECTION_PERIOD > 0)
-#define HAS_BED_THERMAL_PROTECTION (defined(THERMAL_RUNAWAY_PROTECTION_BED_PERIOD) && THERMAL_RUNAWAY_PROTECTION_BED_PERIOD > 0 && TEMP_SENSOR_BED != 0)
-#if HAS_HEATER_THERMAL_PROTECTION || HAS_BED_THERMAL_PROTECTION
-  static bool thermal_runaway = false;
+#endif  
+#if defined (THERMAL_RUNAWAY_PROTECTION_PERIOD) && THERMAL_RUNAWAY_PROTECTION_PERIOD > 0
   void thermal_runaway_protection(int *state, unsigned long *timer, float temperature, float target_temperature, int heater_id, int period_seconds, int hysteresis_degc);
-  #if HAS_HEATER_THERMAL_PROTECTION
-    static int thermal_runaway_state_machine[4]; // = {0,0,0,0};
-    static unsigned long thermal_runaway_timer[4]; // = {0,0,0,0};
-  #endif
-  #if HAS_BED_THERMAL_PROTECTION
+  static int thermal_runaway_state_machine[4]; // = {0,0,0,0};
+  static unsigned long thermal_runaway_timer[4]; // = {0,0,0,0};
+  static bool thermal_runaway = false;
+  #if TEMP_SENSOR_BED != 0
     static int thermal_runaway_bed_state_machine;
     static unsigned long thermal_runaway_bed_timer;
   #endif
@@ -648,7 +643,7 @@ void manage_heater() {
 
   #if TEMP_SENSOR_BED != 0
   
-    #if HAS_BED_THERMAL_PROTECTION
+    #if defined(THERMAL_RUNAWAY_PROTECTION_BED_PERIOD) && THERMAL_RUNAWAY_PROTECTION_BED_PERIOD > 0
       thermal_runaway_protection(&thermal_runaway_bed_state_machine, &thermal_runaway_bed_timer, current_temperature_bed, target_temperature_bed, 9, THERMAL_RUNAWAY_PROTECTION_BED_PERIOD, THERMAL_RUNAWAY_PROTECTION_BED_HYSTERESIS);
     #endif
 
@@ -992,7 +987,7 @@ void setWatch() {
   #endif
 }
 
-#if HAS_HEATER_THERMAL_PROTECTION || HAS_BED_THERMAL_PROTECTION
+#if defined(THERMAL_RUNAWAY_PROTECTION_PERIOD) && THERMAL_RUNAWAY_PROTECTION_PERIOD > 0
 void thermal_runaway_protection(int *state, unsigned long *timer, float temperature, float target_temperature, int heater_id, int period_seconds, int hysteresis_degc)
 {
 /*
@@ -1379,6 +1374,7 @@ HAL_TEMP_TIMER_ISR {
         #endif
       #endif
     #endif
+
     #if HAS_HEATER_BED
       PWM_OFF_ROUTINE(BED); // BED
     #endif
@@ -1410,6 +1406,7 @@ HAL_TEMP_TIMER_ISR {
           #endif
         #endif
       #endif
+
       #if HAS_HEATER_BED
         if (state_timer_heater_BED > 0) state_timer_heater_BED--;
       #endif
@@ -1508,7 +1505,6 @@ HAL_TEMP_TIMER_ISR {
     case Measure_FILWIDTH:
       #if HAS_FILAMENT_SENSOR
         raw_filwidth_value = analogRead (FILWIDTH_PIN);
-        }
       #endif
       temp_state = Prepare_POWCONSUMPTION;
       break;
@@ -1523,7 +1519,6 @@ HAL_TEMP_TIMER_ISR {
     case Measure_POWCONSUMPTION:
       #if HAS_POWER_CONSUMPTION_SENSOR
         raw_powconsumption_value = analogRead(POWER_CONSUMPTION_PIN);
-        }
       #endif
       temp_state = PrepareTemp_0;
       temp_count++;
@@ -1531,7 +1526,7 @@ HAL_TEMP_TIMER_ISR {
 
     case StartupDelay:
       temp_state = PrepareTemp_0;
-      analogReadResolution(12); // Set resolution ADC
+      analogReadResolution(12); // Set ADC resolution
       break;
 
     // default:
@@ -1617,7 +1612,7 @@ HAL_TEMP_TIMER_ISR {
         #define GE1 >=
       #endif
       if (current_temperature_raw[1] GE1 maxttemp_raw[1]) max_temp_error(1);
-      if (minttemp_raw[1] GE0 current_temperature_raw[1]) min_temp_error(1);
+      if (minttemp_raw[1] GE1 current_temperature_raw[1]) min_temp_error(1);
 
       #if HOTENDS > 2
         #if HEATER_2_RAW_LO_TEMP > HEATER_2_RAW_HI_TEMP
@@ -1626,7 +1621,7 @@ HAL_TEMP_TIMER_ISR {
           #define GE2 >=
         #endif
         if (current_temperature_raw[2] GE2 maxttemp_raw[2]) max_temp_error(2);
-        if (minttemp_raw[2] GE0 current_temperature_raw[2]) min_temp_error(2);
+        if (minttemp_raw[2] GE2 current_temperature_raw[2]) min_temp_error(2);
 
         #if HOTENDS > 3
           #if HEATER_3_RAW_LO_TEMP > HEATER_3_RAW_HI_TEMP
@@ -1635,7 +1630,7 @@ HAL_TEMP_TIMER_ISR {
             #define GE3 >=
           #endif
           if (current_temperature_raw[3] GE3 maxttemp_raw[3]) max_temp_error(3);
-          if (minttemp_raw[3] GE0 current_temperature_raw[3]) min_temp_error(3);
+          if (minttemp_raw[3] GE3 current_temperature_raw[3]) min_temp_error(3);
 
         #endif // HOTENDS > 3
       #endif // HOTENDS > 2

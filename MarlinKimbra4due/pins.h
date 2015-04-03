@@ -330,24 +330,24 @@
 #define X_STEP_PIN      96  // PB24
 #define X_DIR_PIN        2  // PB25
 #define X_ENABLE_PIN    24  // PA15, motor RESET pin
-#define X_MIN_PIN       34  // PC2
-#define X_MAX_PIN       33  // PC1
+#define X_MIN_PIN       33  // PC1
+#define X_MAX_PIN       34  // PC2
 #define X_MS1_PIN       99  // PC10
 
 // Y AXIS
 #define Y_STEP_PIN      94  // PB22
 #define Y_DIR_PIN       95  // PB23
 #define Y_ENABLE_PIN    24  // PA15, motor RESET pin
-#define Y_MIN_PIN       37  // PC5
-#define Y_MAX_PIN       35  // PC3
+#define Y_MIN_PIN       35  // PC3
+#define Y_MAX_PIN       37  // PC5
 #define Y_MS1_PIN       10  // PC29
 
 // Z AXIS
 #define Z_STEP_PIN      98  // PC27
 #define Z_DIR_PIN        3  // PC28
 #define Z_ENABLE_PIN    24  // PA15, motor RESET pin
-#define Z_MIN_PIN       39  // PC7
-#define Z_MAX_PIN       38  // PC6
+#define Z_MIN_PIN       38  // PC6
+#define Z_MAX_PIN       39  // PC7
 #define Z_MS1_PIN       44  // PC19
 
 // E AXIS
@@ -576,7 +576,14 @@
 
 #ifdef MKR4
   #if (EXTRUDERS == 2) && (DRIVER_EXTRUDERS==1)     // Use this for one driver and two extruder
-    #define E0E1_CHOICE_PIN    5
+    #define E0E1_CHOICE_PIN    40
+  #elif (EXTRUDERS == 3) && (DRIVER_EXTRUDERS==1)     // Use this for one driver and 3 extruder
+    #define E0E1_CHOICE_PIN    40
+    #define E0E2_CHOICE_PIN    41
+  #elif (EXTRUDERS == 4) && (DRIVER_EXTRUDERS==1)     // Use this for one driver and 4 extruder
+    #define E0E1_CHOICE_PIN    40
+    #define E0E2_CHOICE_PIN    41
+    #define E0E3_CHOICE_PIN    42
   #elif (EXTRUDERS == 3) && (DRIVER_EXTRUDERS==2)   // Use this for two driver and 3 extruder
     #define E0E2_CHOICE_PIN    5
   #elif (EXTRUDERS == 4) && (DRIVER_EXTRUDERS==2)   // Use this for two driver and 4 extruder
@@ -612,17 +619,17 @@
 
 //List of pins which to ignore when asked to change by gcode, 0 and 1 are RX and TX, do not mess with those!
 #define _E0_PINS E0_STEP_PIN, E0_DIR_PIN, E0_ENABLE_PIN, HEATER_0_PIN,
-#if EXTRUDERS > 1
+#if DRIVER_EXTRUDERS > 1
   #define _E1_PINS E1_STEP_PIN, E1_DIR_PIN, E1_ENABLE_PIN, HEATER_1_PIN,
 #else
   #define _E1_PINS
 #endif
-#if EXTRUDERS  > 2
+#if DRIVER_EXTRUDERS  > 2
   #define _E2_PINS E2_STEP_PIN, E2_DIR_PIN, E2_ENABLE_PIN, HEATER_2_PIN,
 #else
   #define _E2_PINS
 #endif
-#if EXTRUDERS > 3
+#if DRIVER_EXTRUDERS > 3
   #define _E3_PINS E3_STEP_PIN, E3_DIR_PIN, E3_ENABLE_PIN, HEATER_3_PIN,
 #else
   #define _E3_PINS

@@ -26,6 +26,8 @@
 
 #define BIT(b) (1<<(b))
 #define TEST(n,b) (((n)&BIT(b))!=0)
+#define RADIANS(d) ((d)*M_PI/180.0)
+#define DEGREES(r) ((d)*180.0/M_PI)
 
 // Arduino < 1.0.0 does not define this, so we need to do it ourselves
 #ifndef analogInputToDigitalPin
@@ -149,7 +151,7 @@ void manage_inactivity(bool ignore_stepper_queue=false);
   #define disable_e0() /* nothing */
 #endif
 
-#if (EXTRUDERS > 1) && defined(E1_ENABLE_PIN) && (E1_ENABLE_PIN > -1)
+#if (DRIVER_EXTRUDERS > 1) && defined(E1_ENABLE_PIN) && (E1_ENABLE_PIN > -1)
   #define enable_e1() E1_ENABLE_WRITE(E_ENABLE_ON)
   #define disable_e1() E1_ENABLE_WRITE(!E_ENABLE_ON)
 #else
@@ -157,7 +159,7 @@ void manage_inactivity(bool ignore_stepper_queue=false);
   #define disable_e1() /* nothing */
 #endif
 
-#if (EXTRUDERS > 2) && defined(E2_ENABLE_PIN) && (E2_ENABLE_PIN > -1)
+#if (DRIVER_EXTRUDERS > 2) && defined(E2_ENABLE_PIN) && (E2_ENABLE_PIN > -1)
   #define enable_e2() E2_ENABLE_WRITE(E_ENABLE_ON)
   #define disable_e2() E2_ENABLE_WRITE(!E_ENABLE_ON)
 #else
@@ -165,7 +167,7 @@ void manage_inactivity(bool ignore_stepper_queue=false);
   #define disable_e2() /* nothing */
 #endif
 
-#if (EXTRUDERS > 3) && defined(E3_ENABLE_PIN) && (E3_ENABLE_PIN > -1)
+#if (DRIVER_EXTRUDERS > 3) && defined(E3_ENABLE_PIN) && (E3_ENABLE_PIN > -1)
   #define enable_e3() E3_ENABLE_WRITE(E_ENABLE_ON)
   #define disable_e3() E3_ENABLE_WRITE(!E_ENABLE_ON)
 #else
@@ -301,6 +303,8 @@ extern int fanSpeed;
 #if HAS_POWER_CONSUMPTION_SENSOR
   extern float power_consumption_meas;          //holds the power consumption as accurately measured
   extern unsigned long power_consumption_hour;  //holds the power consumption per hour as accurately measured
+  extern unsigned long startpower;
+  extern unsigned long stoppower;
 #endif
 
 #ifdef IDLE_OOZING_PREVENT
@@ -327,6 +331,7 @@ extern unsigned long stoptime;
 
 // Handling multiple extruders pins
 extern uint8_t active_extruder;
+extern uint8_t active_driver;
 
 #ifdef DIGIPOT_I2C
   extern void digipot_i2c_set_current( int channel, float current );

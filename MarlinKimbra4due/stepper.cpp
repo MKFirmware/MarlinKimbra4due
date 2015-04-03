@@ -134,7 +134,7 @@ volatile signed char count_direction[NUM_AXIS] = { 1, 1, 1, 1 };
       X2_DIR_WRITE(v); \
     } \
     else { \
-      if (current_block->active_extruder) X2_DIR_WRITE(v); else X_DIR_WRITE(v); \
+      if (current_block->active_driver) X2_DIR_WRITE(v); else X_DIR_WRITE(v); \
     }
   #define X_APPLY_STEP(v,ALWAYS) \
     if (extruder_duplication_enabled || ALWAYS) { \
@@ -142,7 +142,7 @@ volatile signed char count_direction[NUM_AXIS] = { 1, 1, 1, 1 };
       X2_STEP_WRITE(v); \
     } \
     else { \
-      if (current_block->active_extruder != 0) X2_STEP_WRITE(v); else X_STEP_WRITE(v); \
+      if (current_block->active_driver != 0) X2_STEP_WRITE(v); else X_STEP_WRITE(v); \
     }
 #else
   #define X_APPLY_DIR(v,Q) X_DIR_WRITE(v)
@@ -185,7 +185,53 @@ volatile signed char count_direction[NUM_AXIS] = { 1, 1, 1, 1 };
 
 #define MultiU16X8toH16(intRes, charIn1, intIn2)   intRes = ((charIn1) * (intIn2)) >> 16
 #define MultiU24X24toH16(intRes, longIn1, longIn2) intRes = ((uint64_t)(longIn1) * (longIn2)) >> 24
+#ifdef NPR2
 
+void endstops_hit_on_purpose() {
+  endstop_x_hit = endstop_y_hit = endstop_z_hit = endstop_e_hit = false;
+}
+
+void checkHitEndstops() {
+  if( endstop_x_hit || endstop_y_hit || endstop_z_hit || endstop_e_hit) {
+    SERIAL_ECHO_START;
+    SERIAL_ECHOPGM(MSG_ENDSTOPS_HIT);
+    if(endstop_x_hit) {
+      SERIAL_ECHOPAIR(" X:", (float)endstops_trigsteps[X_AXIS] / axis_steps_per_unit[X_AXIS]);
+      LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT "X");
+    }
+    if(endstop_y_hit) {
+      SERIAL_ECHOPAIR(" Y:", (float)endstops_trigsteps[Y_AXIS] / axis_steps_per_unit[Y_AXIS]);
+      LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT "Y");
+    }
+    if(endstop_z_hit) {
+      SERIAL_ECHOPAIR(" Z:", (float)endstops_trigsteps[Z_AXIS] / axis_steps_per_unit[Z_AXIS]);
+      LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT "Z");
+    }
+    if(endstop_e_hit) {
+      SERIAL_ECHOPAIR(" E:", (float)endstops_trigsteps[E_AXIS] / axis_steps_per_unit[E_AXIS]);
+      LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT "E");
+    }
+
+    SERIAL_ECHOLN("");
+
+    endstops_hit_on_purpose();
+
+    #if defined(ABORT_ON_ENDSTOP_HIT_FEATURE_ENABLED) && defined(SDSUPPORT)
+      if (abort_on_endstop_hit) {
+        card.sdprinting = false;
+        card.closefile();
+        quickStop();
+        setTargetHotend0(0);
+        setTargetHotend1(0);
+        setTargetHotend2(0);
+        setTargetHotend3(0);
+        setTargetBed(0);
+      }
+    #endif
+  }
+}
+
+#else // NOT NPR2
 void endstops_hit_on_purpose() {
   endstop_x_hit = endstop_y_hit = endstop_z_hit = false;
 }
@@ -224,6 +270,7 @@ void checkHitEndstops() {
     #endif
   }
 }
+#endif // NOT NPR2
 
 void enable_endstops(bool check) { check_endstops = check; }
 
@@ -292,7 +339,7 @@ FORCE_INLINE void trapezoid_generator_reset() {
     advance = current_block->initial_advance;
     final_advance = current_block->final_advance;
     // Do E steps + advance steps
-    e_steps[current_block->active_extruder] += ((advance >>8) - old_advance);
+    e_steps[current_block->active_driver] += ((advance >>8) - old_advance);
     old_advance = advance >>8;
   #endif
   deceleration_time = 0;
@@ -331,7 +378,7 @@ HAL_STEP_TIMER_ISR {
     HAL_timer_set_count (STEP_TIMER_NUM, HAL_TIMER_RATE / 200); //5ms wait
     return;
   }
-  
+
   // If there is no current block, attempt to pop one from the buffer
   if (!current_block) {
     // Anything in the buffer?
@@ -352,7 +399,7 @@ HAL_STEP_TIMER_ISR {
       #endif
 
       // #ifdef ADVANCE
-      //   e_steps[current_block->active_extruder] = 0;
+      //   e_steps[current_block->active_driver] = 0;
       // #endif
     }
     else {
@@ -384,7 +431,7 @@ HAL_STEP_TIMER_ISR {
     }
 
     #define UPDATE_ENDSTOP(axis,AXIS,minmax,MINMAX) \
-      bool axis ##_## minmax ##_endstop = (READ(AXIS ##_## MINMAX ##_PIN) != AXIS ##_## MINMAX ##_ENDSTOP_INVERTING); \
+      bool axis ##_## minmax ##_endstop = (READ(AXIS ##_## MINMAX ##_PIN) == AXIS ##_## MINMAX ##_ENDSTOP_INVERTING); \
       if (axis ##_## minmax ##_endstop && old_## axis ##_## minmax ##_endstop && (current_block->steps[AXIS ##_AXIS] > 0)) { \
         endstops_trigsteps[AXIS ##_AXIS] = count_position[AXIS ##_AXIS]; \
         endstop_## axis ##_hit = true; \
@@ -416,7 +463,7 @@ HAL_STEP_TIMER_ISR {
           else { // +direction
             #ifdef DUAL_X_CARRIAGE
               // with 2 x-carriages, endstops are only checked in the homing direction for the active extruder
-              if ((current_block->active_extruder == 0 && X_HOME_DIR == 1) || (current_block->active_extruder != 0 && X2_HOME_DIR == 1))
+              if ((current_block->active_driver == 0 && X_HOME_DIR == 1) || (current_block->active_driver != 0 && X2_HOME_DIR == 1))
             #endif
               {
                 #if defined(X_MAX_PIN) && X_MAX_PIN >= 0
@@ -568,7 +615,7 @@ HAL_STEP_TIMER_ISR {
         counter_e += current_block->steps[E_AXIS];
         if (counter_e > 0) {
           counter_e -= current_block->step_event_count;
-          e_steps[current_block->active_extruder] += TEST(out_bits, E_AXIS) ? -1 : 1;
+          e_steps[current_block->active_driver] += TEST(out_bits, E_AXIS) ? -1 : 1;
         }
       #endif //ADVANCE
 
@@ -647,7 +694,7 @@ HAL_STEP_TIMER_ISR {
         }
         //if (advance > current_block->advance) advance = current_block->advance;
         // Do E steps + advance steps
-        e_steps[current_block->active_extruder] += ((advance >>8) - old_advance);
+        e_steps[current_block->active_driver] += ((advance >>8) - old_advance);
         old_advance = advance >>8;
 
       #endif
@@ -676,7 +723,7 @@ HAL_STEP_TIMER_ISR {
         }
         if (advance < final_advance) advance = final_advance;
         // Do E steps + advance steps
-        e_steps[current_block->active_extruder] += ((advance >>8) - old_advance);
+        e_steps[current_block->active_driver] += ((advance >>8) - old_advance);
         old_advance = advance >>8;
       #endif //ADVANCE
     }
@@ -717,51 +764,52 @@ HAL_STEP_TIMER_ISR {
           E0_STEP_WRITE(!INVERT_E_STEP_PIN);
         }
       }
-      #if EXTRUDERS > 1
-        if (e_steps[1] != 0) {
-          E1_STEP_WRITE(INVERT_E_STEP_PIN);
-          if (e_steps[1] < 0) {
-            E1_DIR_WRITE(INVERT_E1_DIR);
-            e_steps[1]++;
-            E1_STEP_WRITE(!INVERT_E_STEP_PIN);
-          }
-          else if (e_steps[1] > 0) {
-            E1_DIR_WRITE(!INVERT_E1_DIR);
-            e_steps[1]--;
-            E1_STEP_WRITE(!INVERT_E_STEP_PIN);
-          }
+ #if DRIVER_EXTRUDERS > 1
+      if (e_steps[1] != 0) {
+        E1_STEP_WRITE(INVERT_E_STEP_PIN);
+        if (e_steps[1] < 0) {
+          E1_DIR_WRITE(INVERT_E1_DIR);
+          e_steps[1]++;
+          E1_STEP_WRITE(!INVERT_E_STEP_PIN);
         }
-      #endif
-      #if EXTRUDERS > 2
-        if (e_steps[2] != 0) {
-          E2_STEP_WRITE(INVERT_E_STEP_PIN);
-          if (e_steps[2] < 0) {
-            E2_DIR_WRITE(INVERT_E2_DIR);
-            e_steps[2]++;
-            E2_STEP_WRITE(!INVERT_E_STEP_PIN);
-          }
-          else if (e_steps[2] > 0) {
-            E2_DIR_WRITE(!INVERT_E2_DIR);
-            e_steps[2]--;
-            E2_STEP_WRITE(!INVERT_E_STEP_PIN);
-          }
+        else if (e_steps[1] > 0) {
+          E1_DIR_WRITE(!INVERT_E1_DIR);
+          e_steps[1]--;
+          E1_STEP_WRITE(!INVERT_E_STEP_PIN);
         }
-      #endif
-      #if EXTRUDERS > 3
-        if (e_steps[3] != 0) {
-          E3_STEP_WRITE(INVERT_E_STEP_PIN);
-          if (e_steps[3] < 0) {
-            E3_DIR_WRITE(INVERT_E3_DIR);
-            e_steps[3]++;
-            E3_STEP_WRITE(!INVERT_E_STEP_PIN);
-          }
-          else if (e_steps[3] > 0) {
-            E3_DIR_WRITE(!INVERT_E3_DIR);
-            e_steps[3]--;
-            E3_STEP_WRITE(!INVERT_E_STEP_PIN);
-          }
+      }
+ #endif
+ #if DRIVER_EXTRUDERS > 2
+      if (e_steps[2] != 0) {
+        E2_STEP_WRITE(INVERT_E_STEP_PIN);
+        if (e_steps[2] < 0) {
+          E2_DIR_WRITE(INVERT_E2_DIR);
+          e_steps[2]++;
+          E2_STEP_WRITE(!INVERT_E_STEP_PIN);
         }
-      #endif
+        else if (e_steps[2] > 0) {
+          E2_DIR_WRITE(!INVERT_E2_DIR);
+          e_steps[2]--;
+          E2_STEP_WRITE(!INVERT_E_STEP_PIN);
+        }
+      }
+ #endif
+ #if DRIVER_EXTRUDERS > 3
+      if (e_steps[3] != 0) {
+        E3_STEP_WRITE(INVERT_E_STEP_PIN);
+        if (e_steps[3] < 0) {
+          E3_DIR_WRITE(INVERT_E3_DIR);
+          e_steps[3]++;
+          E3_STEP_WRITE(!INVERT_E_STEP_PIN);
+        }
+        else if (e_steps[3] > 0) {
+          E3_DIR_WRITE(!INVERT_E3_DIR);
+          e_steps[3]--;
+          E3_STEP_WRITE(!INVERT_E_STEP_PIN);
+        }
+      }
+ #endif
+
     }
   }
 #endif // ADVANCE

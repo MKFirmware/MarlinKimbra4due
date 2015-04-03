@@ -72,6 +72,46 @@
 // Uncomment below to enable (One Hotend)
 //#define SINGLENOZZLE
 
+/***********************************************************************
+ *********************** Multiextruder MKR4  ***************************
+ ***********************************************************************
+ *                                                                     *
+ * Setting for more extruder width relay system                        *
+ *                                                                     *
+ * Firmware by MagoKimbra magokimbra@hotmail.com                       *
+ *                                                                     *
+ * See pins.h for pin command relay                                    *
+ *                                                                     *
+ ***********************************************************************/
+//#define MKR4
+#ifdef MKR4
+  #define DRIVER_EXTRUDERS 1   // This defines the number of Driver extruder
+#endif // END MKR4
+
+//**********************************************************************
+
+/***********************************************************************
+ *********************** Multiextruder NPr2  ***************************
+ ***********************************************************************
+ *                                                                     *
+ * Setting fot color meccanism NPr2 by NicolaP (www.3dmakerlab.it)     *
+ *                                                                     *
+ * Firmware by MagoKimbra magokimbra@hotmail.com                       *
+ *                                                                     *
+ * Find angle setting by g-Code "M997 Cxxx"                            *
+ *                                                                     *
+ ***********************************************************************/
+//#define NPR2
+#ifdef NPR2
+  #define COLOR_STEP {120,25,-65,-155} // CARTER ANGLE
+  #define COLOR_SLOWRATE 170           // MICROSECOND delay for carter motor routine (Carter Motor Feedrate: upper value-slow feedrate)  
+  #define COLOR_HOMERATE 4             // FEEDRATE for carter home
+  #define MOTOR_ANGLE 1.8              // Nema angle for single step 
+  #define DRIVER_MICROSTEP 4           // Microstep moltiplicator driver (set jumper MS1-2-3) off-on-off 1/4 microstepping.
+  #define CARTER_MOLTIPLICATOR 14.22   // CARTER MOLTIPLICATOR (gear ratio 13/31-10/31)
+  #define DRIVER_EXTRUDERS 2           // This defines the number of Driver extruders
+#endif
+//**********************************************************************
 
 
 // The following define selects which power supply you have. Please choose the one that matches your setup
@@ -414,7 +454,7 @@ your extruder heater takes 2 minutes to hit the target on heating.
 // M501 - reads parameters from EEPROM (if you need reset them after you changed them temporarily).
 // M502 - reverts to the default "factory settings".  You still need to store them in EEPROM afterwards if you want to.
 //define this to enable EEPROM support
-#define EEPROM_SETTINGS
+//#define EEPROM_SETTINGS
 #define EEPROM_CHITCHAT
 // to disable EEPROM Serial responses and decrease program space by ~1700 byte: comment this out:
 // please keep turned on if you can.

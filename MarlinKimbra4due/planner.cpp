@@ -429,7 +429,7 @@ void check_axes_activity() {
     disable_e3();
   }
 
-  #if defined(FAN_PIN) && FAN_PIN > -1 // HAS_FAN
+  #if HAS_FAN // HAS_FAN
     #ifdef FAN_KICKSTART_TIME
       static unsigned long fan_kick_end;
       if (tail_fan_speed) {
@@ -449,7 +449,7 @@ void check_axes_activity() {
     #else
       analogWrite(FAN_PIN, tail_fan_speed);
     #endif //!FAN_SOFT_PWM
-  #endif //FAN_PIN > -1
+  #endif //HAS_FAN
 
   #ifdef AUTOTEMP
     getHighESpeed();
@@ -476,9 +476,9 @@ float junction_deviation = 0.1;
 // mm. Microseconds specify how many microseconds the move should take to perform. To aid acceleration
 // calculation the caller must also provide the physical length of the line in millimeters.
 #ifdef ENABLE_AUTO_BED_LEVELING
-  void plan_buffer_line(float x, float y, float z, const float &e, float feed_rate, const uint8_t &extruder)
+  void plan_buffer_line(float x, float y, float z, const float &e, float feed_rate, const uint8_t &extruder, const uint8_t &driver)
 #else
-  void plan_buffer_line(const float &x, const float &y, const float &z, const float &e, float feed_rate, const uint8_t &extruder)
+  void plan_buffer_line(const float &x, const float &y, const float &z, const float &e, float feed_rate, const uint8_t &extruder, const uint8_t &driver)
 #endif  //ENABLE_AUTO_BED_LEVELING
 {
   // Calculate the buffer head after we push this byte
@@ -599,7 +599,7 @@ float junction_deviation = 0.1;
   if (de < 0) db |= BIT(E_AXIS); 
   block->direction_bits = db;
 
-  block->active_extruder = extruder;
+  block->active_driver = driver;
 
   //enable active axes
   #ifdef COREXY
