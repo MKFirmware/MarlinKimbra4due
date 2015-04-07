@@ -11,12 +11,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
+
+#ifdef __SAM3X8E__
+  #include "HAL.h"
+#else
+  #include <util/delay.h>
+  #include <avr/eeprom.h>
+#endif
+
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
-#include "HAL.h"
 #include "fastio.h"
 #include "Configuration.h"
-#include "pins.h"
 
 #if (ARDUINO >= 100)
   #include "Arduino.h"
@@ -38,6 +44,10 @@
   #include "HardwareSerial.h"
 #endif
 
+#ifndef __SAM3X8E__
+  #include "MarlinSerial.h"
+#endif
+
 #ifndef cbi
   #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
 #endif
@@ -54,62 +64,64 @@
     #define MYSERIAL Serial
   #endif // BTENABLED
 #else
-  #define MYSERIAL Serial
+  #ifdef __SAM3X8E__
+    #define MYSERIAL Serial
+  #else
+    #define MYSERIAL MSerial
+  #endif
 #endif
 
-#define SERIAL_PROTOCOL(x) (MYSERIAL.print(x))
-#define SERIAL_PROTOCOL_F(x,y) (MYSERIAL.print(x,y))
-#define SERIAL_PROTOCOLPGM(x) (serialprintPGM(PSTR(x)))
-#define SERIAL_PROTOCOLLN(x) (MYSERIAL.print(x),MYSERIAL.write('\n'))
-#define SERIAL_PROTOCOLLNPGM(x) (serialprintPGM(PSTR(x)),MYSERIAL.write('\n'))
+#define SERIAL_CHAR(x) MYSERIAL.write(x)
+#define SERIAL_EOL SERIAL_CHAR('\n')
+
+#define SERIAL_PROTOCOLCHAR(x) SERIAL_CHAR(x)
+#define SERIAL_PROTOCOL(x) MYSERIAL.print(x)
+#define SERIAL_PROTOCOL_F(x,y) MYSERIAL.print(x,y)
+#define SERIAL_PROTOCOLPGM(x) serialprintPGM(PSTR(x))
+#define SERIAL_PROTOCOLLN(x) do{ MYSERIAL.print(x),MYSERIAL.write('\n'); }while(0)
+#define SERIAL_PROTOCOLLNPGM(x) do{ serialprintPGM(PSTR(x)),MYSERIAL.write('\n'); }while(0)
 
 
 extern const char errormagic[] PROGMEM;
 extern const char echomagic[] PROGMEM;
 
-#define SERIAL_ERROR_START (serialprintPGM(errormagic))
+#define SERIAL_ERROR_START serialprintPGM(errormagic)
 #define SERIAL_ERROR(x) SERIAL_PROTOCOL(x)
 #define SERIAL_ERRORPGM(x) SERIAL_PROTOCOLPGM(x)
 #define SERIAL_ERRORLN(x) SERIAL_PROTOCOLLN(x)
 #define SERIAL_ERRORLNPGM(x) SERIAL_PROTOCOLLNPGM(x)
 
-#define SERIAL_ECHO_START (serialprintPGM(echomagic))
+#define SERIAL_ECHO_START serialprintPGM(echomagic)
 #define SERIAL_ECHO(x) SERIAL_PROTOCOL(x)
 #define SERIAL_ECHOPGM(x) SERIAL_PROTOCOLPGM(x)
 #define SERIAL_ECHOLN(x) SERIAL_PROTOCOLLN(x)
 #define SERIAL_ECHOLNPGM(x) SERIAL_PROTOCOLLNPGM(x)
 
-#define SERIAL_ECHOPAIR(name,value) (serial_echopair_P(PSTR(name),(value)))
-
-#define SERIAL_EOL MYSERIAL.write('\n')
+#define SERIAL_ECHOPAIR(name,value) do{ serial_echopair_P(PSTR(name),(value)); }while(0)
 
 void serial_echopair_P(const char *s_P, float v);
 void serial_echopair_P(const char *s_P, double v);
 void serial_echopair_P(const char *s_P, unsigned long v);
 
 
-//Things to write to serial from Program memory. Saves 400 to 2k of RAM.
-FORCE_INLINE void serialprintPGM(const char *str)
-{
-  char ch=pgm_read_byte(str);
-  while(ch)
-  {
+// Things to write to serial from Program memory. Saves 400 to 2k of RAM.
+FORCE_INLINE void serialprintPGM(const char *str) {
+  char ch;
+  while ((ch = pgm_read_byte(str))) {
     MYSERIAL.write(ch);
-    ch=pgm_read_byte(++str);
+    str++;
   }
 }
-
 
 void get_command();
 void process_commands();
 
 void manage_inactivity(bool ignore_stepper_queue=false);
 
-#if defined(DUAL_X_CARRIAGE) && defined(X_ENABLE_PIN) && X_ENABLE_PIN > -1 \
-    && defined(X2_ENABLE_PIN) && X2_ENABLE_PIN > -1
+#if defined(DUAL_X_CARRIAGE) && HAS_X_ENABLE && HAS_X2_ENABLE
   #define  enable_x() do { X_ENABLE_WRITE( X_ENABLE_ON); X2_ENABLE_WRITE( X_ENABLE_ON); } while (0)
   #define disable_x() do { X_ENABLE_WRITE(!X_ENABLE_ON); X2_ENABLE_WRITE(!X_ENABLE_ON); axis_known_position[X_AXIS] = false; } while (0)
-#elif defined(X_ENABLE_PIN) && X_ENABLE_PIN > -1
+#elif HAS_X_ENABLE
   #define  enable_x() X_ENABLE_WRITE( X_ENABLE_ON)
   #define disable_x() { X_ENABLE_WRITE(!X_ENABLE_ON); axis_known_position[X_AXIS] = false; }
 #else
@@ -117,7 +129,7 @@ void manage_inactivity(bool ignore_stepper_queue=false);
   #define disable_x() ;
 #endif
 
-#if defined(Y_ENABLE_PIN) && Y_ENABLE_PIN > -1
+#if HAS_Y_ENABLE
   #ifdef Y_DUAL_STEPPER_DRIVERS
     #define  enable_y() { Y_ENABLE_WRITE( Y_ENABLE_ON); Y2_ENABLE_WRITE(Y_ENABLE_ON); }
     #define disable_y() { Y_ENABLE_WRITE(!Y_ENABLE_ON); Y2_ENABLE_WRITE(!Y_ENABLE_ON); axis_known_position[Y_AXIS] = false; }
@@ -130,7 +142,7 @@ void manage_inactivity(bool ignore_stepper_queue=false);
   #define disable_y() ;
 #endif
 
-#if defined(Z_ENABLE_PIN) && Z_ENABLE_PIN > -1
+#if HAS_Z_ENABLE
   #ifdef Z_DUAL_STEPPER_DRIVERS
     #define  enable_z() { Z_ENABLE_WRITE( Z_ENABLE_ON); Z2_ENABLE_WRITE(Z_ENABLE_ON); }
     #define disable_z() { Z_ENABLE_WRITE(!Z_ENABLE_ON); Z2_ENABLE_WRITE(!Z_ENABLE_ON); axis_known_position[Z_AXIS] = false; }
@@ -143,32 +155,32 @@ void manage_inactivity(bool ignore_stepper_queue=false);
   #define disable_z() ;
 #endif
 
-#if defined(E0_ENABLE_PIN) && (E0_ENABLE_PIN > -1)
-  #define enable_e0() E0_ENABLE_WRITE(E_ENABLE_ON)
+#if HAS_E0_ENABLE
+  #define enable_e0()  E0_ENABLE_WRITE( E_ENABLE_ON)
   #define disable_e0() E0_ENABLE_WRITE(!E_ENABLE_ON)
 #else
   #define enable_e0()  /* nothing */
   #define disable_e0() /* nothing */
 #endif
 
-#if (DRIVER_EXTRUDERS > 1) && defined(E1_ENABLE_PIN) && (E1_ENABLE_PIN > -1)
-  #define enable_e1() E1_ENABLE_WRITE(E_ENABLE_ON)
+#if (DRIVER_EXTRUDERS > 1) && HAS_E1_ENABLE
+  #define enable_e1()  E1_ENABLE_WRITE( E_ENABLE_ON)
   #define disable_e1() E1_ENABLE_WRITE(!E_ENABLE_ON)
 #else
   #define enable_e1()  /* nothing */
   #define disable_e1() /* nothing */
 #endif
 
-#if (DRIVER_EXTRUDERS > 2) && defined(E2_ENABLE_PIN) && (E2_ENABLE_PIN > -1)
-  #define enable_e2() E2_ENABLE_WRITE(E_ENABLE_ON)
+#if (DRIVER_EXTRUDERS > 2) && HAS_E2_ENABLE
+  #define enable_e2()  E2_ENABLE_WRITE( E_ENABLE_ON)
   #define disable_e2() E2_ENABLE_WRITE(!E_ENABLE_ON)
 #else
   #define enable_e2()  /* nothing */
   #define disable_e2() /* nothing */
 #endif
 
-#if (DRIVER_EXTRUDERS > 3) && defined(E3_ENABLE_PIN) && (E3_ENABLE_PIN > -1)
-  #define enable_e3() E3_ENABLE_WRITE(E_ENABLE_ON)
+#if (DRIVER_EXTRUDERS > 3) && HAS_E3_ENABLE
+  #define enable_e3()  E3_ENABLE_WRITE( E_ENABLE_ON)
   #define disable_e3() E3_ENABLE_WRITE(!E_ENABLE_ON)
 #else
   #define enable_e3()  /* nothing */
@@ -177,12 +189,21 @@ void manage_inactivity(bool ignore_stepper_queue=false);
 
 #define disable_e() {disable_e0(); disable_e1(); disable_e2(); disable_e3();}
 
-#ifdef COREXY
-  enum AxisEnum {X_AXIS=0, Y_AXIS=1, A_AXIS=0, B_AXIS=1, Z_AXIS=2, E_AXIS=3, X_HEAD=4, Y_HEAD=5};
-  //X_HEAD and Y_HEAD is used for systems that don't have a 1:1 relationship between X_AXIS and X Head movement, like CoreXY bots.
-#else
-  enum AxisEnum {X_AXIS=0, Y_AXIS=1, Z_AXIS=2, E_AXIS=3};
-#endif
+/**
+ * The axis order in all axis related arrays is X, Y, Z, E
+ */
+#define NUM_AXIS 4
+
+/**
+ * Axis indices as enumerated constants
+ *
+ * A_AXIS and B_AXIS are used by COREXY printers
+ * X_HEAD and Y_HEAD is used for systems that don't have a 1:1 relationship between X_AXIS and X Head movement, like CoreXY bots.
+ */
+enum AxisEnum {X_AXIS=0, Y_AXIS=1, A_AXIS=0, B_AXIS=1, Z_AXIS=2, E_AXIS=3, X_HEAD=4, Y_HEAD=5};
+
+void enable_all_steppers();
+void disable_all_steppers();
 
 void FlushSerialRequestResend();
 void ClearToSend();
@@ -212,8 +233,11 @@ extern float delta_tower3_x,delta_tower3_y;
 #endif
 void prepare_move();
 void kill();
-void pause();
 void Stop();
+
+#ifdef FILAMENT_RUNOUT_SENSOR
+  void filrunout();
+#endif
 
 bool IsStopped();
 
@@ -223,7 +247,8 @@ void enquecommands_P(const char *cmd); //put one or many ASCII commands at the e
 void prepare_arc_move(char isclockwise);
 void clamp_to_software_endstops(float target[3]);
 
-void refresh_cmd_timeout(void);
+extern unsigned long previous_millis_cmd;
+inline void refresh_cmd_timeout() { previous_millis_cmd = millis(); }
 
 #ifdef FAST_PWM_FAN
   void setPwmFrequency(uint8_t pin, int val);
@@ -232,14 +257,13 @@ void refresh_cmd_timeout(void);
 #ifndef CRITICAL_SECTION_START
   #define CRITICAL_SECTION_START  unsigned char _sreg = SREG; cli();
   #define CRITICAL_SECTION_END    SREG = _sreg;
-#endif //CRITICAL_SECTION_START
+#endif
 
-extern unsigned long baudrate;
 extern float homing_feedrate[];
 extern bool axis_relative_modes[];
 extern int feedmultiply;
 extern bool volumetric_enabled;
-extern int extruder_multiplier[EXTRUDERS]; // sets extrude multiply factor (in percent) for each extruder individually
+extern int extruder_multiply[EXTRUDERS]; // sets extrude multiply factor (in percent) for each extruder individually
 extern float filament_size[EXTRUDERS]; // cross-sectional area of filament (in millimeters), typically around 1.75 or 2.85, 0 disables the volumetric calculations for the extruder.
 extern float volumetric_multiplier[EXTRUDERS]; // reciprocal of cross-sectional area of filament (in square millimeters), stored this way to reduce computational burden in planner
 extern float current_position[NUM_AXIS];

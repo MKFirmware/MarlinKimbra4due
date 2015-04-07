@@ -76,6 +76,7 @@ volatile long endstops_stepsTotal, endstops_stepsDone;
 static volatile bool endstop_x_hit = false;
 static volatile bool endstop_y_hit = false;
 static volatile bool endstop_z_hit = false;
+static volatile bool endstop_z_probe_hit = false; // Leaving this in even if Z_PROBE_ENDSTOP isn't defined, keeps code below cleaner. #ifdef it and usage below to save space.
 
 #ifdef NPR2
   static volatile bool endstop_e_hit = false;
@@ -90,31 +91,35 @@ static volatile bool endstop_z_hit = false;
   int motor_current_setting[3] = DEFAULT_PWM_MOTOR_CURRENT;
 #endif
 
-#if defined(X_MIN_PIN) && X_MIN_PIN >= 0
+#if HAS_X_MIN
   static bool old_x_min_endstop = false;
 #endif
-#if defined(X_MAX_PIN) && X_MAX_PIN >= 0
+#if HAS_X_MAX
   static bool old_x_max_endstop = false;
 #endif
-#if defined(Y_MIN_PIN) && Y_MIN_PIN >= 0
+#if HAS_Y_MIN
   static bool old_y_min_endstop = false;
 #endif
-#if defined(Y_MAX_PIN) && Y_MAX_PIN >= 0
+#if HAS_Y_MAX
   static bool old_y_max_endstop = false;
 #endif
-#if defined(Z_MIN_PIN) && Z_MIN_PIN >= 0
+#if HAS_Z_MIN
   static bool old_z_min_endstop = false;
 #endif
-#if defined(Z_MAX_PIN) && Z_MAX_PIN >= 0
+#if HAS_Z_MAX
   static bool old_z_max_endstop = false;
 #endif
 #ifdef Z_DUAL_ENDSTOPS
-  #if defined(Z2_MIN_PIN) && Z2_MIN_PIN >= 0
+  #if HAS_Z2_MIN
     static bool old_z2_min_endstop = false;
   #endif
-  #if defined(Z2_MAX_PIN) && Z2_MAX_PIN >= 0
+  #if HAS_Z2_MAX
     static bool old_z2_max_endstop = false;
   #endif
+#endif
+
+#ifdef Z_PROBE_ENDSTOP // No need to check for valid pin, SanityCheck.h already does this.
+  static bool old_z_probe_endstop = false;
 #endif
 
 static bool check_endstops = true;
@@ -188,11 +193,11 @@ volatile signed char count_direction[NUM_AXIS] = { 1, 1, 1, 1 };
 #ifdef NPR2
 
 void endstops_hit_on_purpose() {
-  endstop_x_hit = endstop_y_hit = endstop_z_hit = endstop_e_hit = false;
+  endstop_x_hit = endstop_y_hit = endstop_z_hit = endstop_z_probe_hit = endstop_e_hit = false;
 }
 
 void checkHitEndstops() {
-  if( endstop_x_hit || endstop_y_hit || endstop_z_hit || endstop_e_hit) {
+  if( endstop_x_hit || endstop_y_hit || endstop_z_hit || endstop_z_probe_hit || endstop_e_hit) {
     SERIAL_ECHO_START;
     SERIAL_ECHOPGM(MSG_ENDSTOPS_HIT);
     if(endstop_x_hit) {
@@ -207,6 +212,12 @@ void checkHitEndstops() {
       SERIAL_ECHOPAIR(" Z:", (float)endstops_trigsteps[Z_AXIS] / axis_steps_per_unit[Z_AXIS]);
       LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT "Z");
     }
+    #ifdef Z_PROBE_ENDSTOP
+    if (endstop_z_probe_hit) {
+    	SERIAL_ECHOPAIR(" Z_PROBE:", (float)endstops_trigsteps[Z_AXIS] / axis_steps_per_unit[Z_AXIS]);
+    	LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT "ZP");
+    }
+    #endif
     if(endstop_e_hit) {
       SERIAL_ECHOPAIR(" E:", (float)endstops_trigsteps[E_AXIS] / axis_steps_per_unit[E_AXIS]);
       LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT "E");
@@ -233,11 +244,11 @@ void checkHitEndstops() {
 
 #else // NOT NPR2
 void endstops_hit_on_purpose() {
-  endstop_x_hit = endstop_y_hit = endstop_z_hit = false;
+  endstop_x_hit = endstop_y_hit = endstop_z_hit = endstop_z_probe_hit = false;
 }
 
 void checkHitEndstops() {
-  if (endstop_x_hit || endstop_y_hit || endstop_z_hit) {
+  if (endstop_x_hit || endstop_y_hit || endstop_z_hit || endstop_z_probe_hit) {
     SERIAL_ECHO_START;
     SERIAL_ECHOPGM(MSG_ENDSTOPS_HIT);
     if (endstop_x_hit) {
@@ -252,6 +263,12 @@ void checkHitEndstops() {
       SERIAL_ECHOPAIR(" Z:", (float)endstops_trigsteps[Z_AXIS] / axis_steps_per_unit[Z_AXIS]);
       LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT "Z");
     }
+    #ifdef Z_PROBE_ENDSTOP
+    if (endstop_z_probe_hit) {
+    	SERIAL_ECHOPAIR(" Z_PROBE:", (float)endstops_trigsteps[Z_AXIS] / axis_steps_per_unit[Z_AXIS]);
+    	LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT "ZP");
+    }
+    #endif
     SERIAL_EOL;
 
     endstops_hit_on_purpose();
@@ -455,7 +472,7 @@ HAL_STEP_TIMER_ISR {
               if ((current_block->active_extruder == 0 && X_HOME_DIR == -1) || (current_block->active_extruder != 0 && X2_HOME_DIR == -1))
             #endif          
               {
-                #if defined(X_MIN_PIN) && X_MIN_PIN >= 0
+                #if HAS_X_MIN
                   UPDATE_ENDSTOP(x, X, min, MIN);
                 #endif
               }
@@ -466,7 +483,7 @@ HAL_STEP_TIMER_ISR {
               if ((current_block->active_driver == 0 && X_HOME_DIR == 1) || (current_block->active_driver != 0 && X2_HOME_DIR == 1))
             #endif
               {
-                #if defined(X_MAX_PIN) && X_MAX_PIN >= 0
+                #if HAS_X_MAX
                   UPDATE_ENDSTOP(x, X, max, MAX);
                 #endif
               }
@@ -481,12 +498,12 @@ HAL_STEP_TIMER_ISR {
           if (TEST(out_bits, Y_AXIS))   // -direction
       #endif
           { // -direction
-            #if defined(Y_MIN_PIN) && Y_MIN_PIN >= 0
+            #if HAS_Y_MIN
               UPDATE_ENDSTOP(y, Y, min, MIN);
             #endif
           }
           else { // +direction
-            #if defined(Y_MAX_PIN) && Y_MAX_PIN >= 0
+            #if HAS_Y_MAX
               UPDATE_ENDSTOP(y, Y, max, MAX);
             #endif
           }
@@ -502,13 +519,13 @@ HAL_STEP_TIMER_ISR {
 
       if (check_endstops) {
 
-        #if defined(Z_MIN_PIN) && Z_MIN_PIN >= 0
+        #if HAS_Z_MIN
 
           #ifdef Z_DUAL_ENDSTOPS
 
             bool z_min_endstop = READ(Z_MIN_PIN) != Z_MIN_ENDSTOP_INVERTING,
                 z2_min_endstop =
-                  #if defined(Z2_MIN_PIN) && Z2_MIN_PIN >= 0
+                  #if HAS_Z2_MIN
                     READ(Z2_MIN_PIN) != Z2_MIN_ENDSTOP_INVERTING
                   #else
                     z_min_endstop
@@ -534,6 +551,19 @@ HAL_STEP_TIMER_ISR {
 
         #endif // Z_MIN_PIN
 
+        #ifdef Z_PROBE_ENDSTOP
+          UPDATE_ENDSTOP(z, Z, probe, PROBE);
+          z_probe_endstop = (READ(Z_PROBE_PIN) == Z_PROBE_ENDSTOP_INVERTING);
+          if(z_probe_endstop && old_z_probe_endstop)
+          {
+        	  endstops_trigsteps[Z_AXIS] = count_position[Z_AXIS];
+        	  endstop_z_probe_hit = true;
+
+//        	  if (z_probe_endstop && old_z_probe_endstop) SERIAL_ECHOLN("z_probe_endstop = true");
+          }
+          old_z_probe_endstop = z_probe_endstop;
+        #endif
+        
       } // check_endstops
 
     }
@@ -544,13 +574,13 @@ HAL_STEP_TIMER_ISR {
 
       if (check_endstops) {
 
-        #if defined(Z_MAX_PIN) && Z_MAX_PIN >= 0
+        #if HAS_Z_MAX
 
           #ifdef Z_DUAL_ENDSTOPS
 
-            bool z_max_endstop = READ(Z_MAX_PIN) != Z_MAX_ENDSTOP_INVERTING,
+            bool z_max_endstop = READ(Z_MAX_PIN) == Z_MAX_ENDSTOP_INVERTING,
                 z2_max_endstop =
-                  #if defined(Z2_MAX_PIN) && Z2_MAX_PIN >= 0
+                  #if HAS_Z2_MAX
                     READ(Z2_MAX_PIN) != Z2_MAX_ENDSTOP_INVERTING
                   #else
                     z_max_endstop
@@ -579,6 +609,18 @@ HAL_STEP_TIMER_ISR {
           #endif // !Z_DUAL_ENDSTOPS
 
         #endif // Z_MAX_PIN
+        
+        #ifdef Z_PROBE_ENDSTOP
+          UPDATE_ENDSTOP(z, Z, probe, PROBE);
+          z_probe_endstop=(READ(Z_PROBE_PIN) == Z_PROBE_ENDSTOP_INVERTING);
+          if(z_probe_endstop && old_z_probe_endstop)
+          {
+        	  endstops_trigsteps[Z_AXIS] = count_position[Z_AXIS];
+        	  endstop_z_probe_hit = true;
+//        	  if (z_probe_endstop && old_z_probe_endstop) SERIAL_ECHOLN("z_probe_endstop = true");
+          }
+          old_z_probe_endstop = z_probe_endstop;
+        #endif
 
       } // check_endstops
 
@@ -591,7 +633,7 @@ HAL_STEP_TIMER_ISR {
 	      #ifdef NPR2
           if (check_endstops) {
             #if defined(E_MIN_PIN) && E_MIN_PIN > -1
-              bool e_min_endstop=(READ(E_MIN_PIN) != E_MIN_ENDSTOP_INVERTING);
+              bool e_min_endstop=(READ(E_MIN_PIN) == E_MIN_ENDSTOP_INVERTING);
               if (e_min_endstop && old_e_min_endstop && (current_block->steps[E_AXIS] > 0)) {
                 endstops_trigsteps[E_AXIS] = count_position[E_AXIS];
                 endstop_e_hit = true;
@@ -609,7 +651,7 @@ HAL_STEP_TIMER_ISR {
     #endif //!ADVANCE
 
     // Take multiple steps per interrupt (For high speed moves)
-    for (int8_t i=0; i < step_loops; i++) {
+    for (int8_t i = 0; i < step_loops; i++) {
 
       #ifdef ADVANCE
         counter_e += current_block->steps[E_AXIS];
@@ -828,151 +870,161 @@ void st_init() {
   #endif
   
   // Initialize Dir Pins
-  #if defined(X_DIR_PIN) && X_DIR_PIN >= 0
+  #if HAS_X_DIR
     X_DIR_INIT;
   #endif
-  #if defined(X2_DIR_PIN) && X2_DIR_PIN >= 0
+  #if HAS_X2_DIR
     X2_DIR_INIT;
   #endif
-  #if defined(Y_DIR_PIN) && Y_DIR_PIN >= 0
+  #if HAS_Y_DIR
     Y_DIR_INIT;
-    #if defined(Y_DUAL_STEPPER_DRIVERS) && defined(Y2_DIR_PIN) && Y2_DIR_PIN >= 0
+    #if defined(Y_DUAL_STEPPER_DRIVERS) && HAS_Y2_DIR
       Y2_DIR_INIT;
     #endif
   #endif
-  #if defined(Z_DIR_PIN) && Z_DIR_PIN >= 0
+  #if HAS_Z_DIR
     Z_DIR_INIT;
-    #if defined(Z_DUAL_STEPPER_DRIVERS) && defined(Z2_DIR_PIN) && Z2_DIR_PIN >= 0
+    #if defined(Z_DUAL_STEPPER_DRIVERS) && HAS_Z2_DIR
       Z2_DIR_INIT;
     #endif
   #endif
-  #if defined(E0_DIR_PIN) && E0_DIR_PIN >= 0
+  #if HAS_E0_DIR
     E0_DIR_INIT;
   #endif
-  #if defined(E1_DIR_PIN) && E1_DIR_PIN >= 0
+  #if HAS_E1_DIR
     E1_DIR_INIT;
   #endif
-  #if defined(E2_DIR_PIN) && E2_DIR_PIN >= 0
+  #if HAS_E2_DIR
     E2_DIR_INIT;
   #endif
-  #if defined(E3_DIR_PIN) && E3_DIR_PIN >= 0
+  #if HAS_E3_DIR
     E3_DIR_INIT;
   #endif
 
   //Initialize Enable Pins - steppers default to disabled.
 
-  #if defined(X_ENABLE_PIN) && X_ENABLE_PIN >= 0
+  #if HAS_X_ENABLE
     X_ENABLE_INIT;
     if (!X_ENABLE_ON) X_ENABLE_WRITE(HIGH);
   #endif
-  #if defined(X2_ENABLE_PIN) && X2_ENABLE_PIN >= 0
+  #if HAS_X2_ENABLE
     X2_ENABLE_INIT;
     if (!X_ENABLE_ON) X2_ENABLE_WRITE(HIGH);
   #endif
-  #if defined(Y_ENABLE_PIN) && Y_ENABLE_PIN >= 0
+  #if HAS_Y_ENABLE
     Y_ENABLE_INIT;
     if (!Y_ENABLE_ON) Y_ENABLE_WRITE(HIGH);
 	
-	#if defined(Y_DUAL_STEPPER_DRIVERS) && defined(Y2_ENABLE_PIN) && Y2_ENABLE_PIN >= 0
+	#if defined(Y_DUAL_STEPPER_DRIVERS) && HAS_Y2_ENABLE
 	  Y2_ENABLE_INIT;
 	  if (!Y_ENABLE_ON) Y2_ENABLE_WRITE(HIGH);
 	#endif
   #endif
-  #if defined(Z_ENABLE_PIN) && Z_ENABLE_PIN >= 0
+  #if HAS_Z_ENABLE
     Z_ENABLE_INIT;
     if (!Z_ENABLE_ON) Z_ENABLE_WRITE(HIGH);
 
-    #if defined(Z_DUAL_STEPPER_DRIVERS) && defined(Z2_ENABLE_PIN) && Z2_ENABLE_PIN >= 0
+    #if defined(Z_DUAL_STEPPER_DRIVERS) && HAS_Z2_ENABLE
       Z2_ENABLE_INIT;
       if (!Z_ENABLE_ON) Z2_ENABLE_WRITE(HIGH);
     #endif
   #endif
-  #if defined(E0_ENABLE_PIN) && E0_ENABLE_PIN >= 0
+  #if HAS_E0_ENABLE
     E0_ENABLE_INIT;
     if (!E_ENABLE_ON) E0_ENABLE_WRITE(HIGH);
   #endif
-  #if defined(E1_ENABLE_PIN) && E1_ENABLE_PIN >= 0
+  #if HAS_E1_ENABLE
     E1_ENABLE_INIT;
     if (!E_ENABLE_ON) E1_ENABLE_WRITE(HIGH);
   #endif
-  #if defined(E2_ENABLE_PIN) && E2_ENABLE_PIN >= 0
+  #if HAS_E2_ENABLE
     E2_ENABLE_INIT;
     if (!E_ENABLE_ON) E2_ENABLE_WRITE(HIGH);
   #endif
-  #if defined(E3_ENABLE_PIN) && E3_ENABLE_PIN >= 0
+  #if HAS_E3_ENABLE
     E3_ENABLE_INIT;
     if (!E_ENABLE_ON) E3_ENABLE_WRITE(HIGH);
   #endif
 
   //Choice E0-E1 or E0-E2 or E1-E3 pin
-  #if defined(E0E1_CHOICE_PIN) && (E0E1_CHOICE_PIN >= 0)
-    OUT_WRITE(E0E1_CHOICE_PIN,LOW);
+  #if HAS_E0E1
+    OUT_WRITE(E0E1_CHOICE_PIN, LOW);
   #endif
-  #if defined(E0E2_CHOICE_PIN) && (E0E2_CHOICE_PIN >= 0)
-    OUT_WRITE(E0E2_CHOICE_PIN,LOW);
+  #if HAS_E0E2
+    OUT_WRITE(E0E2_CHOICE_PIN, LOW);
   #endif
-  #if defined(E1E3_CHOICE_PIN) && (E1E3_CHOICE_PIN >= 0)
-    OUT_WRITE(E1E3_CHOICE_PIN,LOW);
+  #if HAS_E0E3
+    OUT_WRITE(E0E3_CHOICE_PIN, LOW);
+  #endif
+  #if HAS_E1E3
+    OUT_WRITE(E1E3_CHOICE_PIN, LOW);
   #endif
 
   //endstops and pullups
 
-  #if defined(X_MIN_PIN) && X_MIN_PIN >= 0
+  #if HAS_X_MIN
     SET_INPUT(X_MIN_PIN);
     #ifdef ENDSTOPPULLUP_XMIN
       SET_PULLUP(X_MIN_PIN);
     #endif
   #endif
 
-  #if defined(Y_MIN_PIN) && Y_MIN_PIN >= 0
+  #if HAS_Y_MIN
     SET_INPUT(Y_MIN_PIN);
     #ifdef ENDSTOPPULLUP_YMIN
       SET_PULLUP(Y_MIN_PIN);
     #endif
   #endif
 
-  #if defined(Z_MIN_PIN) && Z_MIN_PIN >= 0
+  #if HAS_Z_MIN
     SET_INPUT(Z_MIN_PIN);
     #ifdef ENDSTOPPULLUP_ZMIN
       SET_PULLUP(Z_MIN_PIN);
     #endif
   #endif
 
-  #if defined(E_MIN_PIN) && E_MIN_PIN >= 0
+  #if HAS_E_MIN
     SET_INPUT(E_MIN_PIN);
     #ifdef ENDSTOPPULLUP_EMIN
       WRITE(E_MIN_PIN,HIGH);
     #endif
   #endif
 
-  #if defined(X_MAX_PIN) && X_MAX_PIN >= 0
+  #if HAS_X_MAX
     SET_INPUT(X_MAX_PIN);
     #ifdef ENDSTOPPULLUP_XMAX
       SET_PULLUP(X_MAX_PIN);
     #endif
   #endif
 
-  #if defined(Y_MAX_PIN) && Y_MAX_PIN >= 0
+  #if HAS_Y_MAX
     SET_INPUT(Y_MAX_PIN);
     #ifdef ENDSTOPPULLUP_YMAX
       SET_PULLUP(Y_MAX_PIN);
     #endif
   #endif
 
-  #if defined(Z_MAX_PIN) && Z_MAX_PIN >= 0
+  #if HAS_Z_MAX
     SET_INPUT(Z_MAX_PIN);
     #ifdef ENDSTOPPULLUP_ZMAX
       SET_PULLUP(Z_MAX_PIN);
     #endif
   #endif
 
-  #if defined(Z2_MAX_PIN) && Z2_MAX_PIN >= 0
+  #if HAS_Z2_MAX
     SET_INPUT(Z2_MAX_PIN);
     #ifdef ENDSTOPPULLUP_ZMAX
       SET_PULLUP(Z2_MAX_PIN,HIGH);
     #endif
   #endif  
   
+#if (defined(Z_PROBE_PIN) && Z_PROBE_PIN >= 0) && defined(Z_PROBE_ENDSTOP) // Check for Z_PROBE_ENDSTOP so we don't pull a pin high unless it's to be used.
+  SET_INPUT(Z_PROBE_PIN);
+  #ifdef ENDSTOPPULLUP_ZPROBE
+    SET_PULLUP(Z_PROBE_PIN,HIGH);
+  #endif
+#endif
+
   #define AXIS_INIT(axis, AXIS, PIN) \
     AXIS ##_STEP_INIT; \
     AXIS ##_STEP_WRITE(INVERT_## PIN ##_STEP_PIN); \
@@ -981,36 +1033,36 @@ void st_init() {
   #define E_AXIS_INIT(NUM) AXIS_INIT(e## NUM, E## NUM, E)
 
   // Initialize Step Pins
-  #if defined(X_STEP_PIN) && X_STEP_PIN >= 0
+  #if HAS_X_STEP
     AXIS_INIT(x, X, X);
   #endif
-  #if defined(X2_STEP_PIN) && X2_STEP_PIN >= 0
+  #if HAS_X2_STEP
     AXIS_INIT(x, X2, X);
   #endif
-  #if defined(Y_STEP_PIN) && Y_STEP_PIN >= 0
-    #if defined(Y_DUAL_STEPPER_DRIVERS) && defined(Y2_STEP_PIN) && Y2_STEP_PIN >= 0
+  #if HAS_Y_STEP
+    #if defined(Y_DUAL_STEPPER_DRIVERS) && HAS_Y2_STEP
       Y2_STEP_INIT;
       Y2_STEP_WRITE(INVERT_Y_STEP_PIN);
     #endif
     AXIS_INIT(y, Y, Y);
   #endif
-  #if defined(Z_STEP_PIN) && Z_STEP_PIN >= 0
-    #if defined(Z_DUAL_STEPPER_DRIVERS) && defined(Z2_STEP_PIN) && Z2_STEP_PIN >= 0
+  #if HAS_Z_STEP
+    #if defined(Z_DUAL_STEPPER_DRIVERS) && HAS_Z2_STEP
       Z2_STEP_INIT;
       Z2_STEP_WRITE(INVERT_Z_STEP_PIN);
     #endif
     AXIS_INIT(z, Z, Z);
   #endif
-  #if defined(E0_STEP_PIN) && E0_STEP_PIN >= 0
+  #if HAS_E0_STEP
     E_AXIS_INIT(0);
   #endif
-  #if defined(E1_STEP_PIN) && E1_STEP_PIN >= 0
+  #if HAS_E1_STEP
     E_AXIS_INIT(1);
   #endif
-  #if defined(E2_STEP_PIN) && E2_STEP_PIN >= 0
+  #if HAS_E2_STEP
     E_AXIS_INIT(2);
   #endif
-  #if defined(E3_STEP_PIN) && E3_STEP_PIN >= 0
+  #if HAS_E3_STEP
     E_AXIS_INIT(3);
   #endif
 
@@ -1079,13 +1131,7 @@ long st_get_position(uint8_t axis) {
 
 void finishAndDisableSteppers() {
   st_synchronize();
-  disable_x();
-  disable_y();
-  disable_z();
-  disable_e0();
-  disable_e1();
-  disable_e2();
-  disable_e3();
+  disable_all_steppers();
 }
 
 void quickStop() {
@@ -1213,11 +1259,12 @@ void digipot_init() {
     //Set timer5 to 31khz so the PWM of the motor power is as constant as possible. (removes a buzzing noise)
     TCCR5B = (TCCR5B & ~(_BV(CS50) | _BV(CS51) | _BV(CS52))) | _BV(CS50);
   #endif
+
   #if MB(ALLIGATOR)
-    const float digipot_motor_current[] = DIGIPOT_MOTOR_CURRENT;
+    const float motor_current[] = MOTOR_CURRENT;
     unsigned int digipot_motor = 0;
     for (uint8_t i = 0; i < 4; i++) {
-      digipot_motor = 255 * (digipot_motor_current[i] / 2.5);
+      digipot_motor = 255 * (motor_current[i] / 2.5);
       ExternalDac::setValue(i, digipot_motor);
     }
   #endif//MB(ALLIGATOR)
@@ -1238,12 +1285,12 @@ void digipot_current(uint8_t driver, int current) {
 }
 
 void microstep_init() {
-  #if defined(E1_MS1_PIN) && E1_MS1_PIN >= 0
+  #if HAS_MICROSTEPS_E1
     pinMode(E1_MS1_PIN,OUTPUT);
-    pinMode(E1_MS2_PIN,OUTPUT); 
+    pinMode(E1_MS2_PIN,OUTPUT);
   #endif
 
-  #if defined(X_MS1_PIN) && X_MS1_PIN >= 0
+  #if HAS_MICROSTEPS
     pinMode(X_MS1_PIN,OUTPUT);
     pinMode(X_MS2_PIN,OUTPUT);  
     pinMode(Y_MS1_PIN,OUTPUT);
@@ -1264,7 +1311,7 @@ void microstep_ms(uint8_t driver, int8_t ms1, int8_t ms2) {
     case 1: digitalWrite(Y_MS1_PIN, ms1); break;
     case 2: digitalWrite(Z_MS1_PIN, ms1); break;
     case 3: digitalWrite(E0_MS1_PIN, ms1); break;
-    #if defined(E1_MS1_PIN) && E1_MS1_PIN >= 0
+    #if HAS_MICROSTEPS_E1
       case 4: digitalWrite(E1_MS1_PIN, ms1); break;
     #endif
   }
@@ -1306,7 +1353,7 @@ void microstep_readings() {
   SERIAL_PROTOCOLPGM("E0: ");
   SERIAL_PROTOCOL(digitalRead(E0_MS1_PIN));
   SERIAL_PROTOCOLLN(digitalRead(E0_MS2_PIN));
-  #if defined(E1_MS1_PIN) && E1_MS1_PIN >= 0
+  #if HAS_MICROSTEPS_E1
     SERIAL_PROTOCOLPGM("E1: ");
     SERIAL_PROTOCOL(digitalRead(E1_MS1_PIN));
     SERIAL_PROTOCOLLN(digitalRead(E1_MS2_PIN));

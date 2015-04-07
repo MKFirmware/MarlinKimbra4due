@@ -22,8 +22,11 @@
 #define stepper_h 
 
 #include "planner.h"
-#include "ExternalDac.h"
 #include "stepper_indirection.h"
+
+#if MB(ALLIGATOR)
+  #include "ExternalDac.h"
+#endif
 
 #if DRIVER_EXTRUDERS > 3
   #define E_STEP_WRITE(v) { if(current_block->active_driver == 3) { E3_STEP_WRITE(v); } else { if(current_block->active_driver == 2) { E2_STEP_WRITE(v); } else { if(current_block->active_driver == 1) { E1_STEP_WRITE(v); } else { E0_STEP_WRITE(v); }}}}

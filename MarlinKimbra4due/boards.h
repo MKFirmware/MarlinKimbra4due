@@ -9,10 +9,10 @@
  #error Oops!  Make sure you have 'Arduino Due' selected from the 'Tools -> Boards' menu.
 #endif
 
-#define BOARD_RADDS       402   // RADDS
-#define BOARD_RAMPS_FDV1  403   // RAMPS-FD V1
-#define BOARD_RAMPS_FDV2  404   // RAMPS-FD V2
-#define BOARD_ALLIGATOR   501   // ALLIGATOR R2 ARM 32
+#define BOARD_RADDS         402   // RADDS
+#define BOARD_RAMPS_FDV1    403   // RAMPS-FD V1
+#define BOARD_RAMPS_FDV2    404   // RAMPS-FD V2
+#define BOARD_ALLIGATOR     501   // ALLIGATOR R2 ARM 32
 
 #define MB(board) (MOTHERBOARD==BOARD_##board)
 

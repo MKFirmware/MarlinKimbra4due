@@ -6,7 +6,6 @@
 
 #include "HAL.h"
 #include "Configuration.h"
-// #include "DueTimer.h"
 
 #include <Wire.h>
 
@@ -334,10 +333,11 @@ void HAL_step_timer_start() {
 
   tc->TC_CHANNEL[channel].TC_RC   = (VARIANT_MCK >> 1) / 1000; // start with 1kHz as frequency; //interrupt occurs every x interations of the timer counter
   TC_Start(tc, channel); //start timer counter
-  NVIC_EnableIRQ(irq); //enable Nested Vector Interrupt Controller
+    
+  //tc->TC_CHANNEL[channel].TC_IER = TC_IER_CPCS;
+  //tc->TC_CHANNEL[channel].TC_IDR =~ TC_IER_CPCS;
   
-  tc->TC_CHANNEL[channel].TC_IER = TC_IER_CPCS;
-  tc->TC_CHANNEL[channel].TC_IDR =~ TC_IER_CPCS;
+  NVIC_EnableIRQ(irq); //enable Nested Vector Interrupt Controller
 }
 
 void HAL_temp_timer_start (uint8_t timer_num) {

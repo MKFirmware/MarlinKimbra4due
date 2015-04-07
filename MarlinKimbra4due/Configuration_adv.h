@@ -188,10 +188,10 @@
 #endif //DUAL_X_CARRIAGE
 
 //homing hits the endstop, then retracts by this distance, before it tries to slowly bump again:
-#define X_HOME_RETRACT_MM 5
-#define Y_HOME_RETRACT_MM 5
-#define Z_HOME_RETRACT_MM 2
-#define HOMING_BUMP_DIVISOR {4, 4, 2}  // Re-Bump Speed Divisor (Divides the Homing Feedrate)
+#define X_HOME_BUMP_MM 5
+#define Y_HOME_BUMP_MM 5
+#define Z_HOME_BUMP_MM 2
+#define HOMING_BUMP_DIVISOR {5, 5, 2}  // Re-Bump Speed Divisor (Divides the Homing Feedrate)
 //#define QUICK_HOME  //if this is defined, if both x and y are to be homed, a diagonal move will be performed initially.
 
 #define AXIS_RELATIVE_MODES {false, false, false, false}
@@ -231,10 +231,20 @@
 
 // Microstep setting (Only functional when stepper driver microstep pins are connected to MCU.
 // Alligator Board support 16 or 32 only value
-#define MICROSTEP_MODES {32, 32, 32, 32} // [1,2,4,8,16,32]
+#define MICROSTEP_MODES {16, 16, 16, 16} // X Y Z E - [1,2,4,8,16,32]
+
+// Motor Current setting (Only functional on ALLIGATOR BOARD)
+#define MOTOR_CURRENT {1, 1, 1, 1} // X Y Z E - Values 0 - 2.5 A
 
 // Motor Current setting (Only functional when motor driver current ref pins are connected to a digital trimpot on supported boards)
-#define DIGIPOT_MOTOR_CURRENT {1, 1, 1, 1} // X Y Z E - Values 0 - 2.5 A
+#define DIGIPOT_MOTOR_CURRENT {135,135,135,135,135} // Values 0-255 (RAMBO 135 = ~0.75A, 185 = ~1A)
+
+// uncomment to enable an I2C based DIGIPOT like on the Azteeg X3 Pro
+//#define DIGIPOT_I2C
+// Number of channels available for I2C digipot, For Azteeg X3 Pro we have 8
+#define DIGIPOT_I2C_NUM_CHANNELS 8
+// actual motor currents in Amps, need as many here as DIGIPOT_I2C_NUM_CHANNELS
+#define DIGIPOT_I2C_MOTOR_CURRENTS {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}
 
 //===========================================================================
 //=============================Additional Features===========================

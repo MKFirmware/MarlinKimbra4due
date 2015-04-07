@@ -429,7 +429,7 @@ void check_axes_activity() {
     disable_e3();
   }
 
-  #if HAS_FAN // HAS_FAN
+  #if HAS_FAN
     #ifdef FAN_KICKSTART_TIME
       static unsigned long fan_kick_end;
       if (tail_fan_speed) {
@@ -449,17 +449,17 @@ void check_axes_activity() {
     #else
       analogWrite(FAN_PIN, tail_fan_speed);
     #endif //!FAN_SOFT_PWM
-  #endif //HAS_FAN
+  #endif // HAS_FAN
 
   #ifdef AUTOTEMP
     getHighESpeed();
   #endif
 
   #ifdef BARICUDA
-    #if defined(HEATER_1_PIN) && HEATER_1_PIN > -1 // HAS_HEATER_1
+    #if HAS_HEATER_1
       analogWrite(HEATER_1_PIN,tail_valve_pressure);
     #endif
-    #if defined(HEATER_2_PIN) && HEATER_2_PIN > -1 // HAS_HEATER_2
+    #if HAS_HEATER_2
       analogWrite(HEATER_2_PIN,tail_e_to_p_pressure);
     #endif
   #endif
@@ -494,7 +494,7 @@ float junction_deviation = 0.1;
 
   #ifdef ENABLE_AUTO_BED_LEVELING
     apply_rotation_xyz(plan_bed_level_matrix, x, y, z);
-  #endif // ENABLE_AUTO_BED_LEVELING
+  #endif
 
   // The target position of the tool in absolute steps
   // Calculate target position in absolute steps
@@ -566,7 +566,7 @@ float junction_deviation = 0.1;
   block->steps[Z_AXIS] = labs(dz);
   block->steps[E_AXIS] = labs(de);
   block->steps[E_AXIS] *= volumetric_multiplier[active_extruder];
-  block->steps[E_AXIS] *= extruder_multiplier[active_extruder];
+  block->steps[E_AXIS] *= extruder_multiply[active_extruder];
   block->steps[E_AXIS] /= 100;
   block->step_event_count = max(block->steps[X_AXIS], max(block->steps[Y_AXIS], max(block->steps[Z_AXIS], block->steps[E_AXIS])));
 
@@ -701,7 +701,6 @@ float junction_deviation = 0.1;
   }
   else if (feed_rate < mintravelfeedrate) feed_rate = mintravelfeedrate;
 
-
   /**
    * This part of the code calculates the total length of the movement. 
    * For cartesian bots, the X_AXIS is the real X movement and same for Y_AXIS.
@@ -722,8 +721,8 @@ float junction_deviation = 0.1;
     delta_mm[Y_AXIS] = dy / axis_steps_per_unit[Y_AXIS];
   #endif
   delta_mm[Z_AXIS] = dz / axis_steps_per_unit[Z_AXIS];
-  delta_mm[E_AXIS] = (de / axis_steps_per_unit[E_AXIS + active_extruder]) * volumetric_multiplier[active_extruder] * extruder_multiplier[active_extruder] / 100.0;
-  
+  delta_mm[E_AXIS] = (de / axis_steps_per_unit[E_AXIS + active_extruder]) * volumetric_multiplier[active_extruder] * extruder_multiply[active_extruder] / 100.0;
+
   if (block->steps[X_AXIS] <= dropsegments && block->steps[Y_AXIS] <= dropsegments && block->steps[Z_AXIS] <= dropsegments) {
     block->millimeters = fabs(delta_mm[E_AXIS]);
   }
@@ -762,9 +761,8 @@ float junction_deviation = 0.1;
           #endif
         }
       }
-    #endif // SLOWDOWN
-  #endif //OLD_SLOWDOWN
-  //  END OF SLOW DOWN SECTION
+    #endif
+  #endif
 
   block->nominal_speed = block->millimeters * inverse_second; // (mm/sec) Always > 0
   block->nominal_rate = ceil(block->step_event_count * inverse_second); // (step/sec) Always > 0
@@ -887,7 +885,12 @@ float junction_deviation = 0.1;
  
   block->acceleration_st = acc_st;
   block->acceleration = acc_st / steps_per_mm;
-  block->acceleration_rate = (long)(acc_st * ( 16777216.0 / HAL_TIMER_RATE));
+
+  #ifdef __SAM3X8E__
+    block->acceleration_rate = (long)(acc_st * ( 16777216.0 / HAL_TIMER_RATE));
+  #else
+    block->acceleration_rate = (long)(acc_st * 16777216.0 / (F_CPU / 8.0));
+  #endif
 
   #if 0  // Use old jerk for now
     // Compute path unit vector
@@ -1055,6 +1058,6 @@ void plan_set_e_position(const float &e) {
 
 // Calculate the steps/s^2 acceleration rates, based on the mm/s^s
 void reset_acceleration_rates() {
-	for(int8_t i=0; i < E_AXIS + EXTRUDERS; i++)
+	for (int i = 0; i < 3 + EXTRUDERS; i++)
     axis_steps_per_sqr_second[i] = max_acceleration_units_per_sq_second[i] * axis_steps_per_unit[i];
 }

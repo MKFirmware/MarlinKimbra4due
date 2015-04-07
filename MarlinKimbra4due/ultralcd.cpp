@@ -30,9 +30,6 @@ int gumPreheatHotendTemp;
 int gumPreheatHPBTemp;
 int gumPreheatFanSpeed;
 
-const long baudrates[] = {9600,14400,19200,28800,38400,56000,115200,250000};
-int baudrate_position = -1;
-
 #if HAS_LCD_FILAMENT_SENSOR || HAS_LCD_POWER_SENSOR
   unsigned long message_millis = 0;
 #endif
@@ -71,7 +68,6 @@ static void lcd_status_screen();
   static void lcd_prepare_menu();
   static void lcd_move_menu();
   static void lcd_control_menu();
-  static void lcd_config_menu();
   static void lcd_control_temperature_menu();
   static void lcd_control_temperature_preheat_pla_settings_menu();
   static void lcd_control_temperature_preheat_abs_settings_menu();
@@ -275,8 +271,7 @@ static void lcd_goto_menu(menuFunc_t menu, const uint32_t encoder=0, const bool 
 }
 
 /* Main status screen. It's up to the implementation specific part to show what is needed. As this is very display dependent */
-static void lcd_status_screen()
-{
+static void lcd_status_screen() {
 	encoderRateMultiplierEnabled = false;
 
   #ifdef LCD_PROGRESS_BAR
@@ -309,16 +304,8 @@ static void lcd_status_screen()
     #endif
   #endif //LCD_PROGRESS_BAR
 
-  if (lcd_status_update_delay)
-    lcd_status_update_delay--;
-  else
-    lcdDrawUpdate = 1;
-
-  if (lcdDrawUpdate) {
     lcd_implementation_status_screen();
-    lcd_status_update_delay = 10;   /* redraw the main screen every second. This is easier then trying keep track of all things that change on the screen */
-  }
-  
+
   #if HAS_LCD_POWER_SENSOR
     if (millis() > print_millis + 2000) print_millis = millis();
   #endif
@@ -362,6 +349,9 @@ static void lcd_status_screen()
           currentMenu == lcd_status_screen
         #endif
       );
+      #ifdef FILAMENT_LCD_DISPLAY
+        message_millis = millis();  // get status message to show up for a while
+      #endif
     }
 
 #ifdef ULTIPANEL_FEEDMULTIPLY
@@ -452,7 +442,7 @@ static void lcd_main_menu() {
       #endif
     }
   #endif //SDSUPPORT
-  MENU_ITEM(submenu, MSG_CONFIG, lcd_config_menu);
+
   END_MENU();
 }
 
@@ -516,15 +506,15 @@ static void lcd_tune_menu() {
     MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_BED, &target_temperature_bed, 0, BED_MAXTEMP + LCD_MAX_TEMP_OFFSET);
   #endif
   MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_FAN_SPEED, &fanSpeed, 0, 255);
-  MENU_ITEM_EDIT(int3, MSG_FLOW " 0", &extruder_multiplier[0], 10, 999);
+  MENU_ITEM_EDIT(int3, MSG_FLOW " 0", &extruder_multiply[0], 10, 999);
   #if TEMP_SENSOR_1 != 0
-    MENU_ITEM_EDIT(int3, MSG_FLOW " 1", &extruder_multiplier[1], 10, 999);
+    MENU_ITEM_EDIT(int3, MSG_FLOW " 1", &extruder_multiply[1], 10, 999);
   #endif
   #if TEMP_SENSOR_2 != 0
-    MENU_ITEM_EDIT(int3, MSG_FLOW " 2", &extruder_multiplier[2], 10, 999);
+    MENU_ITEM_EDIT(int3, MSG_FLOW " 2", &extruder_multiply[2], 10, 999);
   #endif
   #if TEMP_SENSOR_3 != 0
-    MENU_ITEM_EDIT(int3, MSG_FLOW " 3", &extruder_multiplier[3], 10, 999);
+    MENU_ITEM_EDIT(int3, MSG_FLOW " 3", &extruder_multiply[3], 10, 999);
   #endif
 
   #ifdef BABYSTEPPING
@@ -925,41 +915,6 @@ static void lcd_control_menu() {
   #ifdef FWRETRACT
     MENU_ITEM(submenu, MSG_RETRACT, lcd_control_retract_menu);
   #endif
-  END_MENU();
-}
-
-static void config_baudrate() {
-  if(baudrate_position<0){
-    for (int8_t p = 0; p < 8; p++){
-      if (baudrates[p]==baudrate) baudrate_position = p;
-    }
-  }
-  if (encoderPosition != 0)
-    {
-      refresh_cmd_timeout();
-      baudrate_position += int(encoderPosition /2);
-      if(baudrate_position>7) baudrate_position=7;
-      if(baudrate_position<0) baudrate_position=0;
-      encoderPosition = 0;
-      lcdDrawUpdate = 1;
-    }
-  if (lcdDrawUpdate)
-    {
-      lcd_implementation_drawedit(PSTR("Baudrate"), ltostr7(baudrates[baudrate_position]));
-      baudrate=baudrates[baudrate_position];
-    }
-  if (LCD_CLICKED)
-  {
-    lcd_quick_feedback();
-    currentMenu = lcd_config_menu;
-    encoderPosition = 0;
-  }
-}
-
-static void lcd_config_menu() {
-  START_MENU();
-  MENU_ITEM(back, MSG_MAIN, lcd_main_menu);
-  MENU_ITEM(submenu, MSG_BAUDRATE, config_baudrate);
   #ifdef EEPROM_SETTINGS
     MENU_ITEM(function, MSG_STORE_EPROM, Config_StoreSettings);
     MENU_ITEM(function, MSG_LOAD_EPROM, Config_RetrieveSettings);
@@ -1565,27 +1520,36 @@ void lcd_update() {
             } // encoderRateMultiplierEnabled
           #endif //ENCODER_RATE_MULTIPLIER
 
-          lcdDrawUpdate = 1;
           encoderPosition += (encoderDiff * encoderMultiplier) / ENCODER_PULSES_PER_STEP;
           encoderDiff = 0;
         }
         timeoutToStatus = ms + LCD_TIMEOUT_TO_STATUS;
+        lcdDrawUpdate = 1;
       }
-
     #endif //ULTIPANEL
 
+    if (currentMenu == lcd_status_screen) {
+      if (!lcd_status_update_delay) {
+        lcdDrawUpdate = 1;
+        lcd_status_update_delay = 10;   /* redraw the main screen every second. This is easier then trying keep track of all things that change on the screen */
+      }
+      else {
+        lcd_status_update_delay--;
+      }
+    }
     #ifdef DOGLCD  // Changes due to different driver architecture of the DOGM display
-      blink++;     // Variable for fan animation and alive dot
-      u8g.firstPage();
-      do {
-        lcd_setFont(FONT_MENU);
-        u8g.setPrintPos(125, 0);
-        if (blink % 2) u8g.setColorIndex(1); else u8g.setColorIndex(0); // Set color for the alive dot
-        u8g.drawPixel(127, 63); // draw alive dot
-        u8g.setColorIndex(1); // black on white
-        (*currentMenu)();
-        if (!lcdDrawUpdate) break; // Terminate display update, when nothing new to draw. This must be done before the last dogm.next()
-      } while( u8g.nextPage() );
+      if (lcdDrawUpdate) {
+        blink++;     // Variable for fan animation and alive dot
+        u8g.firstPage();
+        do {
+          lcd_setFont(FONT_MENU);
+          u8g.setPrintPos(125, 0);
+          if (blink % 2) u8g.setColorIndex(1); else u8g.setColorIndex(0); // Set color for the alive dot
+          u8g.drawPixel(127, 63); // draw alive dot
+          u8g.setColorIndex(1); // black on white
+          (*currentMenu)();
+        } while( u8g.nextPage() );
+      }
     #else
       (*currentMenu)();
     #endif
@@ -1613,13 +1577,6 @@ void lcd_ignore_click(bool b) {
 }
 
 void lcd_finishstatus(bool persist=false) {
-  int len = lcd_strlen(lcd_status_message);
-  if (len > 0) {
-    while (len < LCD_WIDTH) {
-      lcd_status_message[len++] = ' ';
-    }
-  }
-  lcd_status_message[LCD_WIDTH] = '\0';
   #ifdef LCD_PROGRESS_BAR
     progressBarTick = millis();
     #if PROGRESS_MSG_EXPIRE > 0
@@ -1627,21 +1584,37 @@ void lcd_finishstatus(bool persist=false) {
     #endif
   #endif
   lcdDrawUpdate = 2;
+
+  #ifdef FILAMENT_LCD_DISPLAY
+    message_millis = millis();  //get status message to show up for a while
+  #endif
 }
 
 #if defined(LCD_PROGRESS_BAR) && PROGRESS_MSG_EXPIRE > 0
   void dontExpireStatus() { expireStatusMillis = 0; }
 #endif
 
+void set_utf_strlen(char *s, uint8_t n) {
+  uint8_t i = 0, j = 0;
+  while (s[i] && (j < n)) {
+    if ((s[i] & 0xc0u) != 0x80u) j++;
+    i++;
+  }
+  while (j++ < n) s[i++] = ' ';
+  s[i] = 0;
+}
+
 void lcd_setstatus(const char* message, bool persist) {
   if (lcd_status_message_level > 0) return;
-  strncpy(lcd_status_message, message, LCD_WIDTH);
+  strncpy(lcd_status_message, message, 3*LCD_WIDTH);
+  set_utf_strlen(lcd_status_message, LCD_WIDTH);
   lcd_finishstatus(persist);
 }
 
 void lcd_setstatuspgm(const char* message, uint8_t level) {
   if (level >= lcd_status_message_level) {
-    strncpy_P(lcd_status_message, message, LCD_WIDTH);
+    strncpy_P(lcd_status_message, message, 3*LCD_WIDTH);
+    set_utf_strlen(lcd_status_message, LCD_WIDTH);
     lcd_status_message_level = level;
     lcd_finishstatus(level > 0);
   }

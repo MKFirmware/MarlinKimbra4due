@@ -49,7 +49,7 @@
 //===========================================================================
 
 // coarse Endstop Settings
-#define ENDSTOPPULLUPS // Comment this out (using // at the start of the line) to disable the endstop pullup resistors
+//#define ENDSTOPPULLUPS // Comment this out (using // at the start of the line) to disable the endstop pullup resistors
 
 #ifndef ENDSTOPPULLUPS
   // fine endstop settings: Individual pullups. will be ignored if ENDSTOPPULLUPS is defined
@@ -59,20 +59,11 @@
   // #define ENDSTOPPULLUP_XMIN
   // #define ENDSTOPPULLUP_YMIN
   // #define ENDSTOPPULLUP_ZMIN
+  // #define ENDSTOPPULLUP_ZPROBE
   // #define ENDSTOPPULLUP_EMIN
 #endif
 
-#ifdef ENDSTOPPULLUPS
-  #define ENDSTOPPULLUP_XMAX
-  #define ENDSTOPPULLUP_YMAX
-  #define ENDSTOPPULLUP_ZMAX
-  #define ENDSTOPPULLUP_XMIN
-  #define ENDSTOPPULLUP_YMIN
-  #define ENDSTOPPULLUP_ZMIN
-  #define ENDSTOPPULLUP_EMIN
-#endif
-
-// The pullups are needed if you directly connect a mechanical end switch between the signal and ground pins.
+// Mechanical endstop with COM to ground and NC to Signal uses "false" here (most common setup).
 const bool X_MIN_ENDSTOP_INVERTING = false;     // set to true to invert the logic of the endstop.
 const bool Y_MIN_ENDSTOP_INVERTING = false;     // set to true to invert the logic of the endstop.
 const bool Z_MIN_ENDSTOP_INVERTING = false;     // set to true to invert the logic of the endstop.
@@ -80,6 +71,12 @@ const bool E_MIN_ENDSTOP_INVERTING = false;     // set to true to invert the log
 const bool X_MAX_ENDSTOP_INVERTING = false;     // set to true to invert the logic of the endstop.
 const bool Y_MAX_ENDSTOP_INVERTING = false;     // set to true to invert the logic of the endstop.
 const bool Z_MAX_ENDSTOP_INVERTING = false;     // set to true to invert the logic of the endstop.
+const bool Z_PROBE_ENDSTOP_INVERTING = false;   // set to true to invert the logic of the endstop.
+// If you want to enable the Z Probe pin, but disable its use, uncomment the line below.
+// This only affects a Z Probe Endstop if you have separate Z min endstop as well and have
+// activated Z_PROBE_ENDSTOP below. If you are using the Z Min endstop on your Z Probe,
+// this has no effect.
+//#define DISABLE_Z_PROBE_ENDSTOP
 
 // ENDSTOP SETTINGS:
 // Sets direction of endstop when homing; 1=MAX, -1=MIN
@@ -122,7 +119,7 @@ const bool Z_MAX_ENDSTOP_INVERTING = false;     // set to true to invert the log
 #define MANUAL_Y_HOME_POS 0
 #define MANUAL_Z_HOME_POS 205      // Distance between nozzle and print surface after homing.
 
-// Travel limits after homing
+// Travel limits after homing (units are in mm)
 #define X_MAX_POS PRINTER_RADIUS
 #define X_MIN_POS -PRINTER_RADIUS
 #define Y_MAX_POS PRINTER_RADIUS
@@ -132,9 +129,8 @@ const bool Z_MAX_ENDSTOP_INVERTING = false;     // set to true to invert the log
 #define E_MIN_POS 0
 
 
-//// MOVEMENT SETTINGS
-#define NUM_AXIS 4 // The axis order in all axis related arrays is X, Y, Z, E
-#define HOMING_FEEDRATE {100*60,100*60,100*60,0}      // set the homing speeds (mm/min)
+// MOVEMENT SETTINGS
+#define HOMING_FEEDRATE {100*60, 100*60, 100*60, 0}      // set the homing speeds (mm/min)
 
 // default settings
 // delta speeds must be the same on xyz

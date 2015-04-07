@@ -20,7 +20,7 @@
 // User-specified version info of this build to display in [Pronterface, etc] terminal window during
 // startup. Implementation of an idea by Prof Braino to inform user that any changes made to this
 // build by the user have been successfully uploaded into firmware.
-#define STRING_VERSION " 4.0.8"
+#define STRING_VERSION " 4.0.9"
 #define STRING_URL "reprap.org"
 #define STRING_VERSION_CONFIG_H __DATE__ " " __TIME__     // build date and time
 #define STRING_CONFIG_H_AUTHOR "(none, default config)"   // Who made the changes.
@@ -331,7 +331,7 @@ your extruder heater takes 2 minutes to hit the target on heating.
 
 //==============================LCD and SD support=============================
 
-// Chose ONE of the next three charsets. This has to match your hardware. In case of a full graphic display this information is not important.
+// Choose ONE of these 3 charsets. This has to match your hardware. Ignored for full graphic display.
 // To find out what type you have - compile with (test) - upload - click to get the menu. You'll see two typical lines from the upper half of the charset.
 // See also documentation/LCDLanguageFont.md
   #define DISPLAY_CHARSET_HD44780_JAPAN        // this is the most common hardware
@@ -404,7 +404,7 @@ your extruder heater takes 2 minutes to hit the target on heating.
 // Shift register panels
 // ---------------------
 // 2 wire Non-latching LCD SR from:
-// https://bitbucket.org/fmalpartida/new-liquidcrystal/wiki/schematics#!shiftregister-connection 
+// https://bitbucket.org/fmalpartida/new-liquidcrystal/wiki/schematics#!shiftregister-connection
 
 //#define SAV_3DLCD
 
@@ -525,7 +525,7 @@ your extruder heater takes 2 minutes to hit the target on heating.
 #define MAX_MEASUREMENT_DELAY        20     //delay buffer size in bytes (1 byte = 1cm)- limits maximum measurement delay allowable (must be larger than MEASUREMENT_DELAY_CM  and lower number saves RAM)
 
 //defines used in the code
-#define DEFAULT_MEASURED_FILAMENT_DIA  DEFAULT_NOMINAL_FILAMENT_DIA  //set measured to nominal initially 
+#define DEFAULT_MEASURED_FILAMENT_DIA  DEFAULT_NOMINAL_FILAMENT_DIA  //set measured to nominal initially
 
 //When using an LCD, uncomment the line below to display the Filament sensor data on the last line instead of status.  Status will appear for 5 sec.
 //#define FILAMENT_LCD_DISPLAY
@@ -593,13 +593,20 @@ your extruder heater takes 2 minutes to hit the target on heating.
 // Enable this option for Toshiba steppers
 //#define CONFIG_STEPPERS_TOSHIBA
 
-// Setting firmware for filament end switch
-//#define FILAMENT_END_SWITCH
-#ifdef FILAMENT_END_SWITCH
-  #define PAUSEPINPULLUP
-  const bool PAUSE_PIN_INVERTING = false;      // set to true to invert the logic of the pause pin.
+//===========================================================================
+//============================= Filament Runout Sensor ======================
+//===========================================================================
+//#define FILAMENT_RUNOUT_SENSOR // Uncomment for defining a filament runout sensor such as a mechanical or opto endstop to check the existence of filament
+                                 // It is assumed that when logic high = filament available
+                                 //                    when logic  low = filament ran out
+#ifdef FILAMENT_RUNOUT_SENSOR
+  const bool FIL_RUNOUT_INVERTING = true; // Should be uncommented and true or false should assigned
+  #define ENDSTOPPULLUP_FIL_RUNOUT        // Uncomment to use internal pullup for filament runout pins if the sensor is defined.
 #endif
 
+//===========================================================================
+//============================= Laser Beam Support ==========================
+//===========================================================================
 // define laser beam support
 //#define LASERBEAM
 

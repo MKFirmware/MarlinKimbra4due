@@ -1,14 +1,14 @@
-#ifndef __CONFIGURATIONSTORE_H
-#define __CONFIGURATIONSTORE_H
+#ifndef CONFIGURATIONSTORE_H
+#define CONFIGURATIONSTORE_H
 
 #include "Configuration.h"
 
 void Config_ResetDefault();
 
 #ifndef DISABLE_M503
-  void Config_PrintSettings();
+  void Config_PrintSettings(bool forReplay=false);
 #else
-  FORCE_INLINE void Config_PrintSettings() {}
+  FORCE_INLINE void Config_PrintSettings(bool forReplay=false) {}
 #endif
 
 #ifdef EEPROM_SETTINGS
@@ -19,4 +19,4 @@ void Config_ResetDefault();
   FORCE_INLINE void Config_RetrieveSettings() { Config_ResetDefault(); Config_PrintSettings(); }
 #endif
 
-#endif //__CONFIGURATIONSTORE_H
+#endif //CONFIGURATIONSTORE_H

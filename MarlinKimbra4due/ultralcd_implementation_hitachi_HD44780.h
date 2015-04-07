@@ -33,7 +33,7 @@
   #define EN_C BIT(BLEN_C) 
 #endif 
 
-#if defined(BTN_BACK) && BTN_BACK > -1
+#if HAS_BTN_BACK
   #define BLEN_D 3
   #define EN_D BIT(BLEN_D)
 #endif
@@ -106,7 +106,7 @@
 
 #elif defined(NEWPANEL)
   #define LCD_CLICKED (buttons&EN_C)
-  #if defined(BTN_BACK) && BTN_BACK > -1
+  #if HAS_BTN_BACK
     #define LCD_BACK_CLICKED (buttons&EN_D)
   #endif
   
