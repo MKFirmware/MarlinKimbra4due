@@ -117,7 +117,7 @@ const bool Z_PROBE_ENDSTOP_INVERTING = false;   // set to true to invert the log
 //Manual homing switch locations:
 #define MANUAL_X_HOME_POS 0
 #define MANUAL_Y_HOME_POS 0
-#define MANUAL_Z_HOME_POS 205      // Distance between nozzle and print surface after homing.
+#define MANUAL_Z_HOME_POS 200      // Distance between nozzle and print surface after homing.
 
 // Travel limits after homing (units are in mm)
 #define X_MAX_POS PRINTER_RADIUS

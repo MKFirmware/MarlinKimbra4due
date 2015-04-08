@@ -24,8 +24,6 @@
 #include "watchdog.h"
 #include "language.h"
 
-#include "Sd2PinMap.h"
-
 //===========================================================================
 //================================== macros =================================
 //===========================================================================
@@ -438,7 +436,7 @@ void checkExtruderAutoFans()
 // Temperature Error Handlers
 //
 inline void _temp_error(int e, const char *msg1, const char *msg2) {
-  if (!IsStopped()) {
+  if (IsRunning()) {
     SERIAL_ERROR_START;
     if (e >= 0) SERIAL_ERRORLN((int)e);
     serialprintPGM(msg1);
