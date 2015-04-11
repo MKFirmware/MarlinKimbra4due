@@ -28,8 +28,6 @@
   #endif
 #endif // ENABLE_AUTO_BED_LEVELING
 
-#define SERVO_LEVELING (defined(ENABLE_AUTO_BED_LEVELING) && PROBE_SERVO_DEACTIVATION_DELAY > 0)
-
 
 #include "ultralcd.h"
 #include "planner.h"
@@ -362,6 +360,10 @@ bool target_direction;
   static float bed_level_c = 20; //used for inital bed probe safe distance (to avoid crashing into bed)
   static float bed_level_ox, bed_level_oy, bed_level_oz;
   static int loopcount;
+<<<<<<< HEAD
+=======
+  static bool home_all_axis = true;
+>>>>>>> origin/master
 #else
   static bool home_all_axis = true;
 #endif // DELTA
@@ -476,12 +478,13 @@ Timer timer;
 void get_arc_coordinates();
 bool setTargetedHotend(int code);
 
-void serial_echopair_P(const char *s_P, float v)
-    { serialprintPGM(s_P); SERIAL_ECHO(v); }
-void serial_echopair_P(const char *s_P, double v)
-    { serialprintPGM(s_P); SERIAL_ECHO(v); }
-void serial_echopair_P(const char *s_P, unsigned long v)
-    { serialprintPGM(s_P); SERIAL_ECHO(v); }
+void serial_echopair_P(const char *s_P, float v)         { serialprintPGM(s_P); SERIAL_ECHO(v); }
+void serial_echopair_P(const char *s_P, double v)        { serialprintPGM(s_P); SERIAL_ECHO(v); }
+void serial_echopair_P(const char *s_P, unsigned long v) { serialprintPGM(s_P); SERIAL_ECHO(v); }
+
+#ifdef PREVENT_DANGEROUS_EXTRUDE
+  float extrude_min_temp = EXTRUDE_MINTEMP;
+#endif
 
 #ifndef __SAM3X8E__
 #ifdef SDSUPPORT
@@ -656,7 +659,7 @@ void servo_init()
         servos[servo_endstops[i]].write(servo_endstop_angles[i * 2 + 1]);
   #endif //NUM_SERVOS
 
-  #if SERVO_LEVELING
+  #if SERVO_LEVELING_DELAY
     delay(PROBE_SERVO_DEACTIVATION_DELAY);
     servos[servo_endstops[Z_AXIS]].detach();
   #endif
@@ -703,10 +706,9 @@ void setup()
   SERIAL_ECHOPGM(MSG_PLANNER_BUFFER_BYTES);
   SERIAL_ECHOLN((int)sizeof(block_t)*BLOCK_BUFFER_SIZE);
   #ifdef SDSUPPORT
-  for(int8_t i = 0; i < BUFSIZE; i++)
-  {
-    fromsd[i] = false;
-  }
+    for(int8_t i = 0; i < BUFSIZE; i++) {
+      fromsd[i] = false;
+    }
   #endif //!SDSUPPORT
 
   // loads data from EEPROM if available else uses defaults (and resets step acceleration rate)
@@ -1078,8 +1080,11 @@ inline void line_to_current_position() {
 inline void line_to_z(float zPosition) {
   plan_buffer_line(current_position[X_AXIS], current_position[Y_AXIS], zPosition, current_position[E_AXIS], feedrate/60, active_extruder, active_driver);
 }
+inline void line_to_destination(float mm_m) {
+  plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], mm_m/60, active_extruder, active_driver);
+}
 inline void line_to_destination() {
-  plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], feedrate/60, active_extruder, active_driver);
+  line_to_destination(feedrate);
 }
 inline void sync_plan_position() {
   plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
@@ -1284,7 +1289,11 @@ inline void set_destination_to_current() { memcpy(destination, current_position,
             servos[servo_endstops[Z_AXIS]].attach(0);
           #endif
           servos[servo_endstops[Z_AXIS]].write(servo_endstop_angles[Z_AXIS * 2]);
+<<<<<<< HEAD
           #if SERVO_LEVELING
+=======
+          #if SERVO_LEVELING_DELAY
+>>>>>>> origin/master
             delay(PROBE_SERVO_DEACTIVATION_DELAY);
             servos[servo_endstops[Z_AXIS]].detach();
           #endif
@@ -1349,7 +1358,7 @@ inline void set_destination_to_current() { memcpy(destination, current_position,
       #endif
 
       if (verbose_level > 2) {
-        SERIAL_PROTOCOLPGM(MSG_BED);
+        SERIAL_PROTOCOLPGM("Bed");
         SERIAL_PROTOCOLPGM(" X: ");
         SERIAL_PROTOCOL_F(x, 3);
         SERIAL_PROTOCOLPGM(" Y: ");
@@ -1472,7 +1481,11 @@ inline void set_destination_to_current() { memcpy(destination, current_position,
     max_pos[axis] =          base_max_pos[axis] + home_offset[axis];
   }
 
+<<<<<<< HEAD
   static void homeaxis(int axis) {
+=======
+  static void homeaxis(AxisEnum axis) {
+>>>>>>> origin/master
     #define HOMEAXIS_DO(LETTER) \
       ((LETTER##_MIN_PIN > -1 && LETTER##_HOME_DIR==-1) || (LETTER##_MAX_PIN > -1 && LETTER##_HOME_DIR==1))
 
@@ -2946,7 +2959,7 @@ inline void gcode_G28(boolean home_x = false, boolean home_y = false) {
       feedrate = homing_feedrate[Z_AXIS];
 
       run_z_probe();
-      SERIAL_PROTOCOLPGM(MSG_BED);
+      SERIAL_PROTOCOLPGM("Bed");
       SERIAL_PROTOCOLPGM(" X: ");
       SERIAL_PROTOCOL(current_position[X_AXIS] + 0.0001);
       SERIAL_PROTOCOLPGM(" Y: ");
@@ -3833,7 +3846,7 @@ inline void gcode_M42() {
   inline void gcode_M49() {
 
     double sum = 0.0, mean = 0.0, sigma = 0.0, sample_set[50];
-    int verbose_level = 1, n_samples = 10, n_legs = 0;
+    uint8_t verbose_level = 1, n_samples = 10, n_legs = 0;
 
     if (code_seen('V') || code_seen('v')) {
       verbose_level = code_value_short();
@@ -3947,7 +3960,7 @@ inline void gcode_M42() {
         //SERIAL_ECHOPAIR("   direction: ",dir);
         //SERIAL_EOL;
 
-        for (int l = 0; l < n_legs - 1; l++) {
+        for (uint8_t l = 0; l < n_legs - 1; l++) {
           ms = millis();
           theta += RADIANS(dir * (ms % 20L));
           radius += (ms % 10L) - 5L;
@@ -3986,7 +3999,7 @@ inline void gcode_M42() {
       // Get the current mean for the data points we have so far
       //
       sum = 0.0;
-      for (int j = 0; j <= n; j++) sum += sample_set[j];
+      for (uint8_t j = 0; j <= n; j++) sum += sample_set[j];
       mean = sum / (n + 1);
 
       //
@@ -3994,7 +4007,7 @@ inline void gcode_M42() {
       // data points we have so far
       //
       sum = 0.0;
-      for (int j = 0; j <= n; j++) {
+      for (uint8_t j = 0; j <= n; j++) {
         float ss = sample_set[j] - mean;
         sum += ss * ss;
       }
@@ -4190,7 +4203,10 @@ inline void gcode_M104() {
  */
 inline void gcode_M105() {
   if (setTargetedHotend(105)) return;
+<<<<<<< HEAD
   if (debugDryrun()) return;
+=======
+>>>>>>> origin/master
 
   #if HAS_TEMP_0 || HAS_TEMP_BED
     SERIAL_PROTOCOLPGM("ok");
@@ -4925,6 +4941,9 @@ inline void gcode_M226() {
 #endif // PIDTEMP
 
 #ifdef PREVENT_DANGEROUS_EXTRUDE
+
+  void set_extrude_min_temp(float temp) { extrude_min_temp = temp; }
+
   /**
    * M302: Allow cold extrudes, or set the minimum extrude S<temperature>.
    */
@@ -5118,7 +5137,7 @@ inline void gcode_M303() {
  */
 inline void gcode_M400() { st_synchronize(); }
 
-#if defined(ENABLE_AUTO_BED_LEVELING) && defined(SERVO_ENDSTOPS) && (NUM_SERVOS > 0) && not defined(Z_PROBE_SLED)
+#if SERVO_LEVELING
 
   /**
    * M401: Engage Z Servo endstop if available
@@ -5651,7 +5670,7 @@ inline void gcode_T() {
         // Save current position to return to after applying extruder offset
         set_destination_to_current();
         #ifdef DUAL_X_CARRIAGE
-          if (dual_x_carriage_mode == DXC_AUTO_PARK_MODE && Stopped == false &&
+          if (dual_x_carriage_mode == DXC_AUTO_PARK_MODE && Running == true &&
             (delayed_move_time != 0 || current_position[X_AXIS] != x_home_pos(active_extruder)))
           {
             // Park old head: 1) raise 2) move to park position 3) lower
@@ -6167,7 +6186,7 @@ void process_commands() {
       case 400: // M400 finish all moves
         gcode_M400(); break;
 
-      #if defined(ENABLE_AUTO_BED_LEVELING) && (defined(SERVO_ENDSTOPS) || defined(Z_PROBE_ALLEN_KEY)) && not defined(Z_PROBE_SLED)
+      #if SERVO_LEVELING
         case 401:
           gcode_M401(); break;
         case 402:
@@ -6331,14 +6350,30 @@ void prepare_move() {
   clamp_to_software_endstops(destination);
   refresh_cmd_timeout();
 
+  #ifdef PREVENT_DANGEROUS_EXTRUDE
+    float de = destination[E_AXIS] - current_position[E_AXIS];
+    if (de) {
+      if (degHotend(active_extruder) < extrude_min_temp) {
+        current_position[E_AXIS] = destination[E_AXIS]; // Behave as if the move really took place, but ignore E part
+        SERIAL_ECHO_START;
+        SERIAL_ECHOLNPGM(MSG_ERR_COLD_EXTRUDE_STOP);
+      }
+      #ifdef PREVENT_LENGTHY_EXTRUDE
+        if (labs(de) > EXTRUDE_MAXLENGTH) {
+          current_position[E_AXIS] = destination[E_AXIS]; // Behave as if the move really took place, but ignore E part
+          SERIAL_ECHO_START;
+          SERIAL_ECHOLNPGM(MSG_ERR_LONG_EXTRUDE_STOP);
+        }
+      #endif
+    }
+  #endif
+
   #ifdef SCARA //for now same as delta-code
 
     float difference[NUM_AXIS];
     for (int8_t i = 0; i < NUM_AXIS; i++) difference[i] = destination[i] - current_position[i];
 
-    float cartesian_mm = sqrt(  sq(difference[X_AXIS]) +
-                                sq(difference[Y_AXIS]) +
-                                sq(difference[Z_AXIS]));
+    float cartesian_mm = sqrt(sq(difference[X_AXIS]) + sq(difference[Y_AXIS]) + sq(difference[Z_AXIS]));
     if (cartesian_mm < 0.000001) { cartesian_mm = abs(difference[E_AXIS]); }
     if (cartesian_mm < 0.000001) { return; }
     float seconds = 6000 * cartesian_mm / feedrate / feedmultiply;
@@ -6350,9 +6385,7 @@ void prepare_move() {
 
     for (int s = 1; s <= steps; s++) {
       float fraction = float(s) / float(steps);
-      for(int8_t i = 0; i < NUM_AXIS; i++) {
-        destination[i] = current_position[i] + difference[i] * fraction;
-      }
+      for (int8_t i = 0; i < NUM_AXIS; i++) destination[i] = current_position[i] + difference[i] * fraction;
 
       calculate_delta(destination);
       //SERIAL_ECHOPGM("destination[X_AXIS]="); SERIAL_ECHOLN(destination[X_AXIS]);
@@ -6373,9 +6406,7 @@ void prepare_move() {
     float difference[NUM_AXIS];
     for (int8_t i=0; i < NUM_AXIS; i++) difference[i] = destination[i] - current_position[i];
 
-    float cartesian_mm = sqrt(sq(difference[X_AXIS]) +
-                              sq(difference[Y_AXIS]) +
-                              sq(difference[Z_AXIS]));
+    float cartesian_mm = sqrt(sq(difference[X_AXIS]) + sq(difference[Y_AXIS]) + sq(difference[Z_AXIS]));
     if (cartesian_mm < 0.000001) cartesian_mm = abs(difference[E_AXIS]);
     if (cartesian_mm < 0.000001) return;
     float seconds = 6000 * cartesian_mm / feedrate / feedmultiply;
@@ -6388,15 +6419,7 @@ void prepare_move() {
     for (int s = 1; s <= steps; s++) {
       float fraction = float(s) / float(steps);
       for (int8_t i = 0; i < NUM_AXIS; i++) destination[i] = current_position[i] + difference[i] * fraction;
-
       calculate_delta(destination);
-      //SERIAL_ECHOPGM("destination[0]="); SERIAL_ECHOLN(destination[0]);
-      //SERIAL_ECHOPGM("destination[1]="); SERIAL_ECHOLN(destination[1]);
-      //SERIAL_ECHOPGM("destination[2]="); SERIAL_ECHOLN(destination[2]);
-      //SERIAL_ECHOPGM("delta[X_AXIS]="); SERIAL_ECHOLN(delta[X_AXIS]);
-      //SERIAL_ECHOPGM("delta[Y_AXIS]="); SERIAL_ECHOLN(delta[Y_AXIS]);
-      //SERIAL_ECHOPGM("delta[Z_AXIS]="); SERIAL_ECHOLN(delta[Z_AXIS]);
-
       adjust_delta(destination);
       plan_buffer_line(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], destination[E_AXIS], feedrate*feedmultiply/60/100.0, active_extruder, active_driver);
     }
@@ -6442,7 +6465,7 @@ void prepare_move() {
       line_to_destination();
     }
     else {
-      plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], (feedrate/60)*(feedmultiply/100.0), active_extruder, active_driver);
+      line_to_destination(feedrate * feedmultiply / 100.0);
     }
   #endif // !defined(DELTA) && !defined(SCARA)
 
