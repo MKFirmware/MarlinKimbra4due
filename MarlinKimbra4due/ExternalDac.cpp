@@ -3,8 +3,11 @@
 * Externa DAC for Alligator Board
 *
 ****************************************************************/
+#include "Configuration.h"
+#include "boards.h"
+#include "pins.h"
 
-#if MOTHERBOARD == 501
+#if MB(ALLIGATOR)
   #include "stepper.h"
   #include "ExternalDac.h"
   #include "SPI.h"

@@ -78,7 +78,7 @@
 #define E2_ENABLE_PIN      49
 
 #define SDPOWER            -1
-#define SDSS               4 //10 Display
+#define SDSS               10
 #define LED_PIN            -1
 
 #define BEEPER             41
@@ -122,27 +122,23 @@
 
 
 #ifdef ULTRA_LCD
+  // RADDS LCD panel
+  #ifdef NEWPANEL
+    #define LCD_PINS_RS 		42
+    #define LCD_PINS_ENABLE 43
+    #define LCD_PINS_D4 		44
+    #define LCD_PINS_D5 		45
+    #define LCD_PINS_D6 		46
+    #define LCD_PINS_D7 		47
 
-	// RADDS LCD panel
-	#ifdef NEWPANEL
-	  #define LCD_PINS_RS 		42
-	  #define LCD_PINS_ENABLE 	43
-	  #define LCD_PINS_D4 		44
-	  #define LCD_PINS_D5 		45
-	  #define LCD_PINS_D6 		46
-	  #define LCD_PINS_D7 		47
-
-	  #ifdef REPRAP_DISCOUNT_SMART_CONTROLLER
-			#define BEEPER 41
-
-			#define BTN_EN1 52
-			#define BTN_EN2 50
-			#define BTN_ENC 48
-
-			#define SDCARDDETECT 14
-	  #endif
-	#endif
-
+    #ifdef REPRAP_DISCOUNT_SMART_CONTROLLER
+      #define BEEPER        41
+      #define BTN_EN1       52
+      #define BTN_EN2       50
+      #define BTN_ENC       48
+      #define SDCARDDETECT  14
+    #endif
+  #endif
 #endif //ULTRA_LCD
 
 
@@ -251,47 +247,43 @@
 
 
 
-  #ifdef NUM_SERVOS
-    #define SERVO0_PIN         11
+#ifdef NUM_SERVOS
+  #define SERVO0_PIN        11
 
-    #if NUM_SERVOS > 1
-      #define SERVO1_PIN         6
-    #endif
-
-    #if NUM_SERVOS > 2
-      #define SERVO2_PIN         5
-    #endif
-
-    #if NUM_SERVOS > 3
-      #define SERVO3_PIN         4
-    #endif
+  #if NUM_SERVOS > 1
+    #define SERVO1_PIN      6
   #endif
 
-  #ifdef ULTRA_LCD
+  #if NUM_SERVOS > 2
+    #define SERVO2_PIN      5
+  #endif
 
-    #ifdef NEWPANEL
-      // ramps-fd lcd adaptor
-      #define LCD_PINS_RS 16
-      #define LCD_PINS_ENABLE 17
-      #define LCD_PINS_D4 23
-      #define LCD_PINS_D5 25
-      #define LCD_PINS_D6 27
-      #define LCD_PINS_D7 29
+  #if NUM_SERVOS > 3
+    #define SERVO3_PIN      4
+  #endif
+#endif
 
-      #ifdef REPRAP_DISCOUNT_SMART_CONTROLLER
-        #define BEEPER 37
+#ifdef ULTRA_LCD
+  #ifdef NEWPANEL
+    // ramps-fd lcd adaptor
+    #define LCD_PINS_RS 16
+    #define LCD_PINS_ENABLE 17
+    #define LCD_PINS_D4 23
+    #define LCD_PINS_D5 25
+    #define LCD_PINS_D6 27
+    #define LCD_PINS_D7 29
 
-        #define BTN_EN1 33
-        #define BTN_EN2 31
-        #define BTN_ENC 35
+    #ifdef REPRAP_DISCOUNT_SMART_CONTROLLER
+      #define BEEPER 37
 
-        #define SDCARDDETECT 49
-        #endif
+      #define BTN_EN1 33
+      #define BTN_EN2 31
+      #define BTN_ENC 35
 
-      #endif
-
-  #endif //ULTRA_LCD
-
+      #define SDCARDDETECT 49
+    #endif
+  #endif
+#endif //ULTRA_LCD
 
 // SPI for Max6675 Thermocouple
 
@@ -433,7 +425,7 @@
 
 
 /****************************************************************************************
-*********** Available chip select pins for HW SPI are 4 10 52 ***************************
+*********** Available chip select pins for HW SPI are 4 10 52 77 ************************
 /****************************************************************************************/
 #if (SDSS == 4) || (SDSS == 10) || (SDSS == 52) || (SDSS == 77)
   #if (SDSS == 4)
@@ -452,6 +444,7 @@
   #define MOSI_PIN          75
   #define MISO_PIN          74
   #define SCK_PIN           76
+  #define SS_PIN            77
 //#define DUE_SOFTWARE_SPI
 #else
   #define DUE_SOFTWARE_SPI
@@ -613,18 +606,18 @@
 #endif
 
 #ifdef MKR4
-  #if (EXTRUDERS == 2) && (DRIVER_EXTRUDERS==1)     // Use this for one driver and two extruder
+  #if (EXTRUDERS == 2) && (DRIVER_EXTRUDERS == 1)    // Use this for one driver and two extruder
     #define E0E1_CHOICE_PIN    40
-  #elif (EXTRUDERS == 3) && (DRIVER_EXTRUDERS==1)     // Use this for one driver and 3 extruder
+  #elif (EXTRUDERS == 3) && (DRIVER_EXTRUDERS == 1)  // Use this for one driver and 3 extruder
     #define E0E1_CHOICE_PIN    40
     #define E0E2_CHOICE_PIN    41
-  #elif (EXTRUDERS == 4) && (DRIVER_EXTRUDERS==1)     // Use this for one driver and 4 extruder
+  #elif (EXTRUDERS == 4) && (DRIVER_EXTRUDERS == 1)  // Use this for one driver and 4 extruder
     #define E0E1_CHOICE_PIN    40
     #define E0E2_CHOICE_PIN    41
     #define E0E3_CHOICE_PIN    42
-  #elif (EXTRUDERS == 3) && (DRIVER_EXTRUDERS==2)   // Use this for two driver and 3 extruder
+  #elif (EXTRUDERS == 3) && (DRIVER_EXTRUDERS == 2)  // Use this for two driver and 3 extruder
     #define E0E2_CHOICE_PIN    5
-  #elif (EXTRUDERS == 4) && (DRIVER_EXTRUDERS==2)   // Use this for two driver and 4 extruder
+  #elif (EXTRUDERS == 4) && (DRIVER_EXTRUDERS == 2)  // Use this for two driver and 4 extruder
     #define E0E2_CHOICE_PIN    5
     #define E1E3_CHOICE_PIN    6
   #endif //EXTRUDERS

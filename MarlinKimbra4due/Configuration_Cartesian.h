@@ -185,7 +185,7 @@ const bool Z_PROBE_ENDSTOP_INVERTING = false;   // set to true to invert the log
 #endif
 
 // MOVEMENT SETTINGS
-#define HOMING_FEEDRATE {100*60,100*60,2*60,0}      // set the homing speeds (mm/min)
+#define HOMING_FEEDRATE {100*60, 100*60, 2*60, 0}      // set the homing speeds (mm/min)
 
 // default settings
 #define DEFAULT_AXIS_STEPS_PER_UNIT     {80,80,3200,625,625,625,625}       // X, Y, Z, E0, E1, E2, E3 default steps per unit
