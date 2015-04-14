@@ -173,14 +173,14 @@
 
 
 //
-#if MB(RAMPS_FD_V1)
+#if MB(RAMPS_FDV1)
   #define INVERTED_HEATER_PINS
-  #define RAMPS_FD_V1
+  #define RAMPS_FDV1
   #define INVERTED_HEATER_PINS
   // No EEPROM
   // Use 4k7 thermistor tables
 #else
-  #define RAMPS_FD_V2
+  #define RAMPS_FDV2
   // EEPROM supported
   // Use 1k thermistor tables
 #endif
