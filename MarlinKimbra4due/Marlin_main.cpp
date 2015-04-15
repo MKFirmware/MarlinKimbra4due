@@ -2983,7 +2983,7 @@ inline void gcode_G28(boolean home_x = false, boolean home_y = false) {
   #endif //Z_PROBE_SLED
 #endif //ENABLE_AUTO_BED_LEVELING
 
-#ifdef DELTA
+#if defined(DELTA) && defined(Z_PROBE_ENDSTOP)
   // G29: Delta Z-Probe, probes the bed at more points.
   inline void gcode_G29() {
     if (code_seen('D')) {
@@ -3469,7 +3469,7 @@ inline void gcode_G28(boolean home_x = false, boolean home_y = false) {
     feedrate = saved_feedrate;
     feedmultiply = saved_feedmultiply;
   }
-#endif // DELTA
+#endif // DELTA && Z_PROBE_ENDSTOP
 
 // G60: Store in memory actual position
 inline void gcode_G60() {
@@ -5933,12 +5933,12 @@ void process_commands() {
         #endif // Z_PROBE_SLED
       #endif // ENABLE_AUTO_BED_LEVELING
 
-      #ifdef DELTA
+      #if defined(DELTA) && defined(Z_PROBE_ENDSTOP)
         case 29: // G29 Detailed Z-Probe, probes the bed at more points.
           gcode_G29(); break;
         case 30:  // G30 Delta AutoCalibration
           gcode_G30(); break;
-      #endif //DELTA
+      #endif // DELTA && Z_PROBE_ENDSTOP
 
       case 60: // G60 Store in memory actual position
         gcode_G60(); break;

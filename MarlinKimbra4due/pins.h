@@ -516,21 +516,21 @@
   #define X_MIN_PIN          -1
 #elif X_HOME_DIR < 0      //Home X to MIN
   #define X_MAX_PIN          -1
-#endif //X_HOME_DIR > 0
+#endif
 
 #if Y_HOME_DIR > 0        //Home Y to MAX
   #define Y_MIN_PIN          -1
 #elif Y_HOME_DIR < 0      //Home Y to MIN
   #define Y_MAX_PIN          -1
-#endif //Y_HOME_DIR > 0
+#endif
 
 #if Z_HOME_DIR > 0      //Home Z to MAX
   #define Z_MIN_PIN        -1
 #elif Z_HOME_DIR < 0    //Home Z to MIN
   #define Z_MAX_PIN        -1
-#endif //Z_HOME_DIR > 0
+#endif
 
-#if defined(DISABLE_Z_PROBE_ENDSTOP) || !defined(Z_PROBE_ENDSTOP) // Allow code to compile regardless of Z_PROBE_ENDSTOP setting.
+#ifndef Z_PROBE_ENDSTOP // Allow code to compile regardless of Z_PROBE_ENDSTOP setting.
   #define Z_PROBE_PIN        -1
 #endif
 

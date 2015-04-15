@@ -103,19 +103,13 @@ static volatile bool endstop_z_probe_hit = false; // Leaving this in even if Z_P
 #if HAS_Y_MAX
   static bool old_y_max_endstop = false;
 #endif
-#if HAS_Z_MIN
-  static bool old_z_min_endstop = false;
-#endif
-#if HAS_Z_MAX
-  static bool old_z_max_endstop = false;
-#endif
+
+static bool old_z_min_endstop = false;
+static bool old_z_max_endstop = false;
+
 #ifdef Z_DUAL_ENDSTOPS
-  #if HAS_Z2_MIN
-    static bool old_z2_min_endstop = false;
-  #endif
-  #if HAS_Z2_MAX
-    static bool old_z2_max_endstop = false;
-  #endif
+  static bool old_z2_min_endstop = false;
+  static bool old_z2_max_endstop = false;
 #endif
 
 #ifdef Z_PROBE_ENDSTOP // No need to check for valid pin, SanityCheck.h already does this.
@@ -197,7 +191,7 @@ void endstops_hit_on_purpose() {
 }
 
 void checkHitEndstops() {
-  if( endstop_x_hit || endstop_y_hit || endstop_z_hit || endstop_z_probe_hit || endstop_e_hit) {
+  if (endstop_x_hit || endstop_y_hit || endstop_z_hit || endstop_z_probe_hit || endstop_e_hit) {
     SERIAL_ECHO_START;
     SERIAL_ECHOPGM(MSG_ENDSTOPS_HIT);
     if(endstop_x_hit) {
@@ -448,7 +442,7 @@ HAL_STEP_TIMER_ISR {
     }
 
     #define UPDATE_ENDSTOP(axis,AXIS,minmax,MINMAX) \
-      bool axis ##_## minmax ##_endstop = (READ(AXIS ##_## MINMAX ##_PIN) == AXIS ##_## MINMAX ##_ENDSTOP_INVERTING); \
+      bool axis ##_## minmax ##_endstop = (READ(AXIS ##_## MINMAX ##_PIN) != AXIS ##_## MINMAX ##_ENDSTOP_INVERTING); \
       if (axis ##_## minmax ##_endstop && old_## axis ##_## minmax ##_endstop && (current_block->steps[AXIS ##_AXIS] > 0)) { \
         endstops_trigsteps[AXIS ##_AXIS] = count_position[AXIS ##_AXIS]; \
         endstop_## axis ##_hit = true; \
@@ -553,8 +547,8 @@ HAL_STEP_TIMER_ISR {
 
         #ifdef Z_PROBE_ENDSTOP
           UPDATE_ENDSTOP(z, Z, probe, PROBE);
-          z_probe_endstop = (READ(Z_PROBE_PIN) == Z_PROBE_ENDSTOP_INVERTING);
-          if(z_probe_endstop && old_z_probe_endstop)
+          z_probe_endstop = (READ(Z_PROBE_PIN) != Z_PROBE_ENDSTOP_INVERTING);
+          if (z_probe_endstop && old_z_probe_endstop)
           {
         	  endstops_trigsteps[Z_AXIS] = count_position[Z_AXIS];
         	  endstop_z_probe_hit = true;
@@ -578,7 +572,7 @@ HAL_STEP_TIMER_ISR {
 
           #ifdef Z_DUAL_ENDSTOPS
 
-            bool z_max_endstop = READ(Z_MAX_PIN) == Z_MAX_ENDSTOP_INVERTING,
+            bool z_max_endstop = READ(Z_MAX_PIN) != Z_MAX_ENDSTOP_INVERTING,
                 z2_max_endstop =
                   #if HAS_Z2_MAX
                     READ(Z2_MAX_PIN) != Z2_MAX_ENDSTOP_INVERTING
@@ -609,18 +603,6 @@ HAL_STEP_TIMER_ISR {
           #endif // !Z_DUAL_ENDSTOPS
 
         #endif // Z_MAX_PIN
-        
-        #ifdef Z_PROBE_ENDSTOP
-          UPDATE_ENDSTOP(z, Z, probe, PROBE);
-          z_probe_endstop=(READ(Z_PROBE_PIN) == Z_PROBE_ENDSTOP_INVERTING);
-          if(z_probe_endstop && old_z_probe_endstop)
-          {
-        	  endstops_trigsteps[Z_AXIS] = count_position[Z_AXIS];
-        	  endstop_z_probe_hit = true;
-//        	  if (z_probe_endstop && old_z_probe_endstop) SERIAL_ECHOLN("z_probe_endstop = true");
-          }
-          old_z_probe_endstop = z_probe_endstop;
-        #endif
 
       } // check_endstops
 
@@ -633,7 +615,7 @@ HAL_STEP_TIMER_ISR {
 	      #ifdef NPR2
           if (check_endstops) {
             #if defined(E_MIN_PIN) && E_MIN_PIN > -1
-              bool e_min_endstop=(READ(E_MIN_PIN) == E_MIN_ENDSTOP_INVERTING);
+              bool e_min_endstop=(READ(E_MIN_PIN) != E_MIN_ENDSTOP_INVERTING);
               if (e_min_endstop && old_e_min_endstop && (current_block->steps[E_AXIS] > 0)) {
                 endstops_trigsteps[E_AXIS] = count_position[E_AXIS];
                 endstop_e_hit = true;
