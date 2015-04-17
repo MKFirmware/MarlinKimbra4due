@@ -228,9 +228,9 @@
   #define K1 0.95 // Smoothing factor within the PID
 
 //             HotEnd{HE0,HE1,HE2,HE3}
-  #define DEFAULT_Kp {41,41,41,41}     // Kp for E0, E1, E2, E3
-  #define DEFAULT_Ki {07,07,07,07}     // Ki for E0, E1, E2, E3
-  #define DEFAULT_Kd {59,59,59,59}     // Kd for E0, E1, E2, E3
+  #define DEFAULT_Kp {40, 40, 40, 40}     // Kp for E0, E1, E2, E3
+  #define DEFAULT_Ki {07, 07, 07, 07}     // Ki for E0, E1, E2, E3
+  #define DEFAULT_Kd {60, 60, 60, 60}     // Kd for E0, E1, E2, E3
 
 #endif // PIDTEMP
 

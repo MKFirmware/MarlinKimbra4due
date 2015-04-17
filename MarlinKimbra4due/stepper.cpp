@@ -376,14 +376,14 @@ FORCE_INLINE void trapezoid_generator_reset() {
 // "The Stepper Driver Interrupt" - This timer interrupt is the workhorse.
 // It pops blocks from the block_buffer and executes them by pulsing the stepper pins appropriately.
 HAL_STEP_TIMER_ISR {
-  HAL_timer_isr_prologue (STEP_TIMER_NUM);
-  
+  HAL_timer_isr_status (STEP_TIMER_NUM);
+
   if(cleaning_buffer_counter)
   {
     current_block = NULL;
     plan_discard_current_block();
     #ifdef SD_FINISHED_RELEASECOMMAND
-      if ((cleaning_buffer_counter == 1) && (SD_FINISHED_STEPPERRELEASE)) enquecommands_P(PSTR(SD_FINISHED_RELEASECOMMAND));
+      if ((cleaning_buffer_counter == 1) && (SD_FINISHED_STEPPERRELEASE)) enqueuecommands_P(PSTR(SD_FINISHED_RELEASECOMMAND));
     #endif
     cleaning_buffer_counter--;
     HAL_timer_set_count (STEP_TIMER_NUM, HAL_TIMER_RATE / 200); //5ms wait
@@ -696,10 +696,10 @@ HAL_STEP_TIMER_ISR {
       step_events_completed++;
       if (step_events_completed >= current_block->step_event_count) break;
     }
-    // Calculare new timer value
+    // Calculate new timer value
     unsigned long timer;
     unsigned long step_rate;
-    if (step_events_completed <= (unsigned long int)current_block->accelerate_until) {
+    if (step_events_completed <= (unsigned long)current_block->accelerate_until) {
 
       MultiU24X24toH16(acc_step_rate, acceleration_time, current_block->acceleration_rate);
       acc_step_rate += current_block->initial_rate;
@@ -723,7 +723,7 @@ HAL_STEP_TIMER_ISR {
 
       #endif
     }
-    else if (step_events_completed > (unsigned long int)current_block->decelerate_after) {
+    else if (step_events_completed > (unsigned long)current_block->decelerate_after) {
       MultiU24X24toH16(step_rate, deceleration_time, current_block->acceleration_rate);
 
       if (step_rate > acc_step_rate) { // Check step_rate stays positive
@@ -1051,19 +1051,16 @@ void st_init() {
   HAL_step_timer_start();
   ENABLE_STEPPER_DRIVER_INTERRUPT();
 
-#if 0 // old AVR-stuff; needs rework
+  #if 0 // old AVR-stuff; needs rework
   #ifdef ADVANCE
     #if defined(TCCR0A) && defined(WGM01)
       TCCR0A &= ~BIT(WGM01);
       TCCR0A &= ~BIT(WGM00);
     #endif
-    e_steps[0] = 0;
-    e_steps[1] = 0;
-    e_steps[2] = 0;
-    e_steps[3] = 0;
+    e_steps[0] = e_steps[1] = e_steps[2] = e_steps[3] = 0;
     TIMSK0 |= BIT(OCIE0A);
   #endif //ADVANCE
-#endif
+  #endif
 
   enable_endstops(true); // Start with endstops active. After homing they can be disabled
   sei();

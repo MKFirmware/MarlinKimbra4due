@@ -62,8 +62,8 @@
 //============================= public variables ============================
 //===========================================================================
 
-unsigned long minsegmenttime;
-float max_feedrate[3 + EXTRUDERS]; // set the max speeds
+millis_t minsegmenttime;
+float max_feedrate[3 + EXTRUDERS]; // Max speeds in mm per minute
 float max_retraction_feedrate[EXTRUDERS]; // set the max speeds for retraction
 float axis_steps_per_unit[3 + EXTRUDERS];
 unsigned long max_acceleration_units_per_sq_second[3 + EXTRUDERS]; // Use M201 to override by software
@@ -156,8 +156,8 @@ void calculate_trapezoid_for_block(block_t *block, float entry_factor, float exi
   unsigned long final_rate = ceil(block->nominal_rate * exit_factor); // (step/min)
 
   // Limit minimal step rate (Otherwise the timer will overflow.)
-  if (initial_rate < 120) initial_rate = 120;
-  if (final_rate < 120) final_rate = 120;
+  NOLESS(initial_rate, 120);
+  NOLESS(final_rate, 120);
 
   long acceleration = block->acceleration_st;
   int32_t accelerate_steps = ceil(estimate_acceleration_distance(initial_rate, block->nominal_rate, acceleration));
@@ -378,16 +378,18 @@ void plan_init() {
     }
 
     float t = autotemp_min + high * autotemp_factor;
-    if (t < autotemp_min) t = autotemp_min;
-    if (t > autotemp_max) t = autotemp_max;
-    if (oldt > t) t = AUTOTEMP_OLDWEIGHT * oldt + (1 - AUTOTEMP_OLDWEIGHT) * t;
+    t = constrain(t, autotemp_min, autotemp_max);
+    if (oldt > t) {
+      t *= (1 - AUTOTEMP_OLDWEIGHT);
+      t += AUTOTEMP_OLDWEIGHT * oldt;
+    }
     oldt = t;
     setTargetHotend0(t);
   }
 #endif
 
 void check_axes_activity() {
-  unsigned char axis_active[NUM_AXIS],
+  unsigned char axis_active[NUM_AXIS] = { 0 },
                 tail_fan_speed = fanSpeed;
   #ifdef BARICUDA
     unsigned char tail_valve_pressure = ValvePressure,
@@ -428,7 +430,7 @@ void check_axes_activity() {
 
   #if HAS_FAN
     #ifdef FAN_KICKSTART_TIME
-      static unsigned long fan_kick_end;
+      static millis_t fan_kick_end;
       if (tail_fan_speed) {
         if (fan_kick_end == 0) {
           // Just starting up fan - run at full power.
@@ -510,10 +512,10 @@ float junction_deviation = 0.1;
   #ifdef PREVENT_DANGEROUS_EXTRUDE
     if (de) {
       #ifdef NPR2
-        if (active_extruder != 1)
+        if (extruder != 1)
       #endif // NPR2
         {
-          if (degHotend(active_extruder) < extrude_min_temp && !debugDryrun()) {
+          if (degHotend(extruder) < extrude_min_temp && !debugDryrun()) {
             position[E_AXIS] = target[E_AXIS]; //behave as if the move really took place, but ignore E part
             de = 0; // no difference
             SERIAL_ECHO_START;
@@ -522,7 +524,7 @@ float junction_deviation = 0.1;
         }
 
       #ifdef PREVENT_LENGTHY_EXTRUDE
-        if (labs(de) > axis_steps_per_unit[E_AXIS + active_extruder] * EXTRUDE_MAXLENGTH) {
+        if (labs(de) > axis_steps_per_unit[E_AXIS + extruder] * EXTRUDE_MAXLENGTH) {
           #ifdef EASY_LOAD
             if (!allow_lengthy_extrude_once) {
           #endif
@@ -559,8 +561,8 @@ float junction_deviation = 0.1;
 
   block->steps[Z_AXIS] = labs(dz);
   block->steps[E_AXIS] = labs(de);
-  block->steps[E_AXIS] *= volumetric_multiplier[active_extruder];
-  block->steps[E_AXIS] *= extruder_multiply[active_extruder];
+  block->steps[E_AXIS] *= volumetric_multiplier[extruder];
+  block->steps[E_AXIS] *= extruder_multiply[extruder];
   block->steps[E_AXIS] /= 100;
   block->step_event_count = max(block->steps[X_AXIS], max(block->steps[Y_AXIS], max(block->steps[Z_AXIS], block->steps[E_AXIS])));
 
@@ -693,7 +695,11 @@ float junction_deviation = 0.1;
     #endif //!MKR4 && !NPR2
     if (feed_rate < minimumfeedrate) feed_rate = minimumfeedrate;
   }
-  else if (feed_rate < mintravelfeedrate) feed_rate = mintravelfeedrate;
+
+  if (block->steps[E_AXIS])
+    NOLESS(feed_rate, minimumfeedrate);
+  else
+    NOLESS(feed_rate, mintravelfeedrate);
 
   /**
    * This part of the code calculates the total length of the movement. 
@@ -715,7 +721,7 @@ float junction_deviation = 0.1;
     delta_mm[Y_AXIS] = dy / axis_steps_per_unit[Y_AXIS];
   #endif
   delta_mm[Z_AXIS] = dz / axis_steps_per_unit[Z_AXIS];
-  delta_mm[E_AXIS] = (de / axis_steps_per_unit[E_AXIS + active_extruder]) * volumetric_multiplier[active_extruder] * extruder_multiply[active_extruder] / 100.0;
+  delta_mm[E_AXIS] = (de / axis_steps_per_unit[E_AXIS + extruder]) * volumetric_multiplier[extruder] * extruder_multiply[extruder] / 100.0;
 
   if (block->steps[X_AXIS] <= dropsegments && block->steps[Y_AXIS] <= dropsegments && block->steps[Z_AXIS] <= dropsegments) {
     block->millimeters = fabs(delta_mm[E_AXIS]);
@@ -799,13 +805,13 @@ float junction_deviation = 0.1;
   current_speed[E_AXIS] = delta_mm[E_AXIS] * inverse_second;
   if (target[E_AXIS] < position[E_AXIS])
   {
-    if(fabs(current_speed[E_AXIS]) > max_retraction_feedrate[active_extruder])
-      speed_factor = min(speed_factor, max_retraction_feedrate[active_extruder]/ fabs(current_speed[E_AXIS]));
+    if(fabs(current_speed[E_AXIS]) > max_retraction_feedrate[extruder])
+      speed_factor = min(speed_factor, max_retraction_feedrate[extruder]/ fabs(current_speed[E_AXIS]));
   }
   else
   {
-    if(fabs(current_speed[E_AXIS]) > max_feedrate[E_AXIS + active_extruder])
-      speed_factor = min(speed_factor, max_feedrate[E_AXIS + active_extruder] / fabs(current_speed[E_AXIS]));
+    if(fabs(current_speed[E_AXIS]) > max_feedrate[E_AXIS + extruder])
+      speed_factor = min(speed_factor, max_feedrate[E_AXIS + extruder] / fabs(current_speed[E_AXIS]));
   }
 
   // Max segement time in us.
