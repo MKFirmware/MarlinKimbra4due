@@ -23,6 +23,7 @@
 
 #include "Marlin.h"
 #include "planner.h"
+#include "stepper.h"
 
 // for smoother temperature
 #define MEDIAN_COUNT 10
