@@ -66,7 +66,7 @@ volatile static unsigned long step_events_completed; // The number of step event
 
 static long acceleration_time, deceleration_time;
 //static unsigned long accelerate_until, decelerate_after, acceleration_rate, initial_rate, final_rate, nominal_rate;
-static unsigned long acc_step_rate; // needed for deccelaration start point
+static unsigned long acc_step_rate; // needed for deceleration start point
 static char step_loops;
 static unsigned long OCR1A_nominal;
 static unsigned short step_loops_nominal;
@@ -458,7 +458,7 @@ HAL_STEP_TIMER_ISR {
         if ((current_block->steps[A_AXIS] != current_block->steps[B_AXIS]) || (TEST(out_bits, A_AXIS) == TEST(out_bits, B_AXIS))) {
           if (TEST(out_bits, X_HEAD))
       #else
-          if (TEST(out_bits, X_AXIS))   // stepping along -X axis (regular cartesians bot)
+          if (TEST(out_bits, X_AXIS))   // stepping along -X axis (regular Cartesian bot)
       #endif
           { // -direction
             #ifdef DUAL_X_CARRIAGE
