@@ -1528,8 +1528,8 @@ inline void set_destination_to_current() { memcpy(destination, current_position,
 #ifdef DELTA
   static void axis_is_at_home(int axis) {
     current_position[axis] = base_home_pos[axis] + home_offset[axis];
-    min_pos[axis] =          base_min_pos(axis) + home_offset[axis];
-    max_pos[axis] =          base_max_pos[axis] + home_offset[axis];
+    min_pos[axis] = base_min_pos(axis) + home_offset[axis];
+    max_pos[axis] = base_max_pos[axis] + home_offset[axis];
   }
 
   static void homeaxis(AxisEnum axis) {
@@ -1541,36 +1541,31 @@ inline void set_destination_to_current() { memcpy(destination, current_position,
       int axis_home_dir = home_dir(axis);
       current_position[axis] = 0;
       sync_plan_position();
+
+      // Move towards the endstop until an endstop is triggered
       destination[axis] = 1.5 * max_length[axis] * axis_home_dir;
       feedrate = homing_feedrate[axis];
       line_to_destination();
       st_synchronize();
 
-      enable_endstops(false);  // Ignore Z probe while moving away from the top microswitch.
+      // Set the axis position as setup for the move
       current_position[axis] = 0;
       sync_plan_position();
+
+      // Move away from the endstop by the axis HOME_BUMP_MM
       destination[axis] = -home_bump_mm(axis) * axis_home_dir;
       line_to_destination();
       st_synchronize();
-      enable_endstops(true);  // Stop ignoring Z probe while moving up to the top microswitch again.
 
       // Slow down the feedrate for the next move
       set_homing_bump_feedrate(axis);
 
-      // Move slowly towards the endstop until triggered
-      destination[axis] = 2 * home_bump_mm(axis) * axis_home_dir;
-      line_to_destination();
-      st_synchronize();
-
       // retrace by the amount specified in endstop_adj
-      if (endstop_adj[axis] * axis_home_dir < 0)
-      {
-        enable_endstops(false);  // Ignore Z probe while moving away from the top microswitch.
+      if (endstop_adj[axis] * axis_home_dir < 0) {
         sync_plan_position();
         destination[axis] = endstop_adj[axis];
         line_to_destination();
         st_synchronize();
-        enable_endstops(true);  // Stop ignoring Z probe while moving up to the top microswitch again.
       }
 
       // Set the axis position to its home position (plus home offsets)
