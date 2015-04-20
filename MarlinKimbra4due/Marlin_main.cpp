@@ -269,6 +269,8 @@ static uint8_t target_extruder;
 bool no_wait_for_cooling = true;
 bool target_direction;
 
+unsigned long printer_usage_seconds;
+
 #ifndef DELTA
   int xy_travel_speed = XY_TRAVEL_SPEED;
   float zprobe_zoffset = 0;
@@ -406,7 +408,11 @@ bool target_direction;
 
 #ifdef SDSUPPORT
   static bool fromsd[BUFSIZE];
-#endif //!SDSUPPORT
+  #ifdef SD_SETTINGS
+    unsigned long config_last_update = 0;
+    bool config_readed = false;
+  #endif
+#endif
 
 #ifdef FILAMENTCHANGEENABLE
 	bool filament_changing = false;
@@ -737,10 +743,6 @@ void setup() {
   SERIAL_ECHOPGM(MSG_PLANNER_BUFFER_BYTES);
   SERIAL_ECHOLN((int)sizeof(block_t)*BLOCK_BUFFER_SIZE);
 
-  #ifdef SDSUPPORT
-    for (int8_t i = 0; i < BUFSIZE; i++) fromsd[i] = false;
-  #endif
-
   // loads data from EEPROM if available else uses defaults (and resets step acceleration rate)
   Config_RetrieveSettings();
 
@@ -754,6 +756,19 @@ void setup() {
 
   lcd_init();
   _delay_ms(1000);  // wait 1sec to display the splash screen
+  
+  #ifdef SDSUPPORT
+    card.initsd();
+    for (int8_t i = 0; i < BUFSIZE; i++) fromsd[i] = false;
+    #ifdef SD_SETTINGS
+      // loads custom configuration from SDCARD if available else uses defaults
+      if (!IS_SD_INSERTED) ConfigSD_ResetDefault();
+      else
+    #endif
+    {
+      ConfigSD_RetrieveSettings();
+    }
+  #endif
 
   #if HAS_CONTROLLERFAN
     SET_OUTPUT(CONTROLLERFAN_PIN); //Set pin used for driver cooling fan
@@ -808,7 +823,7 @@ void loop() {
         char *command = command_queue[cmd_queue_index_r];
         if (strstr_P(command, PSTR("M29"))) {
           // M29 closes the file
-          card.closefile();
+          card.closeFile();
           SERIAL_PROTOCOLLNPGM(MSG_FILE_SAVED);
         }
         else {
@@ -1277,7 +1292,7 @@ inline void set_destination_to_current() { memcpy(destination, current_position,
         current_position[Z_AXIS] = corrected_position.z;
 
         // put the bed at 0 so we don't go below it.
-        current_position[Z_AXIS] = zprobe_zoffset;
+        current_position[Z_AXIS] += zprobe_zoffset;
         sync_plan_position();
       }
 
@@ -1338,12 +1353,12 @@ inline void set_destination_to_current() { memcpy(destination, current_position,
         // Engage Z Servo endstop if enabled
         if (servo_endstops[Z_AXIS] >= 0) {
           #if SERVO_LEVELING
-            servos[servo_endstops[Z_AXIS]].attach(0);
+            servo[servo_endstops[Z_AXIS]].attach(0);
           #endif
-          servos[servo_endstops[Z_AXIS]].write(servo_endstop_angles[Z_AXIS * 2]);
+          servo[servo_endstops[Z_AXIS]].write(servo_endstop_angles[Z_AXIS * 2]);
           #if SERVO_LEVELING_DELAY
             delay(PROBE_SERVO_DEACTIVATION_DELAY);
-            servos[servo_endstops[Z_AXIS]].detach();
+            servo[servo_endstops[Z_AXIS]].detach();
           #endif
         }
       #endif //NUM_SERVOS > 0
@@ -1361,14 +1376,14 @@ inline void set_destination_to_current() { memcpy(destination, current_position,
           */
 
           #if SERVO_LEVELING
-            servos[servo_endstops[Z_AXIS]].attach(0);
+            servo[servo_endstops[Z_AXIS]].attach(0);
           #endif
 
-          servos[servo_endstops[Z_AXIS]].write(servo_endstop_angles[Z_AXIS * 2 + 1]);
+          servo[servo_endstops[Z_AXIS]].write(servo_endstop_angles[Z_AXIS * 2 + 1]);
 
           #if SERVO_LEVELING
             delay(PROBE_SERVO_DEACTIVATION_DELAY);
-            servos[servo_endstops[Z_AXIS]].detach();
+            servo[servo_endstops[Z_AXIS]].detach();
           #endif
         }
       #endif //NUM_SERVOS > 0
@@ -1447,7 +1462,7 @@ inline void set_destination_to_current() { memcpy(destination, current_position,
         #endif
           {
             if (servo_endstops[axis] > -1)
-              servos[servo_endstops[axis]].write(servo_endstop_angles[axis * 2]);
+              servo[servo_endstops[axis]].write(servo_endstop_angles[axis * 2]);
           }
       #endif // SERVO_ENDSTOPS && !Z_PROBE_SLED
 
@@ -1514,7 +1529,7 @@ inline void set_destination_to_current() { memcpy(destination, current_position,
       // Retract Servo endstop if enabled
       #if NUM_SERVOS > 0
         if (servo_endstops[axis] > -1)
-          servos[servo_endstops[axis]].write(servo_endstop_angles[axis * 2 + 1]);
+          servo[servo_endstops[axis]].write(servo_endstop_angles[axis * 2 + 1]);
       #endif
 
       #if SERVO_LEVELING && !defined(Z_PROBE_SLED)
@@ -1887,8 +1902,7 @@ inline void set_destination_to_current() { memcpy(destination, current_position,
   }
 
   void save_carriage_positions(int position_num) {
-    for(int8_t i=0; i < NUM_AXIS; i++)
-    {
+    for(int8_t i=0; i < NUM_AXIS; i++) {
       saved_positions[position_num][i] = saved_position[i];    
     }
   }
@@ -1933,6 +1947,7 @@ inline void set_destination_to_current() { memcpy(destination, current_position,
     feedrate = saved_feedrate;
     feedrate_multiplier = saved_feedrate_multiplier;
     refresh_cmd_timeout();
+    endstops_hit_on_purpose(); // clear endstop hit flags
   }
 
   void prepare_move_raw() {
@@ -3769,7 +3784,7 @@ inline void gcode_M17() {
    */
   inline void gcode_M30() {
     if (card.cardOK) {
-      card.closefile();
+      card.closeFile();
       char* starpos = strchr(strchr_pointer + 4, '*');
       if (starpos) {
         char* npos = strchr(command_queue[cmd_queue_index_r], 'N');
@@ -6407,6 +6422,7 @@ void clamp_to_software_endstops(float target[3]) {
 
   inline float prevent_dangerous_extrude(float &curr_e, float &dest_e) {
     float de = dest_e - curr_e;
+    if (debugDryrun()) return de;
     if (de) {
       if (degHotend(active_extruder) < extrude_min_temp) {
         curr_e = dest_e; // Behave as if the move really took place, but ignore E part
@@ -6867,7 +6883,7 @@ void manage_inactivity(bool ignore_stepper_queue/*=false*/) {
         if (!filament_changing)
       #endif
       {
-        if(degHotend(active_extruder) < IDLE_OOZING_MAXTEMP && degTargetHotend(active_extruder) < IDLE_OOZING_MINTEMP) {
+        if (degTargetHotend(active_extruder) < IDLE_OOZING_MINTEMP) {
           IDLE_OOZING_retract(false);
         }
         else if((millis() - axis_last_activity) >  IDLE_OOZING_SECONDS*1000) {
@@ -6875,6 +6891,18 @@ void manage_inactivity(bool ignore_stepper_queue/*=false*/) {
         }
       }
     }
+  #endif
+  
+  #if defined(SDSUPPORT) && defined(SD_SETTINGS)
+    if(!config_readed) {
+      ConfigSD_RetrieveSettings(true);
+    }
+    else if ((millis() - config_last_update) > SD_CFG_SECONDS * 1000) {
+      ConfigSD_StoreSettings();
+    }
+  #endif
+  #ifdef TEMP_STAT_LEDS
+    handle_status_leds();
   #endif
 
   #ifdef TEMP_STAT_LEDS

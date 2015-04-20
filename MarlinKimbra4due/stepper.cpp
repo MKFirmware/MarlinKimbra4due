@@ -54,7 +54,7 @@ static unsigned int cleaning_buffer_counter;
               locked_z2_motor = false;
 #endif
 
-// Counter variables for the bresenham line tracer
+// Counter variables for the Bresenham line tracer
 static long counter_x, counter_y, counter_z, counter_e;
 volatile static unsigned long step_events_completed; // The number of step events executed in the current block
 
@@ -224,7 +224,7 @@ void checkHitEndstops() {
     #if defined(ABORT_ON_ENDSTOP_HIT_FEATURE_ENABLED) && defined(SDSUPPORT)
       if (abort_on_endstop_hit) {
         card.sdprinting = false;
-        card.closefile();
+        card.closeFile();
         quickStop();
         setTargetHotend0(0);
         setTargetHotend1(0);
@@ -270,7 +270,7 @@ void checkHitEndstops() {
     #if defined(ABORT_ON_ENDSTOP_HIT_FEATURE_ENABLED) && defined(SDSUPPORT)
       if (abort_on_endstop_hit) {
         card.sdprinting = false;
-        card.closefile();
+        card.closeFile();
         quickStop();
         setTargetHotend0(0);
         setTargetHotend1(0);
@@ -299,7 +299,7 @@ void enable_endstops(bool check) { check_endstops = check; }
 //  The trapezoid is the shape the speed curve over time. It starts at block->initial_rate, accelerates
 //  first block->accelerate_until step_events_completed, then keeps going at constant speed until
 //  step_events_completed reaches block->decelerate_after after which it decelerates until the trapezoid generator is reset.
-//  The slope of acceleration is calculated with the lib ramp algorithm.
+//  The slope of acceleration is calculated using v = u + at where t is the accumulated timer values of the steps so far.
 
 void st_wake_up() {
   //  TCNT1 = 0;
@@ -326,18 +326,17 @@ FORCE_INLINE unsigned long calc_timer(unsigned long step_rate) {
   step_rate -= (32); // Correct for minimal speed (lookuptable for Due!)
   
   if (step_rate >= (8 * 256)) { // higher step rate
-    uint32_t* table_address = (uint32_t*)(&(speed_lookuptable_fast[(unsigned int)(step_rate>>8)][0]));
+    unsigned long table_address = (unsigned long)&speed_lookuptable_fast[(unsigned int)(step_rate>>8)][0];
     unsigned long tmp_step_rate = (step_rate & 0x00ff);
-    unsigned long gain = *(table_address+2);
+    unsigned long gain = (unsigned long)pgm_read_dword_near(table_address+4);
     MultiU16X8toH16(timer, tmp_step_rate, gain);
-    timer = *table_address - timer;
+    timer = (unsigned long)pgm_read_dword_near(table_address) - timer;
   }
   else { // lower step rates
-    timer = HAL_TIMER_RATE / step_rate;
-    // uint32_t* table_address = (uint32_t*)(&(speed_lookuptable_slow[0][0]);
-    // table_address += ((step_rate)>>1) & 0xfffc;
-    // timer = (unsigned short)pgm_read_word_near(table_address);
-    // timer -= (((unsigned short)pgm_read_word_near(table_address+2) * (unsigned char)(step_rate & 0x0007))>>3);
+    unsigned long table_address = (unsigned long)&speed_lookuptable_slow[0][0];
+    table_address += ((step_rate)) & 0xfff0;
+    timer = (unsigned long)pgm_read_dword_near(table_address);
+    timer -= (((unsigned long)pgm_read_dword_near(table_address+4) * (unsigned char)(step_rate & 0x0007))>>3);
   }
   if (timer < 100) { timer = 100; MYSERIAL.print(MSG_STEPPER_TOO_HIGH); MYSERIAL.println(step_rate); }//(420kHz this should never happen)
   return timer;
