@@ -460,40 +460,6 @@ unsigned long printer_usage_seconds;
 //===========================================================================
 //================================ Functions ================================
 //===========================================================================
-class Timer
-{
-  public:
-    Timer(void);
-    void set_max_delay(unsigned long v);
-    void set(void);
-    boolean check(void);
-  private:
-    unsigned long max_delay;
-    unsigned long last_set;
-};
-Timer::Timer(void)
-{
-  max_delay = 3600000UL; // default 1 hour
-}
-void Timer::set_max_delay(unsigned long v)
-{
-  max_delay = v;
-  set();
-}
-void Timer::set()
-{
-  last_set = millis();
-}
-boolean Timer::check()
-{
-  unsigned long now = millis();
-  if (now - last_set > max_delay) {
-    last_set = now;
-    return true;
-  }
-  return false;
-}
-Timer timer;
 
 void get_arc_coordinates();
 bool setTargetedHotend(int code);
@@ -2041,7 +2007,7 @@ inline void set_destination_to_current() { memcpy(destination, current_position,
     }
 
     // First Check for control endstop
-    SERIAL_ECHOLN("First check for control endstop");
+    SERIAL_ECHOLN("First check for adjust Z-Height");
     home_delta_axis();
     deploy_z_probe(); 
     //Probe all points
@@ -2515,7 +2481,7 @@ inline void set_destination_to_current() { memcpy(destination, current_position,
 inline void lcd_beep(int number_beep = 3) {
   #ifdef LCD_USE_I2C_BUZZER
     #if !defined(LCD_FEEDBACK_FREQUENCY_HZ) || !defined(LCD_FEEDBACK_FREQUENCY_DURATION_MS)
-      for(int8_t i=0;i<3;i++) {
+      for(int8_t i = 0; i < 3; i++) {
         lcd_buzz(1000/6,100);
       }
     #else
@@ -2526,14 +2492,14 @@ inline void lcd_beep(int number_beep = 3) {
   #elif defined(BEEPER) && BEEPER > -1
     SET_OUTPUT(BEEPER);
     #if !defined(LCD_FEEDBACK_FREQUENCY_HZ) || !defined(LCD_FEEDBACK_FREQUENCY_DURATION_MS)
-      for(int8_t i=0;i<number_beep;i++) {
+      for(int8_t i = 0; i < number_beep; i++) {
         WRITE(BEEPER,HIGH);
         delay(100);
         WRITE(BEEPER,LOW);
         delay(100);
       }
     #else
-      for(int8_t i=0;i<number_beep;i++) {
+      for(int8_t i = 0; i < number_beep; i++) {
         WRITE(BEEPER,HIGH);
         delay(1000000 / LCD_FEEDBACK_FREQUENCY_HZ / 2);
         WRITE(BEEPER,LOW);
@@ -5381,27 +5347,27 @@ inline void gcode_M503() {
       old_target_temperature[e] = target_temperature[e];
     }
     int old_target_temperature_bed = target_temperature_bed;
-    timer.set_max_delay(60000); // 1 minute
-    
+    millis_t last_set = millis();
+
     PRESSBUTTON:
     LCD_ALERTMESSAGEPGM(MSG_FILAMENTCHANGE);
     while (!lcd_clicked()) {
       manage_heater();
       manage_inactivity(true);
       lcd_update();
-      if (timer.check() && cnt <= 5) beep = true;
-      if (cnt >= 5 && !sleep) {
+      if ((millis() - last_set > 60000) && cnt <= FILAMENTCHANGE_PRINTEROFF) beep = true;
+      if (cnt >= FILAMENTCHANGE_PRINTEROFF && !sleep) {
         disable_all_heaters();
         disable_x();
         disable_y();
         disable_z();
-        disable_e();    
+        disable_e();
         sleep = true;
         lcd_reset_alert_level();
         LCD_ALERTMESSAGEPGM("Zzzz Zzzz Zzzz");
       }
       if (beep) {
-        timer.set();        
+        last_set = millis();
         lcd_beep(3);
         beep = false;
         cnt += 1;
