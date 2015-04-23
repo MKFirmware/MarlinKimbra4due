@@ -28,7 +28,6 @@
 #include "ultralcd.h"
 #include "language.h"
 #include "cardreader.h"
-#include "speed_lookuptable.h"
 #if HAS_DIGIPOTSS
   #include <SPI.h>
 #endif
@@ -182,13 +181,11 @@ volatile signed char count_direction[NUM_AXIS] = { 1, 1, 1, 1 };
 
 #define E_APPLY_STEP(v,Q) E_STEP_WRITE(v)
 
-//#define MultiU16X8toH16(intRes, charIn1, intIn2)   intRes = ((charIn1) * (intIn2)) >> 16
-//#define MultiU24X24toH16(intRes, longIn1, longIn2) intRes = ((uint64_t)(longIn1) * (longIn2)) >> 24
+// intRes = intIn1 * intIn2 >> 16
+#define MultiU16X8toH16(intRes, charIn1, intIn2)   intRes = ((charIn1) * (intIn2)) >> 16
 
-FORCE_INLINE uint32_t multiU32xU32toH32(uint64_t longIn1, uint32_t longIn2) {
-	return ((longIn1 * longIn2 + 0x80000000) >> 32);
-}
-
+// intRes = longIn1 * longIn2 >> 24
+#define MultiU32X32toH32(intRes, longIn1, longIn2) intRes = ((uint64_t)longIn1 * longIn2 + 0x80000000) >> 32
 #ifdef NPR2
 
 void endstops_hit_on_purpose() {
@@ -197,32 +194,30 @@ void endstops_hit_on_purpose() {
 
 void checkHitEndstops() {
   if (endstop_x_hit || endstop_y_hit || endstop_z_hit || endstop_z_probe_hit || endstop_e_hit) {
-    SERIAL_ECHO_START;
-    SERIAL_ECHOPGM(MSG_ENDSTOPS_HIT);
+    ECHO_SM(OK, MSG_ENDSTOPS_HIT);
     if(endstop_x_hit) {
-      SERIAL_ECHOPAIR(" X:", (float)endstops_trigsteps[X_AXIS] / axis_steps_per_unit[X_AXIS]);
-      LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT "X");
+      ECHO_MV(MSG_ENDSTOP_X, (float)endstops_trigsteps[X_AXIS] / axis_steps_per_unit[X_AXIS]);
+      LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT MSG_ENDSTOP_XS);
     }
     if(endstop_y_hit) {
-      SERIAL_ECHOPAIR(" Y:", (float)endstops_trigsteps[Y_AXIS] / axis_steps_per_unit[Y_AXIS]);
-      LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT "Y");
+      ECHO_MV(MSG_ENDSTOP_Y, (float)endstops_trigsteps[Y_AXIS] / axis_steps_per_unit[Y_AXIS]);
+      LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT MSG_ENDSTOP_YS);
     }
     if(endstop_z_hit) {
-      SERIAL_ECHOPAIR(" Z:", (float)endstops_trigsteps[Z_AXIS] / axis_steps_per_unit[Z_AXIS]);
-      LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT "Z");
+      ECHO_MV(MSG_ENDSTOP_Z, (float)endstops_trigsteps[Z_AXIS] / axis_steps_per_unit[Z_AXIS]);
+      LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT MSG_ENDSTOP_ZS);
     }
     #ifdef Z_PROBE_ENDSTOP
     if (endstop_z_probe_hit) {
-    	SERIAL_ECHOPAIR(" Z_PROBE:", (float)endstops_trigsteps[Z_AXIS] / axis_steps_per_unit[Z_AXIS]);
-    	LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT "ZP");
+    	ECHO_MV(" Z_PROBE:", (float)endstops_trigsteps[Z_AXIS] / axis_steps_per_unit[Z_AXIS]);
+    	LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT MSG_ENDSTOP_ZPS);
     }
     #endif
     if(endstop_e_hit) {
-      SERIAL_ECHOPAIR(" E:", (float)endstops_trigsteps[E_AXIS] / axis_steps_per_unit[E_AXIS]);
-      LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT "E");
+      ECHO_MV(MSG_ENDSTOP_E, (float)endstops_trigsteps[E_AXIS] / axis_steps_per_unit[E_AXIS]);
+      LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT MSG_ENDSTOP_ES);
     }
-
-    SERIAL_ECHOLN("");
+    ECHO_E;
 
     endstops_hit_on_purpose();
 
@@ -248,27 +243,26 @@ void endstops_hit_on_purpose() {
 
 void checkHitEndstops() {
   if (endstop_x_hit || endstop_y_hit || endstop_z_hit || endstop_z_probe_hit) {
-    SERIAL_ECHO_START;
-    SERIAL_ECHOPGM(MSG_ENDSTOPS_HIT);
+    ECHO_SM(OK, MSG_ENDSTOPS_HIT);
     if (endstop_x_hit) {
-      SERIAL_ECHOPAIR(" X:", (float)endstops_trigsteps[X_AXIS] / axis_steps_per_unit[X_AXIS]);
-      LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT "X");
+      ECHO_MV(MSG_ENDSTOP_X, (float)endstops_trigsteps[X_AXIS] / axis_steps_per_unit[X_AXIS]);
+      LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT MSG_ENDSTOP_XS);
     }
     if (endstop_y_hit) {
-      SERIAL_ECHOPAIR(" Y:", (float)endstops_trigsteps[Y_AXIS] / axis_steps_per_unit[Y_AXIS]);
-      LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT "Y");
+      ECHO_MV(MSG_ENDSTOP_Y, (float)endstops_trigsteps[Y_AXIS] / axis_steps_per_unit[Y_AXIS]);
+      LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT MSG_ENDSTOP_YS);
     }
     if (endstop_z_hit) {
-      SERIAL_ECHOPAIR(" Z:", (float)endstops_trigsteps[Z_AXIS] / axis_steps_per_unit[Z_AXIS]);
-      LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT "Z");
+      ECHO_MV(MSG_ENDSTOP_Z, (float)endstops_trigsteps[Z_AXIS] / axis_steps_per_unit[Z_AXIS]);
+      LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT MSG_ENDSTOP_ZS);
     }
     #ifdef Z_PROBE_ENDSTOP
     if (endstop_z_probe_hit) {
-    	SERIAL_ECHOPAIR(" Z_PROBE:", (float)endstops_trigsteps[Z_AXIS] / axis_steps_per_unit[Z_AXIS]);
-    	LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT "ZP");
+    	ECHO_MV(MSG_ENDSTOP_ZPS, (float)endstops_trigsteps[Z_AXIS] / axis_steps_per_unit[Z_AXIS]);
+    	LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT MSG_ENDSTOP_ZPS);
     }
     #endif
-    SERIAL_EOL;
+    ECHO_E;
 
     endstops_hit_on_purpose();
 
@@ -327,24 +321,9 @@ FORCE_INLINE unsigned long calc_timer(unsigned long step_rate) {
     step_loops = 1;
   }
 
-  if(step_rate < (32)) step_rate = (32);
-  step_rate -= (32); // Correct for minimal speed (lookuptable for Due!)
-  
-  if (step_rate >= (8 * 256)) { // higher step rate
-    unsigned long table_address = (unsigned long)&speed_lookuptable_fast[(unsigned int)(step_rate>>8)][0];
-    unsigned long tmp_step_rate = (step_rate & 0x00ff);
-    unsigned long gain = (unsigned long)pgm_read_dword_near(table_address+4);
-    // MultiU16X8toH16(timer, tmp_step_rate, gain);
-    timer = (tmp_step_rate * gain) >> 16;
-    timer = (unsigned long)pgm_read_dword_near(table_address) - timer;
-  }
-  else { // lower step rates
-    unsigned long table_address = (unsigned long)&speed_lookuptable_slow[0][0];
-    table_address += ((step_rate)) & 0xfff0;
-    timer = (unsigned long)pgm_read_dword_near(table_address);
-    timer -= (((unsigned long)pgm_read_dword_near(table_address+4) * (unsigned char)(step_rate & 0x0007))>>3);
-  }
-  if (timer < 100) { timer = 100; MYSERIAL.print(MSG_STEPPER_TOO_HIGH); MYSERIAL.println(step_rate); }//(420kHz this should never happen)
+  timer = HAL_TIMER_RATE / step_rate;
+
+  if(timer < 50) { timer = 50; MYSERIAL.print(MSG_STEPPER_TOO_HIGH); MYSERIAL.println(step_rate); }//(840kHz this should never happen)
   return timer;
 }
 
@@ -366,16 +345,6 @@ FORCE_INLINE void trapezoid_generator_reset() {
   acc_step_rate = current_block->initial_rate;
   acceleration_time = calc_timer(acc_step_rate);
   HAL_timer_set_count (STEP_TIMER_NUM, acceleration_time);
-
-  // SERIAL_ECHO_START;
-  // SERIAL_ECHOPGM("advance :");
-  // SERIAL_ECHO(current_block->advance/256.0);
-  // SERIAL_ECHOPGM("advance rate :");
-  // SERIAL_ECHO(current_block->advance_rate/256.0);
-  // SERIAL_ECHOPGM("initial advance :");
-  // SERIAL_ECHO(current_block->initial_advance/256.0);
-  // SERIAL_ECHOPGM("final advance :");
-  // SERIAL_ECHOLN(current_block->final_advance/256.0);
 }
 
 // "The Stepper Driver Interrupt" - This timer interrupt is the workhorse.
@@ -557,8 +526,6 @@ HAL_STEP_TIMER_ISR {
           {
         	  endstops_trigsteps[Z_AXIS] = count_position[Z_AXIS];
         	  endstop_z_probe_hit = true;
-
-//        	  if (z_probe_endstop && old_z_probe_endstop) SERIAL_ECHOLN("z_probe_endstop = true");
           }
           old_z_probe_endstop = z_probe_endstop;
         #endif
@@ -591,9 +558,6 @@ HAL_STEP_TIMER_ISR {
             if ((z_max_both || z2_max_both) && current_block->steps[Z_AXIS] > 0) {
               endstops_trigsteps[Z_AXIS] = count_position[Z_AXIS];
               endstop_z_hit = true;
-
-             // if (z_max_both) SERIAL_ECHOLN("z_max_endstop = true");
-             // if (z2_max_both) SERIAL_ECHOLN("z2_max_endstop = true");
 
               if (!performing_homing || (performing_homing && z_max_both && z2_max_both)) //if not performing home or if both endstops were trigged during homing...
                 step_events_completed = current_block->step_event_count;
@@ -706,7 +670,7 @@ HAL_STEP_TIMER_ISR {
     unsigned long step_rate;
     if (step_events_completed <= (unsigned long)current_block->accelerate_until) {
 
-      acc_step_rate = multiU32xU32toH32(acceleration_time, current_block->acceleration_rate);
+      MultiU32X32toH32(acc_step_rate, acceleration_time, current_block->acceleration_rate);
       acc_step_rate += current_block->initial_rate;
 
       // upper limit
@@ -729,7 +693,8 @@ HAL_STEP_TIMER_ISR {
       #endif
     }
     else if (step_events_completed > (unsigned long)current_block->decelerate_after) {
-      step_rate = multiU32xU32toH32(deceleration_time, current_block->acceleration_rate);
+
+      MultiU32X32toH32(step_rate, deceleration_time, current_block->acceleration_rate);
 
       if (step_rate > acc_step_rate) { // Check step_rate stays positive
         step_rate = current_block->final_rate;
@@ -1324,23 +1289,23 @@ void microstep_mode(uint8_t driver, uint8_t stepping_mode) {
 }
 
 void microstep_readings() {
-  SERIAL_PROTOCOLPGM("MS1,MS2 Pins\n");
-  SERIAL_PROTOCOLPGM("X: ");
-  SERIAL_PROTOCOL(digitalRead(X_MS1_PIN));
-  SERIAL_PROTOCOLLN(digitalRead(X_MS2_PIN));
-  SERIAL_PROTOCOLPGM("Y: ");
-  SERIAL_PROTOCOL(digitalRead(Y_MS1_PIN));
-  SERIAL_PROTOCOLLN(digitalRead(Y_MS2_PIN));
-  SERIAL_PROTOCOLPGM("Z: ");
-  SERIAL_PROTOCOL(digitalRead(Z_MS1_PIN));
-  SERIAL_PROTOCOLLN(digitalRead(Z_MS2_PIN));
-  SERIAL_PROTOCOLPGM("E0: ");
-  SERIAL_PROTOCOL(digitalRead(E0_MS1_PIN));
-  SERIAL_PROTOCOLLN(digitalRead(E0_MS2_PIN));
+  ECHO_SM(OK, MSG_MICROSTEP_MS1_MS2);
+  ECHO_M(MSG_MICROSTEP_X);
+  ECHO_V(digitalRead(X_MS1_PIN));
+  ECHO_EV(digitalRead(X_MS2_PIN));
+  ECHO_SM(OK, MSG_MICROSTEP_Y);
+  ECHO_V(digitalRead(Y_MS1_PIN));
+  ECHO_EV(digitalRead(Y_MS2_PIN));
+  ECHO_SM(OK, MSG_MICROSTEP_Z);
+  ECHO_V(digitalRead(Z_MS1_PIN));
+  ECHO_EV(digitalRead(Z_MS2_PIN));
+  ECHO_SM(OK, MSG_MICROSTEP_E0);
+  ECHO_V(digitalRead(E0_MS1_PIN));
+  ECHO_EV(digitalRead(E0_MS2_PIN));
   #if HAS_MICROSTEPS_E1
-    SERIAL_PROTOCOLPGM("E1: ");
-    SERIAL_PROTOCOL(digitalRead(E1_MS1_PIN));
-    SERIAL_PROTOCOLLN(digitalRead(E1_MS2_PIN));
+    ECHO_SM(OK, MSG_MICROSTEP_E1);
+    ECHO_V(digitalRead(E1_MS1_PIN));
+    ECHO_EV(digitalRead(E1_MS2_PIN));
   #endif
 }
 

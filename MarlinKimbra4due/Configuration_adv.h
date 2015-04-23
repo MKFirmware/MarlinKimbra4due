@@ -47,13 +47,16 @@
 //#define SHOW_TEMP_ADC_VALUES
 
 //extruder idle oozing prevention
-//if the extruder motor is idle for more than SECONDS, and the temperature over MINTEMP, some filament is retracted. The filament retracted is re-added before the next extrusion
-//or when the target temperature is less than EXTRUDE_MINTEMP.
+//if the extruder motor is idle for more than SECONDS, and the temperature over MINTEMP,
+//some filament is retracted. The filament retracted is re-added before the next extrusion
+//or when the target temperature is less than EXTRUDE_MINTEMP and the actual temperature
+//is greater than IDLE_OOZING_MINTEMP and less than IDLE_OOZING_FEEDRATE
 //#define IDLE_OOZING_PREVENT
-#define IDLE_OOZING_MINTEMP           EXTRUDE_MINTEMP + 25
+#define IDLE_OOZING_MINTEMP           EXTRUDE_MINTEMP + 5
+#define IDLE_OOZING_MAXTEMP           IDLE_OOZING_MINTEMP + 5
 #define IDLE_OOZING_FEEDRATE          45    //default feedrate for retracting (mm/s)
 #define IDLE_OOZING_SECONDS           10
-#define IDLE_OOZING_LENGTH            10    //default retract length (positive mm)
+#define IDLE_OOZING_LENGTH            15    //default retract length (positive mm)
 #define IDLE_OOZING_RECOVER_LENGTH     0    //default additional recover length (mm, added to retract length when recovering)
 #define IDLE_OOZING_RECOVER_FEEDRATE  50    //default feedrate for recovering from retraction (mm/s)
 
@@ -230,7 +233,7 @@
 
 // Microstep setting (Only functional when stepper driver microstep pins are connected to MCU.
 // Alligator Board support 16 or 32 only value
-#define MICROSTEP_MODES {16, 16, 16, 16} // X Y Z E - [1,2,4,8,16,32]
+#define MICROSTEP_MODES {32, 32, 32, 32} // X Y Z E - [1,2,4,8,16,32]
 
 // Motor Current setting (Only functional on ALLIGATOR BOARD)
 #define MOTOR_CURRENT {1, 1, 1, 1} // X Y Z E - Values 0 - 2.5 A

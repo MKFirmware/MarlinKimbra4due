@@ -675,7 +675,7 @@ void config_lcd_level_bed()
 {
 	setTargetHotend(0,0);
 
-	SERIAL_ECHOLN("Leveling...");	
+	ECHO_EM("Leveling...");	
 	currentMenu = lcd_level_bed;
 	enqueuecommands_P(PSTR("G28 M"));
 	pageShowInfo = 0;
@@ -1104,8 +1104,8 @@ static void lcd_control_motion_menu() {
     MENU_ITEM_EDIT(bool, MSG_ENDSTOP_ABORT, &abort_on_endstop_hit);
   #endif
   #ifdef SCARA
-    MENU_ITEM_EDIT(float74, MSG_XSCALE, &axis_scaling[X_AXIS],0.5,2);
-    MENU_ITEM_EDIT(float74, MSG_YSCALE, &axis_scaling[Y_AXIS],0.5,2);
+    MENU_ITEM_EDIT(float52, MSG_XSCALE, &axis_scaling[X_AXIS],0.5,2);
+    MENU_ITEM_EDIT(float52, MSG_YSCALE, &axis_scaling[Y_AXIS],0.5,2);
   #endif
   END_MENU();
 }
@@ -1493,16 +1493,11 @@ void lcd_update() {
                 else if (encoderStepRate >= ENCODER_10X_STEPS_PER_SEC) encoderMultiplier = 10;
 
                 #ifdef ENCODER_RATE_MULTIPLIER_DEBUG
-                  SERIAL_ECHO_START;
-                  SERIAL_ECHO("Enc Step Rate: ");
-                  SERIAL_ECHO(encoderStepRate);
-                  SERIAL_ECHO("  Multiplier: ");
-                  SERIAL_ECHO(encoderMultiplier);
-                  SERIAL_ECHO("  ENCODER_10X_STEPS_PER_SEC: ");
-                  SERIAL_ECHO(ENCODER_10X_STEPS_PER_SEC);
-                  SERIAL_ECHO("  ENCODER_100X_STEPS_PER_SEC: ");
-                  SERIAL_ECHOLN(ENCODER_100X_STEPS_PER_SEC);
-                #endif //ENCODER_RATE_MULTIPLIER_DEBUG
+                  ECHO_SMV(DB, "Enc Step Rate: ", encoderStepRate);
+                  ECHO_MV("  Multiplier: ", encoderMultiplier);
+                  ECHO_MV("  ENCODER_10X_STEPS_PER_SEC: ", ENCODER_10X_STEPS_PER_SEC);
+                  ECHO_EMV("  ENCODER_100X_STEPS_PER_SEC: ", ENCODER_100X_STEPS_PER_SEC);
+                #endif
               }
 
               lastEncoderMovementMillis = ms;
