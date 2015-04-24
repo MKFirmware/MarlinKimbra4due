@@ -348,15 +348,15 @@
   #define SERVO_LEVELING_DELAY (SERVO_LEVELING && PROBE_SERVO_DEACTIVATION_DELAY > 0)
 
   /**
-   * MAX_STEP_FREQUENCY differs for TOSHIBA
+   * MAX_STEP_FREQUENCY differs for TOSHIBA OR ARDUINO DUE OR ARDUINO MEGA
    */
   #ifdef __SAM3X8E__
     #ifdef CONFIG_STEPPERS_TOSHIBA
       #define MAX_STEP_FREQUENCY 120000 // Max step frequency for Toshiba Stepper Controllers
       #define DOUBLE_STEP_FREQUENCY MAX_STEP_FREQUENCY
     #else
-      #define MAX_STEP_FREQUENCY 480000
-      #define DOUBLE_STEP_FREQUENCY 120000  //96kHz is close to maximum for an Arduino Due
+      #define MAX_STEP_FREQUENCY 320000    // Max step frequency for the Due is approx. 330kHz
+      #define DOUBLE_STEP_FREQUENCY 100000  //96kHz is close to maximum for an Arduino Due
     #endif
   #else
     #ifdef CONFIG_STEPPERS_TOSHIBA
