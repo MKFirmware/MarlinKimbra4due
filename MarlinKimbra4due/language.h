@@ -32,9 +32,35 @@
 #define PROTOCOL_VERSION "1.0"
 #define FIRMWARE_URL "https://github.com/MagoKimbra/MarlinKimbra4Due"
 
+#if MB(ULTIMAKER)|| MB(ULTIMAKER_OLD)|| MB(ULTIMAIN_2)
+  #undef FIRMWARE_URL
+  #define MACHINE_NAME "Ultimaker"
+  #define FIRMWARE_URL "http://firmware.ultimaker.com"
+#elif MB(RUMBA)
+  #define MACHINE_NAME "Rumba"
+#elif MB(3DRAG)
+  #define MACHINE_NAME "3Drag"
+  #undef FIRMWARE_URL
+  #define FIRMWARE_URL "http://3dprint.elettronicain.it/"
+#elif MB(K8200)
+  #define MACHINE_NAME "K8200"
+#elif MB(5DPRINT)
+  #define MACHINE_NAME "Makibox"
+#elif MB(SAV_MKI)
+  #define MACHINE_NAME "SAV MkI"
+  #undef FIRMWARE_URL
+  #define FIRMWARE_URL "https://github.com/fmalpartida/Marlin/tree/SAV-MkI-config"
+#else // Default firmware set to Mendel
+  #define MACHINE_NAME "Mendel"
+#endif
+
 #ifdef CUSTOM_MENDEL_NAME
   #undef MACHINE_NAME
   #define MACHINE_NAME CUSTOM_MENDEL_NAME
+#endif
+
+#ifndef BUILD_VERSION
+  #define BUILD_VERSION "V4;"
 #endif
 
 #ifndef MACHINE_UUID
@@ -55,7 +81,7 @@
 
 // Serial Console Messages (do not translate those!)
 
-#define MSG_Enqueing                        "enqueing \""
+#define MSG_ENQUEUEING                      "enqueueing \""
 #define MSG_POWERUP                         "PowerUp"
 #define MSG_EXTERNAL_RESET                  " External Reset"
 #define MSG_BROWNOUT_RESET                  " Brown out Reset"
@@ -64,10 +90,12 @@
 #define MSG_AUTHOR                          " | Author: "
 #define MSG_CONFIGURATION_VER               " Last Updated: "
 #define MSG_FREE_MEMORY                     " Free Memory: "
-#define MSG_PLANNER_BUFFER_BYTES            "  PlannerBufferBytes: "
+#define MSG_PLANNER_BUFFER_BYTES            " PlannerBufferBytes: "
 #define MSG_OK                              "ok"
+#define MSG_WAIT                            "wait"
 #define MSG_FILE_SAVED                      "Done saving file."
-#define MSG_ERR_LINE_NO                     "Line Number is not Last Line Number+1, Last Line: "
+#define MSG_ERR_LINE_NO1                    "Line Number out of sequence. Expected: "
+#define MSG_ERR_LINE_NO2                    " Got: "
 #define MSG_ERR_CHECKSUM_MISMATCH           "checksum mismatch, Last Line: "
 #define MSG_ERR_NO_CHECKSUM                 "No Checksum with line number, Last Line: "
 #define MSG_ERR_NO_LINENUMBER_WITH_CHECKSUM "No Line Number with checksum, Last Line: "
@@ -85,13 +113,14 @@
 #define MSG_HEATING_COMPLETE                "Heating done."
 #define MSG_BED_HEATING                     "Bed Heating."
 #define MSG_BED_DONE                        "Bed done."
-#define MSG_M115_REPORT                     "FIRMWARE_NAME:MarlinKimbra V4; FIRMWARE_URL:" FIRMWARE_URL " PROTOCOL_VERSION:" PROTOCOL_VERSION " MACHINE_TYPE:" MACHINE_NAME " EXTRUDER_COUNT:" STRINGIFY(EXTRUDERS) " UUID:" MACHINE_UUID "\n"
+#define MSG_M115_REPORT                     "FIRMWARE_NAME:MarlinKimbra " BUILD_VERSION " FIRMWARE_URL:" FIRMWARE_URL " PROTOCOL_VERSION:" PROTOCOL_VERSION " MACHINE_TYPE:" MACHINE_NAME " EXTRUDER_COUNT:" STRINGIFY(EXTRUDERS) " UUID:" MACHINE_UUID "\n"
 #define MSG_COUNT_X                         " Count X: "
 #define MSG_ERR_KILLED                      "Printer halted. kill() called!"
 #define MSG_ERR_STOPPED                     "Printer stopped due to errors. Fix the error and use M999 to restart. (Temperature is reset. Set it after restarting)"
-#define MSG_RESEND                          "Resend: "
 #define MSG_UNKNOWN_COMMAND                 "Unknown command: \""
+#define MSG_ACTIVE_DRIVER                   "Active Driver: "
 #define MSG_ACTIVE_EXTRUDER                 "Active Extruder: "
+#define MSG_ACTIVE_COLOR                    "Active Color: "
 #define MSG_INVALID_EXTRUDER                "Invalid extruder"
 #define MSG_INVALID_SOLENOID                "Invalid solenoid"
 #define MSG_X_MIN                           "x_min: "
@@ -125,6 +154,10 @@
 #define MSG_SD_NOT_PRINTING                 "Not SD printing"
 #define MSG_SD_ERR_WRITE_TO_FILE            "error writing to file"
 #define MSG_SD_CANT_ENTER_SUBDIR            "Cannot enter subdir: "
+#define MSG_SD_FILE_DELETED                 "File deleted:"
+#define MSG_SD_SLASH                        "/"
+#define MSG_SD_FILE_DELETION_ERR            "Deletion failed, File: "
+#define MSG_SD_MAX_DEPTH                    "trying to call sub-gcode files with too many levels. MAX level is:"
 
 #define MSG_STEPPER_TOO_HIGH                "Steprate too high: "
 #define MSG_ENDSTOPS_HIT                    "endstops hit: "
@@ -134,6 +167,17 @@
 #define MSG_BABYSTEPPING_Y                  "Babystepping Y"
 #define MSG_BABYSTEPPING_Z                  "Babystepping Z"
 #define MSG_SERIAL_ERROR_MENU_STRUCTURE     "Error in menu structure"
+#define MSG_MICROSTEP_MS1_MS2                "MS1,MS2 Pins"
+#define MSG_MICROSTEP_X                      "X:"
+#define MSG_MICROSTEP_Y                      "Y:"
+#define MSG_MICROSTEP_Z                      "Z:"
+#define MSG_MICROSTEP_E0                     "E0:"
+#define MSG_MICROSTEP_E1                     "E1:"
+#define MSG_ENDSTOP_X                        " X:"
+#define MSG_ENDSTOP_Y                        " Y:"
+#define MSG_ENDSTOP_Z                        " Z:"
+#define MSG_ENDSTOP_E                        " E:"
+#define MSG_ENDSTOP_ZP                       " ZP:"
 
 #define MSG_ERR_EEPROM_WRITE                "Error writing to EEPROM!"
 
@@ -154,25 +198,42 @@
 #define MSG_KP                              " Kp: "
 #define MSG_KI                              " Ki: "
 #define MSG_KD                              " Kd: "
-#define MSG_OK_B                            "ok B:"
-#define MSG_OK_T                            "ok T:"
+#define MSG_B                               " B:"
+#define MSG_T                               " T:"
 #define MSG_AT                              " @:"
 #define MSG_PID_AUTOTUNE_FINISHED           MSG_PID_AUTOTUNE " finished! Put the last Kp, Ki and Kd constants from above into Configuration.h or send command M500 for save in EEPROM the new value!"
-#define MSG_PID_DEBUG                       " PID_DEBUG "
-#define MSG_PID_DEBUG_INPUT                 ": Input "
-#define MSG_PID_DEBUG_OUTPUT                " Output "
-#define MSG_PID_DEBUG_PTERM                 " pTerm "
-#define MSG_PID_DEBUG_ITERM                 " iTerm "
-#define MSG_PID_DEBUG_DTERM                 " dTerm "
+
 #define MSG_HEATING_FAILED                  "Heating failed"
+#define MSG_THERMAL_RUNAWAY_STOP            "Thermal Runaway, system stopped! Heater_ID: "
+#define MSG_THERMAL_RUNAWAY_BED             "bed"
+#define MSG_TEMP_READ_ERROR                 "Temp measurement error!"
+#define MSG_TEMP_BED                        "bed"
 #define MSG_EXTRUDER_SWITCHED_OFF           "Extruder switched off. Temperature difference between temp sensors is too high !"
 
 #define MSG_INVALID_EXTRUDER_NUM            " - Invalid extruder number !"
-#define MSG_THERMAL_RUNAWAY_STOP            "Thermal Runaway, system stopped! Heater_ID: "
 #define MSG_SWITCHED_OFF_MAX                " switched off. MAXTEMP triggered !!"
 #define MSG_MINTEMP_EXTRUDER_OFF            ": Extruder switched off. MINTEMP triggered !"
 #define MSG_MAXTEMP_EXTRUDER_OFF            ": Extruder" MSG_SWITCHED_OFF_MAX
 #define MSG_MAXTEMP_BED_OFF                 "Heated bed" MSG_SWITCHED_OFF_MAX
+
+#define MSG_ENDSTOP_XS                        "X"
+#define MSG_ENDSTOP_YS                        "Y"
+#define MSG_ENDSTOP_ZS                        "Z"
+#define MSG_ENDSTOP_ZPS                       "ZP"
+#define MSG_ENDSTOP_ES                        "E"
+
+
+//watchdog.cpp
+#define MSG_WATCHDOG_RESET                  "Something is wrong, please turn off the printer."
+
+//other
+#define MSG_COMPILED                        "Compiled: "
+#define MSG_ERR_HOMING_DIV                  "The Homing Bump Feedrate Divisor cannot be less than 1"
+#define MSG_BED_LEVELLING_BED               "Bed"
+#define MSG_BED_LEVELLING_X                 " X: "
+#define MSG_BED_LEVELLING_Y                 " Y: "
+#define MSG_BED_LEVELLING_Z                 " Z: "
+#define MSG_DRYRUN_ENABLED                  "DEBUG DRYRUN ENABLED"
 
 // LCD Menu Messages
 

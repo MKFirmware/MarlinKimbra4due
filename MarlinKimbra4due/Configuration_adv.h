@@ -11,7 +11,7 @@
 #ifndef CONFIGURATION_ADV_H
 #define CONFIGURATION_ADV_H
 
-#include "Conditionals.h"
+#include "conditionals.h"
 
 //===========================================================================
 //=============================Thermal Settings  ============================
@@ -46,9 +46,11 @@
 //The M105 command return, besides traditional information, the ADC value read from temperature sensors.
 //#define SHOW_TEMP_ADC_VALUES
 
-//  extruder idle oozing prevention
-//if the extruder motor is idle for more than SECONDS, and the temperature over MINTEMP, some filament is retracted. The filament retracted is re-added before the next extrusion
-//or when the target temperature is less than EXTRUDE_MINTEMP and the actual temperature is greater than IDLE_OOZING_MINTEMP and less than IDLE_OOZING_FEEDRATE
+//extruder idle oozing prevention
+//if the extruder motor is idle for more than SECONDS, and the temperature over MINTEMP,
+//some filament is retracted. The filament retracted is re-added before the next extrusion
+//or when the target temperature is less than EXTRUDE_MINTEMP and the actual temperature
+//is greater than IDLE_OOZING_MINTEMP and less than IDLE_OOZING_FEEDRATE
 //#define IDLE_OOZING_PREVENT
 #define IDLE_OOZING_MINTEMP           EXTRUDE_MINTEMP + 5
 #define IDLE_OOZING_MAXTEMP           IDLE_OOZING_MINTEMP + 5
@@ -231,7 +233,7 @@
 
 // Microstep setting (Only functional when stepper driver microstep pins are connected to MCU.
 // Alligator Board support 16 or 32 only value
-#define MICROSTEP_MODES {16, 16, 16, 16} // X Y Z E - [1,2,4,8,16,32]
+#define MICROSTEP_MODES {32, 32, 32, 32} // X Y Z E - [1,2,4,8,16,32]
 
 // Motor Current setting (Only functional on ALLIGATOR BOARD)
 #define MOTOR_CURRENT {1, 1, 1, 1} // X Y Z E - Values 0 - 2.5 A
@@ -382,6 +384,7 @@ const unsigned int dropsegments=5; //everything with less than this number of st
     #define FILAMENTCHANGE_ZADD 10
     #define FILAMENTCHANGE_FIRSTRETRACT -2
     #define FILAMENTCHANGE_FINALRETRACT -100
+    #define FILAMENTCHANGE_PRINTEROFF 5     // Minutes
   #endif
 #endif
 
@@ -518,7 +521,7 @@ const unsigned int dropsegments=5; //everything with less than this number of st
   
 #endif
 
-#include "Conditionals.h"
-#include "SanityCheck.h"
+#include "conditionals.h"
+#include "sanitycheck.h"
 
 #endif //CONFIGURATION_ADV_H

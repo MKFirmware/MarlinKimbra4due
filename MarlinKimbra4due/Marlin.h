@@ -35,84 +35,17 @@
 #define TEST(n,b) (((n)&BIT(b))!=0)
 #define RADIANS(d) ((d)*M_PI/180.0)
 #define DEGREES(r) ((d)*180.0/M_PI)
+#define NOLESS(v,n) do{ if (v < n) v = n; }while(0)
+#define NOMORE(v,n) do{ if (v > n) v = n; }while(0)
+
+typedef unsigned long millis_t;
 
 // Arduino < 1.0.0 does not define this, so we need to do it ourselves
 #ifndef analogInputToDigitalPin
   #define analogInputToDigitalPin(p) ((p) + 0xA0)
 #endif
 
-#ifdef AT90USB
-  #include "HardwareSerial.h"
-#endif
-
-#ifndef __SAM3X8E__
-  #include "MarlinSerial.h"
-#endif
-
-#ifndef cbi
-  #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
-#endif
-#ifndef sbi
-  #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
-#endif
-
-#include "WString.h"
-
-#ifdef AT90USB
-  #ifdef BTENABLED
-    #define MYSERIAL bt
-  #else
-    #define MYSERIAL Serial
-  #endif // BTENABLED
-#else
-  #ifdef __SAM3X8E__
-    #define MYSERIAL Serial
-  #else
-    #define MYSERIAL MSerial
-  #endif
-#endif
-
-#define SERIAL_CHAR(x) MYSERIAL.write(x)
-#define SERIAL_EOL SERIAL_CHAR('\n')
-
-#define SERIAL_PROTOCOLCHAR(x) SERIAL_CHAR(x)
-#define SERIAL_PROTOCOL(x) MYSERIAL.print(x)
-#define SERIAL_PROTOCOL_F(x,y) MYSERIAL.print(x,y)
-#define SERIAL_PROTOCOLPGM(x) serialprintPGM(PSTR(x))
-#define SERIAL_PROTOCOLLN(x) do{ MYSERIAL.print(x),MYSERIAL.write('\n'); }while(0)
-#define SERIAL_PROTOCOLLNPGM(x) do{ serialprintPGM(PSTR(x)),MYSERIAL.write('\n'); }while(0)
-
-
-extern const char errormagic[] PROGMEM;
-extern const char echomagic[] PROGMEM;
-
-#define SERIAL_ERROR_START serialprintPGM(errormagic)
-#define SERIAL_ERROR(x) SERIAL_PROTOCOL(x)
-#define SERIAL_ERRORPGM(x) SERIAL_PROTOCOLPGM(x)
-#define SERIAL_ERRORLN(x) SERIAL_PROTOCOLLN(x)
-#define SERIAL_ERRORLNPGM(x) SERIAL_PROTOCOLLNPGM(x)
-
-#define SERIAL_ECHO_START serialprintPGM(echomagic)
-#define SERIAL_ECHO(x) SERIAL_PROTOCOL(x)
-#define SERIAL_ECHOPGM(x) SERIAL_PROTOCOLPGM(x)
-#define SERIAL_ECHOLN(x) SERIAL_PROTOCOLLN(x)
-#define SERIAL_ECHOLNPGM(x) SERIAL_PROTOCOLLNPGM(x)
-
-#define SERIAL_ECHOPAIR(name,value) do{ serial_echopair_P(PSTR(name),(value)); }while(0)
-
-void serial_echopair_P(const char *s_P, float v);
-void serial_echopair_P(const char *s_P, double v);
-void serial_echopair_P(const char *s_P, unsigned long v);
-
-
-// Things to write to serial from Program memory. Saves 400 to 2k of RAM.
-FORCE_INLINE void serialprintPGM(const char *str) {
-  char ch;
-  while ((ch = pgm_read_byte(str))) {
-    MYSERIAL.write(ch);
-    str++;
-  }
-}
+#include "Comunication.h"
 
 void get_command();
 void process_commands();
@@ -244,14 +177,14 @@ extern bool Running;
 inline bool IsRunning() { return  Running; }
 inline bool IsStopped() { return !Running; }
 
-bool enquecommand(const char *cmd); //put a single ASCII command at the end of the current buffer or return false when it is full
-void enquecommands_P(const char *cmd); //put one or many ASCII commands at the end of the current buffer, read from flash
+bool enqueuecommand(const char *cmd); //put a single ASCII command at the end of the current buffer or return false when it is full
+void enqueuecommands_P(const char *cmd); //put one or many ASCII commands at the end of the current buffer, read from flash
 
 void prepare_arc_move(char isclockwise);
 void clamp_to_software_endstops(float target[3]);
 
-extern unsigned long previous_millis_cmd;
-inline void refresh_cmd_timeout() { previous_millis_cmd = millis(); }
+extern millis_t previous_cmd_ms;
+inline void refresh_cmd_timeout() { previous_cmd_ms = millis(); }
 
 #ifdef FAST_PWM_FAN
   void setPwmFrequency(uint8_t pin, int val);
@@ -264,7 +197,7 @@ inline void refresh_cmd_timeout() { previous_millis_cmd = millis(); }
 
 extern float homing_feedrate[];
 extern bool axis_relative_modes[];
-extern int feedmultiply;
+extern int feedrate_multiplier;
 extern bool volumetric_enabled;
 extern int extruder_multiply[EXTRUDERS]; // sets extrude multiply factor (in percent) for each extruder individually
 extern float filament_size[EXTRUDERS]; // cross-sectional area of filament (in millimeters), typically around 1.75 or 2.85, 0 disables the volumetric calculations for the extruder.
@@ -306,6 +239,10 @@ extern float max_pos[3];
 extern bool axis_known_position[3];
 extern float lastpos[4];
 extern float zprobe_zoffset;
+
+// Lifetime stats
+extern unsigned long printer_usage_seconds;  //this can old about 136 year before go overflow. If you belive that you can live more than this please contact me.
+extern millis_t config_last_update;
 
 #ifdef PREVENT_DANGEROUS_EXTRUDE
   extern float extrude_min_temp;
@@ -358,8 +295,8 @@ extern int fanSpeed;
   extern int laser_ttl_modulation;
 #endif
 
-extern unsigned long starttime;
-extern unsigned long stoptime;
+extern millis_t print_job_start_ms;
+extern millis_t print_job_stop_ms;
 
 // Handling multiple extruders pins
 extern uint8_t active_extruder;
@@ -370,7 +307,16 @@ extern uint8_t active_driver;
   extern void digipot_i2c_init();
 #endif
 
-// Debug with repetier
+/**
+ * Debug with repetier
+ */
+enum DebugFlags {
+  DEBUG_ECHO          = BIT(0),
+  DEBUG_INFO          = BIT(1),
+  DEBUG_ERRORS        = BIT(2),
+  DEBUG_DRYRUN        = BIT(3),
+  DEBUG_COMMUNICATION = BIT(4)
+};
 extern uint8_t debugLevel;
 extern inline bool debugDryrun() {
   return ((debugLevel & 8) != 0);

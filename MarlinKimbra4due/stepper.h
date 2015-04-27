@@ -25,7 +25,7 @@
 #include "stepper_indirection.h"
 
 #if MB(ALLIGATOR)
-  #include "ExternalDac.h"
+  #include "external_dac.h"
 #endif
 
 #if DRIVER_EXTRUDERS > 3
@@ -109,7 +109,7 @@ void microstep_readings();
 
 #ifdef BABYSTEPPING
   void babystep(const uint8_t axis,const bool direction); // perform a short step with a single stepper motor, outside of any convention
-#endif //BABYSTEPPING
+#endif
 
 #ifdef NPR2 //Multiextruder
   void colorstep(long csteps,const bool direction);

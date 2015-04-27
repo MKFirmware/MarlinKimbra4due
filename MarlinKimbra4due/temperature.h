@@ -23,9 +23,7 @@
 
 #include "Marlin.h"
 #include "planner.h"
-
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+#include "stepper.h"
 
 // for smoother temperature
 #define MEDIAN_COUNT 10
@@ -139,7 +137,7 @@ HOTEND_ROUTINES(0);
 #endif
 
 int getHeaterPower(int heater);
-void disable_heater();
+void disable_all_heaters();
 void setWatch();
 void updatePID();
 
