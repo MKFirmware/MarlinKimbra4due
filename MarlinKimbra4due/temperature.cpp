@@ -94,6 +94,7 @@ unsigned char soft_pwm_bed;
 //=============================private variables============================
 //===========================================================================
 static volatile bool temp_meas_ready = false;
+static millis_t last_update = millis();
 
 #ifdef PIDTEMP
   //static cannot be external:
@@ -767,7 +768,7 @@ static float analog2tempBed(int raw) {
 /* Called to get the raw values into the the actual temperatures. The raw values are created in interrupt context,
     and this function is called from normal context as it is too slow to run in interrupts and will block the stepper routine otherwise */
 static void updateTemperaturesFromRawValues() {
-  static millis_t last_update = millis();
+
   millis_t temp_last_update = millis();
   millis_t from_last_update = temp_last_update - last_update;
   #ifdef HEATER_0_USES_MAX6675

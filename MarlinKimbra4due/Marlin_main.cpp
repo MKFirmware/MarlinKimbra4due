@@ -36,18 +36,18 @@
 #include "motion_control.h"
 #include "cardreader.h"
 #include "watchdog.h"
-#include "ConfigurationStore.h"
+#include "configuration_store.h"
 #include "language.h"
 #include "pins_arduino.h"
 #include "math.h"
 
 #ifdef BLINKM
-  #include "BlinkM.h"
+  #include "blinkm.h"
   #include "Wire.h"
 #endif
 
 #if NUM_SERVOS > 0
-  #include "Servo.h"
+  #include "servo.h"
 #endif
 
 #if HAS_DIGIPOTSS
@@ -136,7 +136,7 @@
  * M109 - Sxxx Wait for extruder current temp to reach target temp. Waits only when heating
  *        Rxxx Wait for extruder current temp to reach target temp. Waits when heating and cooling
  *        IF AUTOTEMP is enabled, S<mintemp> B<maxtemp> F<factor>. Exit autotemp by any M109 without F
- * M111 - Debug mode
+ * M111 - Set debug flags with S<mask>. See flag bits defined in Marlin.h.
  * M112 - Emergency stop
  * M114 - Output current position to serial port
  * M115 - Capabilities string
@@ -217,6 +217,8 @@
 
 bool Running = true;
 
+uint8_t debugLevel = DEBUG_INFO|DEBUG_COMMUNICATION;
+
 static float feedrate = 1500.0, next_feedrate, saved_feedrate;
 float current_position[NUM_AXIS] = { 0.0 };
 float destination[NUM_AXIS] = { 0.0 };
@@ -244,7 +246,7 @@ float max_pos[3] = { X_MAX_POS, Y_MAX_POS, Z_MAX_POS };
 
 uint8_t active_extruder = 0;
 uint8_t active_driver = 0;
-uint8_t debugLevel = 0;
+
 int fanSpeed = 0;
 bool cancel_heatup = false;
 
@@ -268,7 +270,9 @@ static uint8_t target_extruder;
 bool no_wait_for_cooling = true;
 bool target_direction;
 
+// Lifetime stats
 unsigned long printer_usage_seconds;
+millis_t config_last_update = 0;
 
 #ifndef DELTA
   int xy_travel_speed = XY_TRAVEL_SPEED;
@@ -407,10 +411,6 @@ unsigned long printer_usage_seconds;
 
 #ifdef SDSUPPORT
   static bool fromsd[BUFSIZE];
-  #ifdef SD_SETTINGS
-    millis_t config_last_update = 0;
-    bool config_readed = false;
-  #endif
 #endif
 
 #ifdef FILAMENTCHANGEENABLE
@@ -459,6 +459,7 @@ unsigned long printer_usage_seconds;
 //===========================================================================
 //================================ Functions ================================
 //===========================================================================
+
 void get_arc_coordinates();
 bool setTargetedHotend(int code);
 
@@ -579,7 +580,6 @@ void setup_homepin(void) {
   #endif
 }
 
-
 void setup_photpin() {
   #if HAS_PHOTOGRAPH
     OUT_WRITE(PHOTOGRAPH_PIN, LOW);
@@ -696,15 +696,11 @@ void setup() {
     for (int8_t i = 0; i < BUFSIZE; i++) fromsd[i] = false;
   #endif
 
+    // load lifetime stats and power consumation from EEPROM
+  load_lifetime_stats();
+
   // loads data from EEPROM if available else uses defaults (and resets step acceleration rate)
   Config_RetrieveSettings();
-  
-  // loads custom configuration from SDCARD if available else uses defaults
-  #if defined(SDSUPPORT) && defined(SD_SETTINGS)
-    ConfigSD_ResetDefault(); //this reset variable to default value as we can't load in the setup for different reason. Will load the value in the loop()
-  #else
-    ConfigSD_RetrieveSettings();
-  #endif
 
   tp_init();    // Initialize temperature loop
   plan_init();  // Initialize planner;
@@ -713,7 +709,7 @@ void setup() {
   setup_photpin();
   setup_laserbeampin();   // Initialize Laserbeam pin
   servo_init();
-  
+
   lcd_init();
   _delay_ms(1000);  // wait 1sec to display the splash screen
 
@@ -735,6 +731,7 @@ void setup() {
     pinMode(STAT_LED_RED, OUTPUT);
     digitalWrite(STAT_LED_RED, LOW); // turn it off
   #endif
+
   #ifdef STAT_LED_BLUE
     pinMode(STAT_LED_BLUE, OUTPUT);
     digitalWrite(STAT_LED_BLUE, LOW); // turn it off
@@ -834,7 +831,8 @@ void get_command() {
         strchr_pointer = strchr(command, 'N');
         gcode_N = (strtol(strchr_pointer + 1, NULL, 10));
         if (gcode_N != gcode_LastN + 1 && strstr_P(command, PSTR("M110")) == NULL) {
-          ECHO_LMV(ER, MSG_ERR_LINE_NO, gcode_LastN);
+          ECHO_SMV(ER, MSG_ERR_LINE_NO1, gcode_LastN + 1);
+          ECHO_EMV(MSG_ERR_LINE_NO2, gcode_N);
           FlushSerialRequestResend();
           serial_count = 0;
           return;
@@ -966,8 +964,11 @@ void get_command() {
 }
 
 bool code_has_value() {
-  char c = strchr_pointer[1];
-  return (c >= '0' && c <= '9') || c == '-' || c == '+' || c == '.';
+  int i = 1;
+  char c = strchr_pointer[i];
+  if (c == '-' || c == '+') c = strchr_pointer[++i];
+  if (c == '.') c = strchr_pointer[++i];
+  return (c >= '0' && c <= '9');
 }
 
 float code_value() {
@@ -1257,8 +1258,8 @@ inline void set_destination_to_current() { memcpy(destination, current_position,
       st_synchronize();
       endstops_hit_on_purpose(); // clear endstop hit flags
 
+      // Get the current stepper position after bumping an endstop
       current_position[Z_AXIS] = st_get_position_mm(Z_AXIS);
-      // make sure the planner knows where we are as it may be a bit different than we last said to move to
       sync_plan_position();
     }
 
@@ -2613,12 +2614,6 @@ inline void gcode_G4() {
  *  Y   Home to the Y endstop
  *  Z   Home to the Z endstop
  *
- * If numbers are included with XYZ set the position as with G92
- * Currently adds the home_offset, which may be wrong and removed soon.
- *
- *  Xn  Home X, setting X to n + home_offset[X_AXIS]
- *  Yn  Home Y, setting Y to n + home_offset[Y_AXIS]
- *  Zn  Home Z, setting Z to n + home_offset[Z_AXIS]
  */
 inline void gcode_G28(boolean home_x = false, boolean home_y = false) {
 
@@ -2643,7 +2638,7 @@ inline void gcode_G28(boolean home_x = false, boolean home_y = false) {
         homeZ = code_seen(axis_codes[Z_AXIS]),
         homeE = code_seen(axis_codes[E_AXIS]);
         
-  home_all_axis = !(homeX || homeY || homeZ || homeE) || (homeX && homeY && homeZ);
+  home_all_axis = (!homeX && !homeY && !homeZ && !homeE) || (homeX && homeY && homeZ);
 
   #ifdef NPR2
     if((home_all_axis) || (code_seen(axis_codes[E_AXIS]))) {
@@ -3800,7 +3795,7 @@ inline void gcode_M42() {
    *     L = Number of legs of movement before probe
    *  
    * This function assumes the bed has been homed.  Specifically, that a G28 command
-   * as been issued prior to invoking the M48 Z-Probe repeatability measurement function.
+   * as been issued prior to invoking the M49 Z-Probe repeatability measurement function.
    * Any information generated by a prior G29 Bed leveling command will be lost and need to be
    * regenerated.
    */
@@ -3817,6 +3812,9 @@ inline void gcode_M42() {
       }
     }
 
+    if (verbose_level > 0)
+      ECHO_LM(DB, "M49 Z-Probe Repeatability test");
+
     if (code_seen('P') || code_seen('p')) {
       n_samples = code_value_short();
       if (n_samples < 4 || n_samples > 50) {
@@ -3824,15 +3822,13 @@ inline void gcode_M42() {
         return;
       }
     }
-    
-    if (verbose_level > 0) ECHO_LM(DB, "M49 Z-Probe Repeatability test");
 
-    double X_probe_location, Y_probe_location,
-           X_current = X_probe_location = st_get_position_mm(X_AXIS),
-           Y_current = Y_probe_location = st_get_position_mm(Y_AXIS),
+    double X_current = st_get_position_mm(X_AXIS),
+           Y_current = st_get_position_mm(Y_AXIS),
            Z_current = st_get_position_mm(Z_AXIS),
-           Z_start_location = Z_current + Z_RAISE_BEFORE_PROBING,
-           ext_position = st_get_position_mm(E_AXIS);
+           E_current = st_get_position_mm(E_AXIS),
+           X_probe_location = X_current, Y_probe_location = Y_current,
+           Z_start_location = Z_current + Z_RAISE_BEFORE_PROBING;
 
     bool deploy_probe_for_each_reading = code_seen('E') || code_seen('e');
 
@@ -3867,7 +3863,7 @@ inline void gcode_M42() {
 
     st_synchronize();
     plan_bed_level_matrix.set_to_identity();
-    plan_buffer_line(X_current, Y_current, Z_start_location, ext_position, homing_feedrate[Z_AXIS]/60, active_extruder, active_driver);
+    plan_buffer_line(X_current, Y_current, Z_start_location, E_current, homing_feedrate[Z_AXIS]/60, active_extruder, active_driver);
     st_synchronize();
 
     //
@@ -3878,13 +3874,13 @@ inline void gcode_M42() {
     if (verbose_level > 2)
       ECHO_LM(DB, "Positioning the probe...");
 
-    plan_buffer_line(X_probe_location, Y_probe_location, Z_start_location, ext_position, homing_feedrate[X_AXIS]/60, active_extruder, active_driver);
+    plan_buffer_line(X_probe_location, Y_probe_location, Z_start_location, E_current, homing_feedrate[X_AXIS]/60, active_extruder, active_driver);
     st_synchronize();
 
     current_position[X_AXIS] = X_current = st_get_position_mm(X_AXIS);
     current_position[Y_AXIS] = Y_current = st_get_position_mm(Y_AXIS);
     current_position[Z_AXIS] = Z_current = st_get_position_mm(Z_AXIS);
-    current_position[E_AXIS] = ext_position = st_get_position_mm(E_AXIS);
+    current_position[E_AXIS] = E_current = st_get_position_mm(E_AXIS);
 
     // 
     // OK, do the initial probe to get us close to the bed.
@@ -3899,7 +3895,7 @@ inline void gcode_M42() {
     current_position[Z_AXIS] = Z_current = st_get_position_mm(Z_AXIS);
     Z_start_location = st_get_position_mm(Z_AXIS) + Z_RAISE_BEFORE_PROBING;
 
-    plan_buffer_line(X_probe_location, Y_probe_location, Z_start_location, ext_position, homing_feedrate[X_AXIS]/60, active_extruder, active_driver);
+    plan_buffer_line(X_probe_location, Y_probe_location, Z_start_location, E_current, homing_feedrate[X_AXIS]/60, active_extruder, active_driver);
     st_synchronize();
     current_position[Z_AXIS] = Z_current = st_get_position_mm(Z_AXIS);
 
@@ -3926,8 +3922,8 @@ inline void gcode_M42() {
           if (radius < 0.0) radius = -radius;
 
           X_current = X_probe_location + cos(theta) * radius;
-          Y_current = Y_probe_location + sin(theta) * radius;
           X_current = constrain(X_current, X_MIN_POS, X_MAX_POS);
+          Y_current = Y_probe_location + sin(theta) * radius;
           Y_current = constrain(Y_current, Y_MIN_POS, Y_MAX_POS);
 
           if (verbose_level > 3) {
@@ -3983,7 +3979,9 @@ inline void gcode_M42() {
         ECHO_E;
       }
 
-      plan_buffer_line(X_probe_location, Y_probe_location, Z_start_location, current_position[E_AXIS], homing_feedrate[Z_AXIS]/60, active_extruder, active_driver);
+      if (verbose_level > 0) ECHO_E;
+
+      plan_buffer_line(X_probe_location, Y_probe_location, Z_start_location, E_current, homing_feedrate[Z_AXIS]/60, active_extruder, active_driver);
       st_synchronize();
 
       if (deploy_probe_for_each_reading) {
@@ -4154,7 +4152,7 @@ inline void gcode_M104() {
 inline void gcode_M105() {
   if (setTargetedHotend(105)) return;
 
-  #if HAS_TEMP_0 || HAS_TEMP_BED
+  #if HAS_TEMP_0 || HAS_TEMP_BED || defined(HEATER_0_USES_MAX6675)
     ECHO_S(OK);
     #if HAS_TEMP_0
       ECHO_MV(" T:", degHotend(target_extruder), 1);
@@ -4251,7 +4249,7 @@ inline void gcode_M109() {
  * M111: Debug mode Repetier Host compatibile
  */
 inline void gcode_M111() {
-  if (code_seen('S')) debugLevel = code_value_short();
+  debugLevel = code_seen('S') ? code_value_short() : DEBUG_INFO|DEBUG_COMMUNICATION;
   if (debugDryrun()) {
     ECHO_LM(DB, MSG_DRYRUN_ENABLED);
     setTargetBed(0);
@@ -4757,7 +4755,7 @@ inline void gcode_M226() {
       }
       else {
         ECHO_SM(ER, "Servo ");
-        ECHO_EMV(servo_index, " out of range");
+        ECHO_EVM(servo_index, " out of range");
       }
     }
     else if (servo_index >= 0) {
@@ -5715,6 +5713,11 @@ inline void gcode_T() {
 *** Process Commands and dispatch them to handlers ***
 ******************************************************/
 void process_commands() {
+
+  if ((debugLevel & DEBUG_ECHO)) {
+    ECHO_LV(DB, command_queue[cmd_queue_index_r]);
+  }
+
   if(code_seen('G')) {
     int gCode = code_value_short();
     switch(gCode) {
@@ -5875,7 +5878,7 @@ void process_commands() {
 
       case 109: // M109 Wait for temperature
         gcode_M109(); break;
-      case 111: // M111 - Debug mode
+      case 111: // M111 Set debug level
         gcode_M111(); break;
       case 112: //  M112 Emergency Stop
         gcode_M112(); break;
@@ -6521,6 +6524,9 @@ void manage_inactivity(bool ignore_stepper_queue/*=false*/) {
       && !ignore_stepper_queue && !blocks_queued())
     disable_all_steppers();
 
+  // Store in EEPROM Time life and power consumation
+  if((ms - config_last_update) >  60000UL) save_lifetime_stats();
+        
   #ifdef CHDK // Check if pin should be set to LOW after M240 set it to HIGH
     if (chdkActive && ms > chdkHigh + CHDK_DELAY) {
       chdkActive = false;
@@ -6649,18 +6655,6 @@ void manage_inactivity(bool ignore_stepper_queue/*=false*/) {
         else if((millis() - axis_last_activity) >  IDLE_OOZING_SECONDS*1000UL) {
           IDLE_OOZING_retract(true);
         }
-      }
-    }
-  #endif
-
-  #if defined(SDSUPPORT) && defined(SD_SETTINGS)
-    if(IS_SD_INSERTED && !IS_SD_PRINTING) {
-      if(!config_readed) {
-        ConfigSD_RetrieveSettings(true);
-        ConfigSD_StoreSettings();
-      }
-      else if((millis() - config_last_update) >  SD_CFG_SECONDS*1000UL) {
-        ConfigSD_StoreSettings();
       }
     }
   #endif

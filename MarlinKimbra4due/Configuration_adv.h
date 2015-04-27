@@ -11,7 +11,7 @@
 #ifndef CONFIGURATION_ADV_H
 #define CONFIGURATION_ADV_H
 
-#include "Conditionals.h"
+#include "conditionals.h"
 
 //===========================================================================
 //=============================Thermal Settings  ============================
@@ -521,7 +521,7 @@ const unsigned int dropsegments=5; //everything with less than this number of st
   
 #endif
 
-#include "Conditionals.h"
-#include "SanityCheck.h"
+#include "conditionals.h"
+#include "sanitycheck.h"
 
 #endif //CONFIGURATION_ADV_H

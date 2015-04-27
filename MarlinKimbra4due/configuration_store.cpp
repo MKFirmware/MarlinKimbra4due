@@ -1,5 +1,5 @@
 /**
- * ConfigurationStore.cpp
+ * configuration_store.cpp
  *
  * Configuration and EEPROM storage
  *
@@ -95,13 +95,13 @@
  *
  *
  */
+
 #include "Marlin.h"
 #include "language.h"
 #include "planner.h"
 #include "temperature.h"
 #include "ultralcd.h"
-#include "cardreader.h"
-#include "ConfigurationStore.h"
+#include "configuration_store.h"
 
 void _EEPROM_writeData(int &pos, uint8_t* value, uint8_t size) {
   uint8_t c;
@@ -116,6 +116,7 @@ void _EEPROM_writeData(int &pos, uint8_t* value, uint8_t size) {
     value++;
   };
 }
+
 void _EEPROM_readData(int &pos, uint8_t* value, uint8_t size) {
   do {
     *value = eeprom_read_byte((unsigned char*)pos);
@@ -123,6 +124,7 @@ void _EEPROM_readData(int &pos, uint8_t* value, uint8_t size) {
     value++;
   } while (--size);
 }
+
 #define EEPROM_WRITE_VAR(pos, value) _EEPROM_writeData(pos, (uint8_t*)&value, sizeof(value))
 #define EEPROM_READ_VAR(pos, value) _EEPROM_readData(pos, (uint8_t*)&value, sizeof(value))
 
@@ -131,6 +133,8 @@ void _EEPROM_readData(int &pos, uint8_t* value, uint8_t size) {
 #define DUMMY_PID_VALUE 3000.0f
 
 #define EEPROM_OFFSET 100
+#define LIFETIME_EEPROM_OFFSET 600
+#define LIFETIME_MAGIC "L99"
 
 #ifdef EEPROM_SETTINGS
 
@@ -559,14 +563,6 @@ void Config_ResetDefault() {
   ECHO_LM(DB, "Hardcoded Default Settings Loaded");
 }
 
-void ConfigSD_ResetDefault() {
-  #ifdef POWER_CONSUMPTION
-   power_consumption_hour = 0;
-  #endif
-  printer_usage_seconds = 0;
-  ECHO_LM(DB, "Hardcoded SD Default Settings Loaded");
-}
-
 #ifndef DISABLE_M503
 
 void Config_PrintSettings(bool forReplay) {
@@ -798,11 +794,8 @@ void Config_PrintSettings(bool forReplay) {
       ECHO_LM(DB, "Filament settings: Disabled");
     }
   }
-  ConfigSD_PrintSettings(forReplay);
-}
-
-void ConfigSD_PrintSettings(bool forReplay) {
-  // Always have this function, even with SD_SETTINGS disabled, the current values will be shown
+  
+  // Print Lifetime stats
   #ifdef POWER_CONSUMPTION
     if (!forReplay) {
       ECHO_LM(DB, "Watt/h consumed:");
@@ -816,74 +809,50 @@ void ConfigSD_PrintSettings(bool forReplay) {
   int hours = printer_usage_seconds / 60 / 60, minutes = (printer_usage_seconds / 60) % 60;
   sprintf_P(time, PSTR("%i " MSG_END_HOUR " %i " MSG_END_MINUTE), hours, minutes);
   ECHO_LV(DB, time);
+
 }
 
 #endif //!DISABLE_M503
 
+
 /**
- * Configuration on SD card
- *
- * Author: Simone Primarosa
+ * Lifetime on EEPROM
  *
  */
+void load_lifetime_stats() {
+  int i = LIFETIME_EEPROM_OFFSET;
+  char stored_magic[4];
+  char magic[4] = LIFETIME_MAGIC;
+  EEPROM_READ_VAR(i, stored_magic); // read magic
 
-#if defined(SDSUPPORT) && defined(SD_SETTINGS)
-  void ConfigSD_StoreSettings() {
-    if(!IS_SD_INSERTED || card.isFileOpen() || card.sdprinting) return;
-    card.openFile(CFG_SD_FILE, false, true, false);
-    char buff[CFG_SD_MAX_VALUE_LEN];
+  if (strncmp(magic, stored_magic, 3) != 0) {
     #ifdef POWER_CONSUMPTION
-      ltoa(power_consumption_hour,buff,10);
-      card.unparseKeyLine(cfgSD_KEY[SD_CFG_PWR], buff);
+      power_consumption_hour = 0;
     #endif
-    ltoa(printer_usage_seconds,buff,10);
-    card.unparseKeyLine(cfgSD_KEY[SD_CFG_TME], buff);
-    
-    card.closeFile(false);
-    config_last_update = millis();
+    printer_usage_seconds = 0;
   }
-  void ConfigSD_RetrieveSettings(bool addValue) {
-    if(!IS_SD_INSERTED || card.isFileOpen() || card.sdprinting || !card.cardOK) return;
-    char key[CFG_SD_MAX_KEY_LEN], value[CFG_SD_MAX_VALUE_LEN];
-    int k_idx;
-    int k_len, v_len;
-    
-    card.openFile(CFG_SD_FILE, true, true, false);
-    while(true) {
-      k_len = CFG_SD_MAX_KEY_LEN;
-      v_len = CFG_SD_MAX_VALUE_LEN;
-      card.parseKeyLine(key, value, k_len, v_len);
-      if(k_len == 0 || v_len == 0) break; //no valid key or value founded
-      k_idx = ConfigSD_KeyIndex(key);
-      if(k_idx == -1) continue;    //unknow key ignore it
-      switch(k_idx) {
-        #ifdef POWER_CONSUMPTION
-        case SD_CFG_PWR: {
-          if(addValue) power_consumption_hour += (unsigned long)atol(value);
-          else power_consumption_hour = (unsigned long)atol(value);
-        }
-        break;
-        #endif
-        case SD_CFG_TME: {
-          if(addValue) printer_usage_seconds += (unsigned long)atol(value);
-          else printer_usage_seconds = (unsigned long)atol(value);
-        }
-        break;
-      }
-    }
-    card.closeFile(false);
-    config_readed = true;
+  else {
+    EEPROM_READ_VAR(i, printer_usage_seconds);
+    #ifdef POWER_CONSUMPTION
+      EEPROM_READ_VAR(i, power_consumption_hour);
+    #endif
   }
-  
-  int ConfigSD_KeyIndex(char *key) {    //At the moment a binary search algorithm is used for simplicity, if it will be necessary (Eg. tons of key), an hash search algorithm will be implemented.
-    int begin = 0, end = SD_CFG_END - 1, middle, cond;
-    while(begin <= end) {
-      middle = (begin + end) / 2;
-      cond = strcmp(cfgSD_KEY[middle], key);
-      if(!cond) return middle;
-      else if(cond < 0) begin = middle + 1;
-      else end = middle - 1;
-    }
-    return -1;
-  }
-#endif
+}
+
+void save_lifetime_stats() {
+  int i = LIFETIME_EEPROM_OFFSET;
+  char magic[4] = "000";
+  EEPROM_WRITE_VAR(i, magic); // invalidate data first
+
+  EEPROM_WRITE_VAR(i, printer_usage_seconds);
+
+  #ifdef POWER_CONSUMPTION
+    EEPROM_WRITE_VAR(i, power_consumption_hour);
+  #endif
+
+  char magic2[4] = LIFETIME_MAGIC;
+  int j = LIFETIME_EEPROM_OFFSET;
+  EEPROM_WRITE_VAR(j, magic2); // validate data
+
+  config_last_update = millis();
+}
