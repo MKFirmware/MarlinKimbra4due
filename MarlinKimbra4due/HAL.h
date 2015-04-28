@@ -128,7 +128,7 @@ void HAL_timer_isr_status (uint8_t timer_num);
 int HAL_timer_get_count (uint8_t timer_num);
 //
 
-void tone(uint8_t pin, int frequency);
+void tone(uint8_t pin, int frequency, int duration);
 void noTone(uint8_t pin);
 
 // --------------------------------------------------------------------------
