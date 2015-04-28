@@ -412,7 +412,7 @@ int HAL_timer_get_count (uint8_t timer_num) {
 
 // Due have no tone, this is from Repetier 0.92.3
 
-void tone(uint8_t pin, int frequency, int duration) {
+void tone(uint8_t pin, int frequency) {
   // set up timer counter 1 channel 0 to generate interrupts for
   // toggling output pin.  
   
