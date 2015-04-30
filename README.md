@@ -13,7 +13,7 @@
 ### known issues:
   * Watchdog doesn't work, don't activate it
   * Servo not tested
-  * LCD not tested
+  * LCD only Reprap full graphics display tested
 
 ---
 # MarlinKimbra4due 3D Printer Firmware
@@ -43,6 +43,7 @@ Adding commands to facilitate purging of hotend.
 Step per unit varied for each extruder as well as the feedrate.
 The addition of a different feedrate for retraction. 
 Adding Debug Dryrun used by repetier.
+Add total Power on time write in EEPROM
 
 ## Credits
 

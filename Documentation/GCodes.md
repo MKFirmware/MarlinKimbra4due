@@ -47,7 +47,7 @@
 *  M42  - Change pin status via gcode Use M42 Px Sy to set pin x to value y, when omitting Px the onboard led will be used.
 *  M49  - Z probe repetability test
 *  M80  - Turn on Power Supply
-*  M81  - Turn off Power Supply
+*  M81  - Turn off Power, including Power Supply, if possible
 *  M82  - Set E codes absolute (default)
 *  M83  - Set E codes relative while in Absolute Coordinates (G90) mode
 *  M84  - Disable steppers until next move, or use S[seconds] to specify an inactivity timeout, after which the steppers will be disabled.  S0 to disable the timeout.
@@ -60,7 +60,7 @@
 *  M109 - S[xxx] Wait for extruder current temp to reach target temp. Waits only when heating - R[xxx] Wait for extruder current temp to reach target temp. Waits when heating and cooling
 *  M111 - Debug Dryrun Repetier
 *  M112 - Emergency stop
-*  M114 - Output current position to serial port
+* M114 - Output current position to serial port, (V)erbose for user
 *  M115 - Capabilities string
 *  M117 - display message
 *  M119 - Output Endstop status to serial port
@@ -73,9 +73,9 @@
 *  M140 - Set bed target temp
 *  M190 - S[xxx] Wait for bed current temp to reach target temp. Waits only when heating - R[xxx] Wait for bed current temp to reach target temp. Waits when heating and cooling
 *  M200 - D[millimeters]- set filament diameter and set E axis units to cubic millimeters (use S0 to set back to millimeters).
-*  M201 - Set max acceleration in units/s^2 for print moves (M201 X1000 Y1000)
-*  M203 - Set maximum feedrate that your machine can sustain (M203 X200 Y200 Z300 E10000) in mm/sec
-*  M204 - Set default acceleration: S normal moves T filament only moves (M204 S3000 T7000) im mm/sec^2  also sets minimum segment time in ms (B20000) to prevent buffer underruns and M20 minimum feedrate
+*  M201 - Set max acceleration in units/s^2 for print moves (M201 X1000 Y1000 Z1000 E0 S1000 E1 S1000 E2 S1000 E3 S1000) in mm/sec^2
+*  M203 - Set maximum feedrate that your machine can sustain (M203 X200 Y200 Z300 E0 S1000 E1 S1000 E2 S1000 E3 S1000) in mm/sec
+*  M204 - Set Accelerations in mm/sec^2: S printing moves, R Retract moves(only E), T travel moves (M204 P1200 R3000 T2500) im mm/sec^2  also sets minimum segment time in ms (B20000) to prevent buffer underruns and M20 minimum feedrate.
 *  M205 - advanced settings:  minimum travel speed S=while printing T=travel only,  B=minimum segment time X= maximum xy jerk, Z=maximum Z jerk, E=maximum E jerk
 *  M206 - set additional homing offset
 *  M207 - set retract length S[positive mm] F[feedrate mm/min] Z[additional zlift/hop], stays in mm regardless of M200 setting
@@ -100,6 +100,8 @@
 *  M405 - Turn on Filament Sensor extrusion control.  Optional D[delay in cm] to set delay in centimeters between sensor and extruder
 *  M406 - Turn off Filament Sensor extrusion control
 *  M407 - Displays measured filament diameter
+* M410 - Quickstop. Abort all the planned moves
+* M428 - Set the home_offset logically based on the current_position
 *  M500 - stores paramters in EEPROM
 *  M501 - reads parameters from EEPROM (if you need reset them after you changed them temporarily).
 *  M502 - reverts to the default "factory settings".  You still need to store them in EEPROM afterwards if you want to.
