@@ -1435,10 +1435,14 @@ inline void set_destination_to_current() { memcpy(destination, current_position,
       current_position[axis] = 0;
       sync_plan_position();
 
+      enable_endstops(false); // Disable endstops while moving away
+
       // Move away from the endstop by the axis HOME_BUMP_MM
       destination[axis] = -home_bump_mm(axis) * axis_home_dir;
       line_to_destination();
       st_synchronize();
+
+      enable_endstops(true); // Enable endstops for next homing move
 
       // Slow down the feedrate for the next move
       set_homing_bump_feedrate(axis);
@@ -1475,6 +1479,7 @@ inline void set_destination_to_current() { memcpy(destination, current_position,
 
       // Set the axis position to its home position (plus home offsets)
       axis_is_at_home(axis);
+      sync_plan_position();
 
       destination[axis] = current_position[axis];
       feedrate = 0.0;
@@ -1521,24 +1526,36 @@ inline void set_destination_to_current() { memcpy(destination, current_position,
       current_position[axis] = 0;
       sync_plan_position();
 
+      enable_endstops(false); // Disable endstops while moving away
+
       // Move away from the endstop by the axis HOME_BUMP_MM
       destination[axis] = -home_bump_mm(axis) * axis_home_dir;
       line_to_destination();
       st_synchronize();
 
+      enable_endstops(true); // Enable endstops for next homing move
+
       // Slow down the feedrate for the next move
       set_homing_bump_feedrate(axis);
 
+      // Move slowly towards the endstop until triggered
+      destination[axis] = 2 * home_bump_mm(axis) * axis_home_dir;
+      line_to_destination();
+      st_synchronize();
+
       // retrace by the amount specified in endstop_adj
       if (endstop_adj[axis] * axis_home_dir < 0) {
+        enable_endstops(false); // Disable endstops while moving away
         sync_plan_position();
         destination[axis] = endstop_adj[axis];
         line_to_destination();
         st_synchronize();
+        enable_endstops(true); // Enable endstops for next homing move
       }
 
       // Set the axis position to its home position (plus home offsets)
       axis_is_at_home(axis);
+      sync_plan_position();
 
       destination[axis] = current_position[axis];
       feedrate = 0.0;
