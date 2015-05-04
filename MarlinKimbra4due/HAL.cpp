@@ -97,17 +97,17 @@ void spiBegin() {
    
     #if MB(ALLIGATOR)
       // Init Motor Fault
-      pinMode( MOTOR_FAULT_PIN, INPUT);
-      pinMode( DAC_SYNC, OUTPUT);
-      pinMode( SPI_EEPROM1_CS, OUTPUT);
-      pinMode( SPI_EEPROM2_CS, OUTPUT);
-      pinMode( SPI_FLASH_CS, OUTPUT);
+      pinMode(MOTOR_FAULT_PIN, INPUT);
+      pinMode(DAC_SYNC, OUTPUT);
+      pinMode(SPI_EEPROM1_CS, OUTPUT);
+      pinMode(SPI_EEPROM2_CS, OUTPUT);
+      pinMode(SPI_FLASH_CS, OUTPUT);
       //pinMode( SPI_PIN, OUTPUT);
-      digitalWrite( DAC_SYNC , HIGH );
-      digitalWrite( SPI_EEPROM1_CS , HIGH );
-      digitalWrite( SPI_EEPROM2_CS , HIGH );
-      digitalWrite( SPI_FLASH_CS , HIGH );
-      digitalWrite( SDSS , HIGH );
+      digitalWrite(DAC_SYNC , HIGH);
+      digitalWrite(SPI_EEPROM1_CS, HIGH);
+      digitalWrite(SPI_EEPROM2_CS, HIGH);
+      digitalWrite(SPI_FLASH_CS, HIGH);
+      digitalWrite(SDSS , HIGH);
       //pinMode( SPI_PIN, OUTPUT);
     #endif//MB(ALLIGATOR)
 
@@ -154,7 +154,7 @@ void spiSendByte(uint32_t chan, byte b) {
   while ((SPI0->SPI_SR & SPI_SR_RDRF) == 1)
     dummy_read = SPI0->SPI_RDR;
 }
-  
+
 void spiSend(uint32_t chan ,const uint8_t* buf , size_t n) {
   uint8_t dummy_read = 0;
   if (n == 0) return;

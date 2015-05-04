@@ -34,7 +34,6 @@
 #include <stdint.h>
 
 #include "Arduino.h"
-#include "Fastio_sam.h"
 
 // --------------------------------------------------------------------------
 // Defines
@@ -52,6 +51,34 @@
 
 #define HIGH 1
 #define LOW 0
+
+// --------------------------------------------------------------------------
+// magic I/O routines
+// now you can simply SET_OUTPUT(STEP); WRITE(STEP, 1); WRITE(STEP, 0);
+// --------------------------------------------------------------------------
+/// Read a pin
+#define   READ(pin)       PIO_Get(g_APinDescription[pin].pPort, PIO_INPUT, g_APinDescription[pin].ulPin)
+/// write to a pin
+#define	  WRITE(pin, v)   do{if(v) {g_APinDescription[pin].pPort->PIO_SODR = g_APinDescription[pin].ulPin;} \
+                          else {g_APinDescription[pin].pPort->PIO_CODR = g_APinDescription[pin].ulPin; }}while(0)
+/// set pin as input
+#define	  SET_INPUT(pin)  pmc_enable_periph_clk(g_APinDescription[pin].ulPeripheralId); \
+                          PIO_Configure(g_APinDescription[pin].pPort, PIO_INPUT, g_APinDescription[pin].ulPin, 0)
+/// set pin as output
+#define	  SET_OUTPUT(pin) PIO_Configure(g_APinDescription[pin].pPort, PIO_OUTPUT_1, \
+                          g_APinDescription[pin].ulPin, g_APinDescription[pin].ulPinConfiguration)
+/// toggle a pin	
+#define   TOGGLE(pin)     WRITE(pin, !READ(pin))
+// Write doesn't work for pullups
+#define   PULLUP(pin, v)  {pinMode(pin, (v!=LOW ? INPUT_PULLUP : INPUT));}
+/// check if pin is an input
+#define   GET_INPUT(pin)
+/// check if pin is an output
+#define   GET_OUTPUT(pin)
+/// check if pin is an timer
+#define   GET_TIMER(pin)
+// Shorthand
+#define   OUT_WRITE(pin, v) {SET_OUTPUT(pin); WRITE(pin, v);}
 
 // --------------------------------------------------------------------------
 // Types
@@ -136,4 +163,3 @@ void noTone(uint8_t pin);
 // --------------------------------------------------------------------------
 
 #endif // _HAL_H
-

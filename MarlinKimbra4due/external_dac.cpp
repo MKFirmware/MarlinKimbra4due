@@ -19,12 +19,12 @@
   void ExternalDac::begin() {
     uint8_t externalDac_buf[2] = {0x20,0x00};//all off
 
+    pinMode (DAC_SYNC, OUTPUT);
     digitalWrite( DAC_SYNC , HIGH );
     digitalWrite( SPI_EEPROM1_CS , HIGH );
     digitalWrite( SPI_EEPROM2_CS , HIGH );
     digitalWrite( SPI_FLASH_CS , HIGH );
     digitalWrite( SDSS , HIGH );
-    pinMode (DAC_SYNC, OUTPUT);
     spiBegin();
 
     delayMicroseconds(1U); // wait 1 microsecond
@@ -40,7 +40,7 @@
 
     return;
   }
-  
+
   void ExternalDac::setValueAll(uint8_t value) {
     uint8_t externalDac_buf[2] = {0x20,0x00};
 
@@ -66,7 +66,7 @@
 
     return;
   }
-  
+
   void ExternalDac::setValue(uint8_t channel, uint8_t value) {
     if(channel>=4)
       return;
