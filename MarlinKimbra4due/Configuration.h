@@ -409,13 +409,13 @@ your extruder heater takes 2 minutes to hit the target on heating.
 // #define LCD_SCREEN_ROT_270
 
 // SPLASH SCREEN duration in millisecond
-#define SPLASH_SCREEN_DURATION 2000 // Millisecond
+#define SPLASH_SCREEN_DURATION 5000 // Millisecond
 
 /** Display Voltage Logic Selector on Alligator Board
  0 = Voltage level 3.3V
  1 = Voltage level 5V
  */
-#define UI_VOLTAGE_LEVEL 0 // Set 5 o 3.3 V
+#define UI_VOLTAGE_LEVEL 1 // Set 5 o 3.3 V
 
 
 //============================== Languages UI =========================
@@ -601,9 +601,9 @@ your extruder heater takes 2 minutes to hit the target on heating.
                                  // It is assumed that when logic high = filament available
                                  //                    when logic  low = filament run out
 #ifdef FILAMENT_RUNOUT_SENSOR
-  const bool FIL_RUNOUT_INVERTING = true; // Should be uncommented and true or false should assigned
-  #define ENDSTOPPULLUP_FIL_RUNOUT        // Uncomment to use internal pullup for filament runout pins if the sensor is defined.
-  #define FILAMENT_RUNOUT_SCRIPT "M600"   // Script execute when filament run out
+  const bool FILRUNOUT_PIN_INVERTING = true;  // Should be uncommented and true or false should assigned
+  #define ENDSTOPPULLUP_FIL_RUNOUT            // Uncomment to use internal pullup for filament runout pins if the sensor is defined.
+  #define FILAMENT_RUNOUT_SCRIPT "M600"       // Script execute when filament run out
 #endif
 
 //===========================================================================
