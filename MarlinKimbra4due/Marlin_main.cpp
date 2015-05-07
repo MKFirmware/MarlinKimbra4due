@@ -407,7 +407,7 @@ millis_t config_last_update = 0;
   int meas_delay_cm = MEASUREMENT_DELAY_CM;                     //distance delay setting
 #endif
 
-#ifdef FILAMENT_RUNOUT_SENSOR
+#if HAS_FILRUNOUT
   static bool filrunoutEnqueued = false;
   bool printing = false;
 #endif
@@ -2027,7 +2027,7 @@ inline void set_destination_to_current() { memcpy(destination, current_position,
       else {
         if ((bed_level_x < -ac_prec) or (bed_level_x > ac_prec) or (bed_level_y < -ac_prec) or (bed_level_y > ac_prec) or (bed_level_z < -ac_prec) or (bed_level_z > ac_prec)) {
           //Endstop req adjustment
-          ECHO_LM(DB,"Adjusting Endstop..");
+          ECHO_LM(DB, "Adjusting Endstop..");
           endstop_adj[0] += bed_level_x / 1.05;
           endstop_adj[1] += bed_level_y / 1.05;
           endstop_adj[2] += bed_level_z / 1.05; 
@@ -2062,7 +2062,7 @@ inline void set_destination_to_current() { memcpy(destination, current_position,
           else adj_tower_done = true;
           if ((adj_r_done == false) or (adj_dr_done == false) or (adj_tower_done == false)) {
             //delta geometry adjustment required
-            ECHO_LM(DB,"Adjusting Delta Geometry..");
+            ECHO_LM(DB, "Adjusting Delta Geometry..");
             //set initial direction and magnitude for delta radius & diagonal rod adjustment
             if (adj_r == 0) {
               if (adj_r_target > bed_level_c) adj_r = 1; 
@@ -3542,13 +3542,13 @@ inline void gcode_G92() {
   }
 #endif //LASERBEAM
 
-#ifdef FILAMENT_END_SWITCH
+#if HAS_FILRUNOUT
   /**
    * M11: Start printing
    */
   inline void gcode_M11() {
     printing = true;
-    paused = false;
+    filrunoutEnqueued = false;
     ECHO_LM(DB, "Start Printing, pause pin active.");
     ECHO_S(RESUME);
     ECHO_E;
@@ -6662,7 +6662,7 @@ void disable_all_steppers() {
 void manage_inactivity(bool ignore_stepper_queue/*=false*/) {
 
   #if HAS_FILRUNOUT
-    if ((printing || IS_SD_PRINTING ) && (READ(FILRUNOUT_PIN) ^ FIL_RUNOUT_INVERTING))
+    if ((printing || IS_SD_PRINTING ) && (READ(FILRUNOUT_PIN) ^ FILRUNOUT_PIN_INVERTING))
       filrunout();
   #endif
 
@@ -6712,7 +6712,7 @@ void manage_inactivity(bool ignore_stepper_queue/*=false*/) {
     if (!READ(HOME_PIN)) {
       if (!homeDebounceCount) {
         enqueuecommands_P(PSTR("G28"));
-        LCD_ALERTMESSAGEPGM(MSG_AUTO_HOME);
+        LCD_MESSAGEPGM(MSG_AUTO_HOME);
       }
       if (homeDebounceCount < HOME_DEBOUNCE_DELAY)
         homeDebounceCount++;

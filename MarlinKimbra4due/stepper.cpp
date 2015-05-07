@@ -639,8 +639,8 @@ HAL_STEP_TIMER_ISR {
          * lag to allow it work with without needing NOPs
          */
         #define STEP_ADD(axis, AXIS) \
-         counter_## axis += current_block->steps[AXIS ##_AXIS]; \
-         if (counter_## axis > 0) { AXIS ##_STEP_WRITE(HIGH); }
+         _COUNTER(axis) += current_block->steps[_AXIS(AXIS)]; \
+         if (_COUNTER(axis) > 0) { _WRITE_STEP(AXIS, HIGH); }
 
         STEP_ADD(x,X);
         STEP_ADD(y,Y);
@@ -652,10 +652,10 @@ HAL_STEP_TIMER_ISR {
         _delay_us(1U); // Add delay us
 
         #define STEP_IF_COUNTER(axis, AXIS) \
-          if (counter_## axis > 0) { \
-            counter_## axis -= current_block->step_event_count; \
-            count_position[AXIS ##_AXIS] += count_direction[AXIS ##_AXIS]; \
-            AXIS ##_STEP_WRITE(LOW); \
+          if (_COUNTER(axis) > 0) { \
+            _COUNTER(axis) -= current_block->step_event_count; \
+            count_position[_AXIS(AXIS)] += count_direction[_AXIS(AXIS)]; \
+            _WRITE_STEP(AXIS, LOW); \
           }
 
         STEP_IF_COUNTER(x, X);
