@@ -24,17 +24,17 @@
 static void ST7920_SWSPI_SND_8BIT(uint8_t val)
 {
   uint8_t i;
-  for( i=0; i<8; i++ )
+  for( i = 0; i < 8; i++ )
   {
-    WRITE(ST7920_CLK_PIN,0);
-    WRITE(ST7920_DAT_PIN,val&0x80); 
+    digitalWrite(ST7920_CLK_PIN, 0);
+    digitalWrite(ST7920_DAT_PIN, val&0x80); 
     val<<=1;
-    WRITE(ST7920_CLK_PIN,1);
+    digitalWrite(ST7920_CLK_PIN, 1);
   }
 }
 
-#define ST7920_CS()              {WRITE(ST7920_CS_PIN,1);u8g_10MicroDelay();}
-#define ST7920_NCS()             {WRITE(ST7920_CS_PIN,0);}
+#define ST7920_CS()              {digitalWrite(ST7920_CS_PIN,1);u8g_10MicroDelay();}
+#define ST7920_NCS()             {digitalWrite(ST7920_CS_PIN,0);}
 #define ST7920_SET_CMD()         {ST7920_SWSPI_SND_8BIT(0xf8);u8g_10MicroDelay();}
 #define ST7920_SET_DAT()         {ST7920_SWSPI_SND_8BIT(0xfa);u8g_10MicroDelay();}
 #define ST7920_WRITE_BYTE(a)     {ST7920_SWSPI_SND_8BIT((uint8_t)((a)&0xf0u));ST7920_SWSPI_SND_8BIT((uint8_t)((a)<<4u));u8g_10MicroDelay();}
@@ -47,9 +47,9 @@ uint8_t u8g_dev_rrd_st7920_128x64_fn(u8g_t *u8g, u8g_dev_t *dev, uint8_t msg, vo
   {
     case U8G_DEV_MSG_INIT:
       {
-        OUT_WRITE(ST7920_CS_PIN,LOW);
-        OUT_WRITE(ST7920_DAT_PIN,LOW);
-        OUT_WRITE(ST7920_CLK_PIN,HIGH);
+        OUT_WRITE(ST7920_CS_PIN, LOW);
+        OUT_WRITE(ST7920_DAT_PIN, LOW);
+        OUT_WRITE(ST7920_CLK_PIN, HIGH);
 
         ST7920_CS();
         u8g_Delay(120);                 //initial delay for boot up

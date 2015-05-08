@@ -99,8 +99,7 @@
 #define MSG_OK                              "ok"
 #define MSG_WAIT                            "wait"
 #define MSG_FILE_SAVED                      "Done saving file."
-#define MSG_ERR_LINE_NO1                    "Line Number out of sequence. Expected: "
-#define MSG_ERR_LINE_NO2                    " Got: "
+#define MSG_ERR_LINE_NO                     "Line Number is not Last Line Number+1, Last Line: "
 #define MSG_ERR_CHECKSUM_MISMATCH           "checksum mismatch, Last Line: "
 #define MSG_ERR_NO_CHECKSUM                 "No Checksum with line number, Last Line: "
 #define MSG_ERR_NO_LINENUMBER_WITH_CHECKSUM "No Line Number with checksum, Last Line: "
@@ -143,7 +142,7 @@
 #define MSG_HOTEND_OFFSET                   "Hotend offsets:"
 #define MSG_EMPTY_PLANE                     "Autolevel can only be execute on an actual plane, make sure width and height are not 0!"
 #define MSG_ERR_MATERIAL_INDEX              "M145 S<index> out of range (0-2)"
-#define MSG_FILAMENT_RUNOUT_PIN             "filament_runout_pin: "
+#define MSG_FILRUNOUT_PIN                   "filament_runout_pin: "
 #define MSG_ERR_M428_TOO_FAR                "Too far from reference point"
 
 #define MSG_SD_CANT_OPEN_SUBDIR             "Cannot open subdir"

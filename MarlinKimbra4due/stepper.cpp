@@ -446,7 +446,7 @@ HAL_STEP_TIMER_ISR {
           { // -direction
             #ifdef DUAL_X_CARRIAGE
               // with 2 x-carriages, endstops are only checked in the homing direction for the active extruder
-              if ((current_block->active_extruder == 0 && X_HOME_DIR == -1) || (current_block->active_extruder != 0 && X2_HOME_DIR == -1))
+              if ((current_block->active_driver == 0 && X_HOME_DIR == -1) || (current_block->active_driver != 0 && X2_HOME_DIR == -1))
             #endif
               {
                 #if HAS_X_MIN
@@ -627,60 +627,34 @@ HAL_STEP_TIMER_ISR {
       #endif //ADVANCE
 
       #define _COUNTER(axis) counter_## axis
-      #define _WRITE_STEP(AXIS, HIGHLOW) AXIS ##_STEP_WRITE(HIGHLOW)
       #define _APPLY_STEP(AXIS) AXIS ##_APPLY_STEP
       #define _INVERT_STEP_PIN(AXIS) INVERT_## AXIS ##_STEP_PIN
 
-      #ifdef CONFIG_STEPPERS_TOSHIBA
-        /**
-         * The Toshiba stepper controller require much longer pulses.
-         * So we 'stage' decompose the pulses between high and low
-         * instead of doing each in turn. The extra tests add enough
-         * lag to allow it work with without needing NOPs
-         */
-        #define STEP_ADD(axis, AXIS) \
-         _COUNTER(axis) += current_block->steps[_AXIS(AXIS)]; \
-         if (_COUNTER(axis) > 0) { _WRITE_STEP(AXIS, HIGH); }
-        STEP_ADD(x,X);
-        STEP_ADD(y,Y);
-        STEP_ADD(z,Z);
-        #ifndef ADVANCE
-          STEP_ADD(e,E);
-        #endif
+      #define STEP_START(axis, AXIS) \
+        _COUNTER(axis) += current_block->steps[_AXIS(AXIS)]; \
+        if (_COUNTER(axis) > 0) { \
+          _APPLY_STEP(AXIS)(!_INVERT_STEP_PIN(AXIS),0); \
+          _COUNTER(axis) -= current_block->step_event_count; \
+          count_position[_AXIS(AXIS)] += count_direction[_AXIS(AXIS)]; }
 
-        #define STEP_IF_COUNTER(axis, AXIS) \
-          if (_COUNTER(axis) > 0) { \
-            _COUNTER(axis) -= current_block->step_event_count; \
-            count_position[_AXIS(AXIS)] += count_direction[_AXIS(AXIS)]; \
-            _WRITE_STEP(AXIS, LOW); \
-          }
+      STEP_START(x,X);
+      STEP_START(y,Y);
+      STEP_START(z,Z);
+      #ifndef ADVANCE
+        STEP_START(e,E);
+      #endif
 
-        STEP_IF_COUNTER(x, X);
-        STEP_IF_COUNTER(y, Y);
-        STEP_IF_COUNTER(z, Z);
-        #ifndef ADVANCE
-          STEP_IF_COUNTER(e, E);
-        #endif
+      _delay_us(1U); // Add delay us
 
-      #else // !CONFIG_STEPPERS_TOSHIBA
+      #define STEP_END(axis, AXIS) _APPLY_STEP(AXIS)(_INVERT_STEP_PIN(AXIS),0)
 
-        #define APPLY_MOVEMENT(axis, AXIS) \
-          _COUNTER(axis) += current_block->steps[_AXIS(AXIS)]; \
-          if (_COUNTER(axis) > 0) { \
-            _APPLY_STEP(AXIS)(!_INVERT_STEP_PIN(AXIS),0); \
-            _COUNTER(axis) -= current_block->step_event_count; \
-            count_position[_AXIS(AXIS)] += count_direction[_AXIS(AXIS)]; \
-            _APPLY_STEP(AXIS)(_INVERT_STEP_PIN(AXIS),0); \
-          }
+      STEP_END(x, X);
+      STEP_END(y, Y);
+      STEP_END(z, Z);
+      #ifndef ADVANCE
+        STEP_END(e, E);
+      #endif
 
-        APPLY_MOVEMENT(x, X);
-        APPLY_MOVEMENT(y, Y);
-        APPLY_MOVEMENT(z, Z);
-        #ifndef ADVANCE
-          APPLY_MOVEMENT(e, E);
-        #endif
-
-      #endif // CONFIG_STEPPERS_TOSHIBA
       step_events_completed++;
       if (step_events_completed >= current_block->step_event_count) break;
     }
@@ -936,67 +910,68 @@ void st_init() {
   #if HAS_X_MIN
     SET_INPUT(X_MIN_PIN);
     #ifdef ENDSTOPPULLUP_XMIN
-      SET_PULLUP(X_MIN_PIN);
+      PULLUP(X_MIN_PIN, HIGH);
     #endif
   #endif
 
   #if HAS_Y_MIN
     SET_INPUT(Y_MIN_PIN);
     #ifdef ENDSTOPPULLUP_YMIN
-      SET_PULLUP(Y_MIN_PIN);
+      PULLUP(Y_MIN_PIN ,HIGH);
     #endif
   #endif
 
   #if HAS_Z_MIN
     SET_INPUT(Z_MIN_PIN);
     #ifdef ENDSTOPPULLUP_ZMIN
-      SET_PULLUP(Z_MIN_PIN);
+      PULLUP(Z_MIN_PIN, HIGH);
     #endif
   #endif
 
   #if HAS_E_MIN
     SET_INPUT(E_MIN_PIN);
     #ifdef ENDSTOPPULLUP_EMIN
-      WRITE(E_MIN_PIN,HIGH);
+      PULLUP(E_MIN_PIN, HIGH);
     #endif
   #endif
 
   #if HAS_X_MAX
     SET_INPUT(X_MAX_PIN);
     #ifdef ENDSTOPPULLUP_XMAX
-      SET_PULLUP(X_MAX_PIN);
+      PULLUP(X_MAX_PIN, HIGH);
     #endif
   #endif
 
   #if HAS_Y_MAX
     SET_INPUT(Y_MAX_PIN);
     #ifdef ENDSTOPPULLUP_YMAX
-      SET_PULLUP(Y_MAX_PIN);
+      PULLUP(Y_MAX_PIN, HIGH);
     #endif
   #endif
 
   #if HAS_Z_MAX
     SET_INPUT(Z_MAX_PIN);
     #ifdef ENDSTOPPULLUP_ZMAX
-      SET_PULLUP(Z_MAX_PIN);
+      PULLUP(Z_MAX_PIN, HIGH);
     #endif
   #endif
 
   #if HAS_Z2_MAX
     SET_INPUT(Z2_MAX_PIN);
     #ifdef ENDSTOPPULLUP_ZMAX
-      SET_PULLUP(Z2_MAX_PIN,HIGH);
+      PULLUP(Z2_MAX_PIN, HIGH);
     #endif
   #endif
 
 #if (defined(Z_PROBE_PIN) && Z_PROBE_PIN >= 0) && defined(Z_PROBE_ENDSTOP) // Check for Z_PROBE_ENDSTOP so we don't pull a pin high unless it's to be used.
   SET_INPUT(Z_PROBE_PIN);
   #ifdef ENDSTOPPULLUP_ZPROBE
-    SET_PULLUP(Z_PROBE_PIN,HIGH);
+    PULLUP(Z_PROBE_PIN, HIGH);
   #endif
 #endif
 
   #define _STEP_INIT(AXIS) AXIS ##_STEP_INIT
+  #define _WRITE_STEP(AXIS, HIGHLOW) AXIS ##_STEP_WRITE(HIGHLOW)
   #define _DISABLE(axis) disable_## axis()
 
   #define AXIS_INIT(axis, AXIS, PIN) \
