@@ -268,7 +268,6 @@ static millis_t max_inactive_time = 0;
 static millis_t stepper_inactive_time = DEFAULT_STEPPER_DEACTIVE_TIME * 1000L;
 millis_t print_job_start_ms = 0; ///< Print job start time
 millis_t print_job_stop_ms = 0;  ///< Print job stop time
-static millis_t last_command_time = 0;
 static uint8_t target_extruder;
 bool no_wait_for_cooling = true;
 bool target_direction;
@@ -810,18 +809,9 @@ void get_command() {
 
   if (drain_queued_commands_P()) return; // priority is given to non-serial commands
   
-  millis_t ms = millis();
-  
-  if (!MYSERIAL.available()) {
-    if (commands_in_queue == 0 && ms - last_command_time > 1000) {
-      ECHO_EM(MSG_WAIT);
-      last_command_time = ms;	  
-    }
-  }
+  while (MYSERIAL.available() > 0 && commands_in_queue < BUFSIZE) {
 
-  while (MYSERIAL.available() && commands_in_queue < BUFSIZE) {
-    last_command_time = ms;
-    char serial_char = MYSERIAL.read();
+    serial_char = MYSERIAL.read();
 
     if (serial_char == '\n' || serial_char == '\r' ||
        serial_count >= (MAX_CMD_SIZE - 1)
@@ -906,7 +896,7 @@ void get_command() {
       serial_count = 0; //clear buffer
     }
     else if (serial_char == '\\') {  // Handle escapes
-      if (MYSERIAL.available()  && commands_in_queue < BUFSIZE) {
+      if (MYSERIAL.available() > 0  && commands_in_queue < BUFSIZE) {
         // if we have one more character, copy it over
         serial_char = MYSERIAL.read();
         command_queue[cmd_queue_index_w][serial_count++] = serial_char;
@@ -4144,11 +4134,11 @@ inline void gcode_M105() {
   #if HAS_TEMP_0 || HAS_TEMP_BED || defined(HEATER_0_USES_MAX6675)
     ECHO_S(OK);
     #if HAS_TEMP_0
-      ECHO_MV(" T:", degHotend(target_extruder), 1);
+      ECHO_MV(MSG_T, degHotend(target_extruder), 1);
       ECHO_MV(" /", degTargetHotend(target_extruder), 1);
     #endif
     #if HAS_TEMP_BED
-      ECHO_MV(" B:", degBed(), 1);
+      ECHO_MV(MSG_B, degBed(), 1);
       ECHO_MV(" /", degTargetBed(), 1);
     #endif
     for (int8_t e = 0; e < EXTRUDERS; ++e) {
@@ -6276,8 +6266,7 @@ void ClearToSend() {
   #ifdef SDSUPPORT
     if (fromsd[cmd_queue_index_r]) return;
   #endif
-  ECHO_S(OK);
-  ECHO_E;
+  ECHO_L(OK);
   #ifdef ADVANCED_OK
     ECHO_MV(" N", gcode_LastN);
     ECHO_EMV(" S", commands_in_queue);
