@@ -630,29 +630,31 @@ HAL_STEP_TIMER_ISR {
       #define _APPLY_STEP(AXIS) AXIS ##_APPLY_STEP
       #define _INVERT_STEP_PIN(AXIS) INVERT_## AXIS ##_STEP_PIN
 
-      #define STEP_START(axis, AXIS) \
+      #define STEP_ADD(axis, AXIS) \
         _COUNTER(axis) += current_block->steps[_AXIS(AXIS)]; \
-        if (_COUNTER(axis) > 0) { \
-          _APPLY_STEP(AXIS)(!_INVERT_STEP_PIN(AXIS),0); \
-          _COUNTER(axis) -= current_block->step_event_count; \
-          count_position[_AXIS(AXIS)] += count_direction[_AXIS(AXIS)]; }
+        if (_COUNTER(axis) > 0) { _APPLY_STEP(AXIS)(!_INVERT_STEP_PIN(AXIS),0); }
 
-      STEP_START(x,X);
-      STEP_START(y,Y);
-      STEP_START(z,Z);
+      STEP_ADD(x,X);
+      STEP_ADD(y,Y);
+      STEP_ADD(z,Z);
       #ifndef ADVANCE
-        STEP_START(e,E);
+        STEP_ADD(e,E);
       #endif
 
       _delay_us(1U); // Add delay us
 
-      #define STEP_END(axis, AXIS) _APPLY_STEP(AXIS)(_INVERT_STEP_PIN(AXIS),0)
+      #define STEP_IF_COUNTER(axis, AXIS) \
+        if (_COUNTER(axis) > 0) { \
+          _COUNTER(axis) -= current_block->step_event_count; \
+          count_position[_AXIS(AXIS)] += count_direction[_AXIS(AXIS)]; \
+          _APPLY_STEP(AXIS)(_INVERT_STEP_PIN(AXIS),0); \
+        }
 
-      STEP_END(x, X);
-      STEP_END(y, Y);
-      STEP_END(z, Z);
+      STEP_IF_COUNTER(x, X);
+      STEP_IF_COUNTER(y, Y);
+      STEP_IF_COUNTER(z, Z);
       #ifndef ADVANCE
-        STEP_END(e, E);
+        STEP_IF_COUNTER(e, E);
       #endif
 
       step_events_completed++;
@@ -686,7 +688,6 @@ HAL_STEP_TIMER_ISR {
       #endif
     }
     else if (step_events_completed > (unsigned long)current_block->decelerate_after) {
-
       MultiU32X32toH32(step_rate, deceleration_time, current_block->acceleration_rate);
 
       if (step_rate > acc_step_rate) { // Check step_rate stays positive
