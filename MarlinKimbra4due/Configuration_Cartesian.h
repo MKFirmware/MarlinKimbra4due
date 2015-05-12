@@ -25,10 +25,12 @@
 #define X_MIN_ENDSTOP_LOGIC   false   // set to true to invert the logic of the endstop.
 #define Y_MIN_ENDSTOP_LOGIC   false   // set to true to invert the logic of the endstop.
 #define Z_MIN_ENDSTOP_LOGIC   false   // set to true to invert the logic of the endstop.
+#define Z2_MIN_ENDSTOP_LOGIC  false   // set to true to invert the logic of the endstop.
 #define E_MIN_ENDSTOP_LOGIC   false   // set to true to invert the logic of the endstop.
 #define X_MAX_ENDSTOP_LOGIC   false   // set to true to invert the logic of the endstop.
 #define Y_MAX_ENDSTOP_LOGIC   false   // set to true to invert the logic of the endstop.
 #define Z_MAX_ENDSTOP_LOGIC   false   // set to true to invert the logic of the endstop.
+#define Z2_MAX_ENDSTOP_LOGIC  false   // set to true to invert the logic of the endstop.
 #define Z_PROBE_ENDSTOP_LOGIC false   // set to true to invert the logic of the endstop.
 
 // ENDSTOP SETTINGS:
@@ -145,7 +147,7 @@
 
   #define Z_RAISE_BEFORE_PROBING      10      //How much the extruder will be raised before travelling to the first probing point.
   #define Z_RAISE_BETWEEN_PROBINGS     5      //How much the extruder will be raised when travelling from between next probing points
-  #define Z_RAISE_AFTER_PROBING        0      //How much the extruder will be raised after the last probing point.
+  #define Z_RAISE_AFTER_PROBING        5      //How much the extruder will be raised after the last probing point.
 
   //#define Z_PROBE_SLED                // turn on if you have a z-probe mounted on a sled like those designed by Charles Bell
   //#define SLED_DOCKING_OFFSET 5       // the extra distance the X axis must travel to pick up the sled. 0 should be fine but you can push it further if you'd like.
