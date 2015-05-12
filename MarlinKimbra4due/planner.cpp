@@ -518,8 +518,7 @@ float junction_deviation = 0.1;
           if (degHotend(extruder) < extrude_min_temp && !(debugLevel & DEBUG_DRYRUN)) {
             position[E_AXIS] = target[E_AXIS]; //behave as if the move really took place, but ignore E part
             de = 0; // no difference
-            ECHO_S(OK);
-            ECHO_EM(MSG_ERR_COLD_EXTRUDE_STOP);
+            ECHO_LM(ER, MSG_ERR_COLD_EXTRUDE_STOP);
           }
         }
 
@@ -530,8 +529,7 @@ float junction_deviation = 0.1;
           #endif
           position[E_AXIS] = target[E_AXIS]; // Behave as if the move really took place, but ignore E part
           de = 0; // no difference
-          ECHO_S(OK);
-          ECHO_EM(MSG_ERR_LONG_EXTRUDE_STOP);
+          ECHO_LM(ER, MSG_ERR_LONG_EXTRUDE_STOP);
           #ifdef EASY_LOAD
             }
             allow_lengthy_extrude_once = false;

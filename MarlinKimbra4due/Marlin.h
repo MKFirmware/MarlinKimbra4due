@@ -24,6 +24,10 @@
 #include <avr/interrupt.h>
 #include "Configuration.h"
 
+#ifndef SANITYCHECK_H
+  #error Your Configuration.h and Configuration_adv.h files are outdated!
+#endif
+
 #if (ARDUINO >= 100)
   #include "Arduino.h"
 #else
@@ -134,12 +138,13 @@ void manage_inactivity(bool ignore_stepper_queue=false);
  * X_HEAD and Y_HEAD is used for systems that don't have a 1:1 relationship between X_AXIS and X Head movement, like CoreXY bots.
  */
 enum AxisEnum {X_AXIS=0, Y_AXIS=1, A_AXIS=0, B_AXIS=1, Z_AXIS=2, E_AXIS=3, X_HEAD=4, Y_HEAD=5};
+enum EndstopEnum {X_MIN=0, Y_MIN=1, Z_MIN=2, Z_PROBE=3, X_MAX=4, Y_MAX=5, Z_MAX=6};
 
 void enable_all_steppers();
 void disable_all_steppers();
 
 void FlushSerialRequestResend();
-void ClearToSend();
+void ok_to_send();
 
 void get_coordinates();
 #ifdef DELTA
@@ -171,6 +176,18 @@ void Stop();
 #ifdef FILAMENT_RUNOUT_SENSOR
   void filrunout();
 #endif
+
+/**
+ * Debug flags - with repetier
+ */
+enum DebugFlags {
+  DEBUG_ECHO          = BIT(0),
+  DEBUG_INFO          = BIT(1),
+  DEBUG_ERRORS        = BIT(2),
+  DEBUG_DRYRUN        = BIT(3),
+  DEBUG_COMMUNICATION = BIT(4)
+};
+extern uint8_t debugLevel;
 
 extern bool Running;
 inline bool IsRunning() { return  Running; }
@@ -305,18 +322,6 @@ extern uint8_t active_driver;
   extern void digipot_i2c_set_current( int channel, float current );
   extern void digipot_i2c_init();
 #endif
-
-/**
- * Debug with repetier
- */
-enum DebugFlags {
-  DEBUG_ECHO          = BIT(0),
-  DEBUG_INFO          = BIT(1),
-  DEBUG_ERRORS        = BIT(2),
-  DEBUG_DRYRUN        = BIT(3),
-  DEBUG_COMMUNICATION = BIT(4)
-};
-extern uint8_t debugLevel;
 
 #ifdef FIRMWARE_TEST
   void FirmwareTest();

@@ -16,8 +16,8 @@
 //#define PAGE_HEIGHT 16  //256 byte framebuffer
 #define PAGE_HEIGHT 32  //512 byte framebuffer
 
-#define WIDTH 128
-#define HEIGHT 64
+#define LCD_PIXEL_WIDTH 128
+#define LCD_PIXEL_HEIGHT 64
 
 #include <U8glib.h>
 
@@ -26,15 +26,15 @@ static void ST7920_SWSPI_SND_8BIT(uint8_t val)
   uint8_t i;
   for( i = 0; i < 8; i++ )
   {
-    digitalWrite(ST7920_CLK_PIN, 0);
-    digitalWrite(ST7920_DAT_PIN, val&0x80); 
+    WRITE_VAR(ST7920_CLK_PIN,0);
+    WRITE_VAR(ST7920_DAT_PIN,val&0x80); 
     val<<=1;
-    digitalWrite(ST7920_CLK_PIN, 1);
+    WRITE_VAR(ST7920_CLK_PIN,1);
   }
 }
 
-#define ST7920_CS()              {digitalWrite(ST7920_CS_PIN,1);u8g_10MicroDelay();}
-#define ST7920_NCS()             {digitalWrite(ST7920_CS_PIN,0);}
+#define ST7920_CS()              {WRITE_VAR(ST7920_CS_PIN,1);u8g_10MicroDelay();}
+#define ST7920_NCS()             {WRITE_VAR(ST7920_CS_PIN,0);}
 #define ST7920_SET_CMD()         {ST7920_SWSPI_SND_8BIT(0xf8);u8g_10MicroDelay();}
 #define ST7920_SET_DAT()         {ST7920_SWSPI_SND_8BIT(0xfa);u8g_10MicroDelay();}
 #define ST7920_WRITE_BYTE(a)     {ST7920_SWSPI_SND_8BIT((uint8_t)((a)&0xf0u));ST7920_SWSPI_SND_8BIT((uint8_t)((a)<<4u));u8g_10MicroDelay();}
@@ -47,9 +47,9 @@ uint8_t u8g_dev_rrd_st7920_128x64_fn(u8g_t *u8g, u8g_dev_t *dev, uint8_t msg, vo
   {
     case U8G_DEV_MSG_INIT:
       {
-        OUT_WRITE(ST7920_CS_PIN, LOW);
-        OUT_WRITE(ST7920_DAT_PIN, LOW);
-        OUT_WRITE(ST7920_CLK_PIN, HIGH);
+        OUT_WRITE(ST7920_CS_PIN,LOW);
+        OUT_WRITE(ST7920_DAT_PIN,LOW);
+        OUT_WRITE(ST7920_CLK_PIN,HIGH);
 
         ST7920_CS();
         u8g_Delay(120);                 //initial delay for boot up
@@ -58,12 +58,12 @@ uint8_t u8g_dev_rrd_st7920_128x64_fn(u8g_t *u8g, u8g_dev_t *dev, uint8_t msg, vo
         ST7920_WRITE_BYTE(0x01);       //clear CGRAM ram
         u8g_Delay(15);                 //delay for CGRAM clear
         ST7920_WRITE_BYTE(0x3E);       //extended mode + GDRAM active
-        for(y=0;y<HEIGHT/2;y++)        //clear GDRAM
+        for(y = 0; y < LCD_PIXEL_HEIGHT / 2; y++)        //clear GDRAM
         {
           ST7920_WRITE_BYTE(0x80|y);   //set y
           ST7920_WRITE_BYTE(0x80);     //set x = 0
           ST7920_SET_DAT();
-          for(i=0;i<2*WIDTH/8;i++)     //2x width clears both segments
+          for(i = 0; i < 2 * LCD_PIXEL_WIDTH / 8; i++)     //2x width clears both segments
             ST7920_WRITE_BYTE(0);
           ST7920_SET_CMD();
         }
@@ -97,7 +97,7 @@ uint8_t u8g_dev_rrd_st7920_128x64_fn(u8g_t *u8g, u8g_dev_t *dev, uint8_t msg, vo
           }
 
           ST7920_SET_DAT();
-          ST7920_WRITE_BYTES(ptr,WIDTH/8); //ptr is incremented inside of macro
+          ST7920_WRITE_BYTES(ptr,LCD_PIXEL_WIDTH/8); //ptr is incremented inside of macro
           y++;
         }
         ST7920_NCS();
@@ -113,8 +113,8 @@ uint8_t u8g_dev_rrd_st7920_128x64_fn(u8g_t *u8g, u8g_dev_t *dev, uint8_t msg, vo
 #endif
 }
 
-uint8_t   u8g_dev_st7920_128x64_rrd_buf[WIDTH*(PAGE_HEIGHT/8)] U8G_NOCOMMON;
-u8g_pb_t  u8g_dev_st7920_128x64_rrd_pb = {{PAGE_HEIGHT,HEIGHT,0,0,0},WIDTH,u8g_dev_st7920_128x64_rrd_buf};
+uint8_t   u8g_dev_st7920_128x64_rrd_buf[LCD_PIXEL_WIDTH*(PAGE_HEIGHT/8)] U8G_NOCOMMON;
+u8g_pb_t  u8g_dev_st7920_128x64_rrd_pb = {{PAGE_HEIGHT,LCD_PIXEL_HEIGHT,0,0,0},LCD_PIXEL_WIDTH,u8g_dev_st7920_128x64_rrd_buf};
 u8g_dev_t u8g_dev_st7920_128x64_rrd_sw_spi = {u8g_dev_rrd_st7920_128x64_fn,&u8g_dev_st7920_128x64_rrd_pb,&u8g_com_null_fn};
 
 class U8GLIB_ST7920_128X64_RRD : public U8GLIB
