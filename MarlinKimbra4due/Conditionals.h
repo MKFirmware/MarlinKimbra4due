@@ -358,6 +358,13 @@
     #define MAX_PROBE_Y (min(Y_MAX_POS, Y_MAX_POS + Y_PROBE_OFFSET_FROM_EXTRUDER))
   #endif
 
+   /**
+    * Sled Options
+    */ 
+  #ifdef Z_PROBE_SLED
+    #define Z_SAFE_HOMING
+  #endif
+  
   /**
    * Servo Leveling
    */

@@ -92,6 +92,7 @@ unsigned char soft_pwm_bed;
 //===========================================================================
 //============================ private variables ============================
 //===========================================================================
+
 static volatile bool temp_meas_ready = false;
 
 #ifdef PIDTEMP
@@ -247,8 +248,8 @@ void PID_autotune(float temp, int hotend, int ncycles)
         }
       #endif
 
-      if (heating == true && input > temp) {
-        if (ms - t2 > 5000) {
+      if (heating && input > temp) {
+        if (ms > t2 + 5000) {
           heating = false;
           if (hotend < 0)
             soft_pwm_bed = (bias - d) >> 1;
@@ -259,8 +260,9 @@ void PID_autotune(float temp, int hotend, int ncycles)
           max = temp;
         }
       }
-      if (heating == false && input < temp) {
-        if (ms - t1 > 5000) {
+
+      if (!heating && input < temp) {
+        if (ms > t1 + 5000) {
           heating = true;
           t2 = ms;
           t_low = t2 - t1;
@@ -632,19 +634,21 @@ void manage_heater() {
 
     // Check if the temperature is failing to increase
     #ifdef THERMAL_PROTECTION_HOTENDS
+
       // Is it time to check this extruder's heater?
       if (watch_heater_next_ms[e] && ms > watch_heater_next_ms[e]) {
         // Has it failed to increase enough?
         if (degHotend(e) < watch_target_temp[e]) {
           // Stop!
           disable_all_heaters();
-          _temp_error(e, MSG_HEATING_FAILED, MSG_HEATING_FAILED_LCD);
+          _temp_error(e, PSTR(MSG_HEATING_FAILED), PSTR(MSG_HEATING_FAILED_LCD));
         }
         else {
-          // Only check once per M104/M109
-          watch_heater_next_ms[e] = 0;
+          // Start again if the target is still far off
+          start_watching_heater(e);
         }
       }
+
     #endif // THERMAL_PROTECTION_HOTENDS
 
     #ifdef TEMP_SENSOR_1_AS_REDUNDANT
@@ -803,7 +807,6 @@ static float analog2tempBed(int raw) {
 static void updateTemperaturesFromRawValues() {
   static millis_t last_update = millis();
   millis_t temp_last_update = millis();
-  millis_t from_last_update = temp_last_update - last_update;
   #ifdef HEATER_0_USES_MAX6675
     current_temperature_raw[0] = read_max6675();
   #endif
@@ -818,6 +821,7 @@ static void updateTemperaturesFromRawValues() {
     filament_width_meas = analog2widthFil();
   #endif
   #if HAS_POWER_CONSUMPTION_SENSOR
+    millis_t from_last_update = temp_last_update - last_update;
     static float watt_overflow = 0.0;
     power_consumption_meas = analog2power();
     //MYSERIAL.println(analog2current(),3);
@@ -828,13 +832,6 @@ static void updateTemperaturesFromRawValues() {
     }
   #endif
 
-  static unsigned int second_overflow = 0;
-  second_overflow += from_last_update;
-  if(second_overflow >= 1000) {
-    printer_usage_seconds++;
-    second_overflow -= 1000;
-  }
-  last_update = temp_last_update;
   //Reset the watchdog after we know we have a temperature measurement.
   watchdog_reset();
 
@@ -1067,7 +1064,7 @@ void tp_init() {
    */
   void start_watching_heater(int e) {
     millis_t ms = millis() + WATCH_TEMP_PERIOD * 1000;
-    if (degHotend(e) < degTargetHotend(e) - (WATCH_TEMP_INCREASE * 2)) {
+    if (degHotend(e) < degTargetHotend(e) - (WATCH_TEMP_INCREASE + TEMP_HYSTERESIS + 1)) {
       watch_target_temp[e] = degHotend(e) + WATCH_TEMP_INCREASE;
       watch_heater_next_ms[e] = ms;
     }
@@ -1625,9 +1622,9 @@ HAL_TEMP_TIMER_ISR {
       analogReadResolution(12); // Set ADC resolution
       break;
 
-    default:
-      ECHO_LM(ER, MSG_TEMP_READ_ERROR);
-      break;
+    //default:
+    //  ECHO_LM(ER, MSG_TEMP_READ_ERROR);
+    //  break;
   } // switch(temp_state)
 
   #define SET_CURRENT_TEMP_RAW(temp_id) raw_median_temp[temp_id][median_counter] = (raw_temp_value[temp_id] - (min_temp[temp_id] + max_temp[temp_id])); \

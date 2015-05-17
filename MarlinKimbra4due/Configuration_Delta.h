@@ -29,6 +29,9 @@
 //Uncomment to enable autocalibration debug messages
 #define DEBUG_MESSAGES
 
+//Amount to lift head after probing a point
+#define AUTOCAL_PROBELIFT 3 // mm
+
 // Precision for G30 delta autocalibration function
 #define AUTOCALIBRATION_PRECISION 0.1      // mm
 
@@ -37,7 +40,7 @@
 
 // Z-Probe variables
 // Start and end location values are used to deploy/retract the probe (will move from start to end and back again)
-#define PROBING_FEEDRATE 500                          // Speed for individual probe Use: G30 A F600
+#define PROBING_FEEDRATE 1000                         // Speed in mm/min for individual probe Use: G30 A F600
 #define Z_PROBE_OFFSET {0, 0, -1, 0}                  // X, Y, Z, E distance between hotend nozzle and deployed bed leveling probe. X & Y must are integer...
 #define Z_PROBE_DEPLOY_START_LOCATION {0, 0, 30, 0}   // X, Y, Z, E start location for z-probe deployment sequence
 #define Z_PROBE_DEPLOY_END_LOCATION {0, 0, 30, 0}     // X, Y, Z, E end location for z-probe deployment sequence
@@ -80,9 +83,9 @@
 
 // ENDSTOP SETTINGS:
 // Sets direction of endstop when homing; 1=MAX, -1=MIN
-#define X_HOME_DIR 1 //DELTA MUST HAVE MAX ENDSTOP
-#define Y_HOME_DIR 1 //DELTA MUST HAVE MAX ENDSTOP
-#define Z_HOME_DIR 1 //DELTA MUST HAVE MAX ENDSTOP
+#define X_HOME_DIR 1 // DELTA MUST HAVE MAX ENDSTOP
+#define Y_HOME_DIR 1 // DELTA MUST HAVE MAX ENDSTOP
+#define Z_HOME_DIR 1 // DELTA MUST HAVE MAX ENDSTOP
 
 #define min_software_endstops true  // If true, axis won't move to coordinates less than HOME_POS.
 #define max_software_endstops true  // If true, axis won't move to coordinates greater than the defined lengths below.
@@ -136,7 +139,6 @@
 // delta speeds must be the same on xyz
 #define DEFAULT_AXIS_STEPS_PER_UNIT {80,80,80,451,625,625,625}        // X, Y, Z, E0, E1, E2, E3
 #define DEFAULT_MAX_FEEDRATE {300,300,300,45,100,100,100}             // X, Y, Z, E0, E1, E2, E3 (mm/sec)
-#define DEFAULT_RETRACTION_MAX_FEEDRATE {150,150,150,150}             // E0, E1, E2, E3 (mm/sec)
 #define DEFAULT_MAX_ACCELERATION {2000,2000,2000,1000,1000,1000,1000} // X, Y, Z, E0, E1, E2, E3 maximum start speed for accelerated moves.
 
 #define DEFAULT_ACCELERATION          1000      // X, Y, Z and E max acceleration in mm/s^2 for printing moves

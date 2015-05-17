@@ -198,7 +198,7 @@ uint32_t HAL_timer_get_count_value ();
 void HAL_timer_clear (Tc* tc, uint32_t channel);
 //
 
-void tone(uint8_t pin, int frequency);
+void tone(uint8_t pin, int frequency, int duration);
 void noTone(uint8_t pin);
 //void tone(uint8_t pin, int frequency, long duration);
 
