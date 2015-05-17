@@ -391,10 +391,7 @@ bool target_direction;
   static float bed_level_c = 20; // used for inital bed probe safe distance (to avoid crashing into bed)
   static float bed_level_ox, bed_level_oy, bed_level_oz;
   static int loopcount;
-<<<<<<< HEAD
-=======
   static bool home_all_axis = true;
->>>>>>> origin/master
 #else
   static bool home_all_axis = true;
 #endif // DELTA
@@ -643,11 +640,7 @@ void servo_init() {
   #if (NUM_SERVOS > 0)
     for (int i = 0; i < 3; i++)
       if (servo_endstops[i] >= 0)
-<<<<<<< HEAD
-        servos[servo_endstops[i]].write(servo_endstop_angles[i * 2 + 1]);
-=======
         servo[servo_endstops[i]].write(servo_endstop_angles[i * 2 + 1]);
->>>>>>> origin/master
   #endif //NUM_SERVOS
 
   #if SERVO_LEVELING_DELAY
@@ -1334,20 +1327,8 @@ static void setup_for_endstop_move() {
           #if SERVO_LEVELING
             srv->attach(0);
           #endif
-<<<<<<< HEAD
-<<<<<<< HEAD
-          servos[servo_endstops[Z_AXIS]].write(servo_endstop_angles[Z_AXIS * 2]);
-<<<<<<< HEAD
-          #if SERVO_LEVELING
-=======
-=======
-          servo[servo_endstops[Z_AXIS]].write(servo_endstop_angles[Z_AXIS * 2]);
->>>>>>> origin/master
-=======
           srv->write(servo_endstop_angles[Z_AXIS * 2]);
->>>>>>> origin/master
           #if SERVO_LEVELING_DELAY
->>>>>>> origin/master
             delay(PROBE_SERVO_DEACTIVATION_DELAY);
             srv->detach();
           #endif
@@ -1548,11 +1529,7 @@ static void setup_for_endstop_move() {
 
 #ifdef DELTA
 
-<<<<<<< HEAD
-  static void homeaxis(int axis) {
-=======
   static void homeaxis(AxisEnum axis) {
->>>>>>> origin/master
     #define HOMEAXIS_DO(LETTER) \
       ((LETTER##_MIN_PIN > -1 && LETTER##_HOME_DIR==-1) || (LETTER##_MAX_PIN > -1 && LETTER##_HOME_DIR==1))
 
@@ -2450,7 +2427,7 @@ static void setup_for_endstop_move() {
 
       if (retract_zlift > 0.01) {
         current_position[Z_AXIS] -= retract_zlift;
-        #ifdef DELTA
+        #if defined(DELTA) || defined(SCARA)
           sync_plan_position_delta();
         #else
           sync_plan_position();
@@ -2462,7 +2439,7 @@ static void setup_for_endstop_move() {
 
       if (retract_zlift > 0.01) {
         current_position[Z_AXIS] += retract_zlift;
-        #ifdef DELTA
+        #if defined(DELTA) || defined(SCARA)
           sync_plan_position_delta();
         #else
           sync_plan_position();
@@ -3215,7 +3192,7 @@ inline void gcode_G28(boolean home_x = false, boolean home_y = false) {
 
     sync_plan_position();
 
-  #endif // else DELTA
+  #endif // !DELTA
 
   #ifdef SCARA
     sync_plan_position_delta();
@@ -4386,10 +4363,6 @@ inline void gcode_M104() {
  */
 inline void gcode_M105() {
   if (setTargetedHotend(105)) return;
-<<<<<<< HEAD
-  if (debugDryrun()) return;
-=======
->>>>>>> origin/master
 
   #if HAS_TEMP_0 || HAS_TEMP_BED || defined(HEATER_0_USES_MAX6675)
     ECHO_S(OK);
@@ -5482,7 +5455,11 @@ inline void gcode_M428() {
   if (!err) {
     memcpy(current_position, new_pos, sizeof(new_pos));
     memcpy(home_offset, new_offs, sizeof(new_offs));
-    sync_plan_position();
+    #if defined(DELTA) || defined(SCARA)
+      sync_plan_position_delta()
+    #else
+      sync_plan_position();
+    #endif
     ECHO_LM(DB, "Offset applied.");
     LCD_ALERTMESSAGEPGM("Offset applied.");
     #if HAS_LCD_BUZZ
@@ -5664,8 +5641,7 @@ inline void gcode_M503() {
       plan_buffer_line(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder, active_driver); //move xyz back
       plan_buffer_line(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], lastpos[E_AXIS], feedrate/60, active_extruder, active_driver); //final unretract
       for (int8_t i = 0; i < NUM_AXIS; i++) current_position[i] = lastpos[i];
-      calculate_delta(current_position);
-      plan_set_position(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], current_position[E_AXIS]);
+      sync_plan_position_delta();
     #else
       plan_buffer_line(lastpos[X_AXIS], lastpos[Y_AXIS], target[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder, active_driver); //move xy back
       plan_buffer_line(lastpos[X_AXIS], lastpos[Y_AXIS], lastpos[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder, active_driver); //move z back
@@ -6119,11 +6095,11 @@ inline void gcode_T() {
           #endif // end MKR4 || NPR2
         #endif // end no DUAL_X_CARRIAGE
 
-        #ifdef DELTA 
+        #if defined(DELTA) || defined(SCARA)
           sync_plan_position_delta();
         #else // NO DELTA
           sync_plan_position();
-        #endif // DELTA
+        #endif // !DELTA
         // Move to the old position if 'F' was in the parameters
         if (make_move && IsRunning()) prepare_move();
       }
