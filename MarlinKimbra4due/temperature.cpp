@@ -184,8 +184,7 @@ static void updateTemperaturesFromRawValues();
 //================================ Functions ================================
 //===========================================================================
 
-void PID_autotune(float temp, int hotend, int ncycles)
-{
+void PID_autotune(float temp, int hotend, int ncycles) {
   float input = 0.0;
   int cycles = 0;
   bool heating = true;
@@ -303,7 +302,7 @@ void PID_autotune(float temp, int hotend, int ncycles)
         }
       }
     }
-    if (input > temp + 20) {
+    if (input > temp + MAX_OVERSHOOT_PID_AUTOTUNE) {
       ECHO_LM(ER, MSG_PID_TEMP_TOO_HIGH);
       return;
     }
@@ -318,7 +317,7 @@ void PID_autotune(float temp, int hotend, int ncycles)
       }
       else {
         p = soft_pwm[hotend];
-        ECHO_SMV(OK, MSG_T, input);
+        ECHO_SMV(OK, MSG_T, input, 1);
         ECHO_EMV(MSG_AT, p);
       }
 

@@ -2336,6 +2336,21 @@
      
 #endif //REPRAP_DISCOUNT_FULL_GRAPHIC_SMART_CONTROLLER
 
+  #ifdef NUM_SERVOS
+    #define SERVO0_PIN        36
+
+    #if NUM_SERVOS > 1
+      #define SERVO1_PIN      40
+    #endif
+
+    #if NUM_SERVOS > 2
+      #define SERVO2_PIN      41
+    #endif
+
+    #if NUM_SERVOS > 3
+      #define SERVO3_PIN      -1
+    #endif
+  #endif
 
 #endif //ALLIGATOR
 /****************************************************************************************/
