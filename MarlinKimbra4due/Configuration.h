@@ -218,9 +218,9 @@
 //#define SLOW_PWM_HEATERS // PWM with very low frequency (roughly 0.125Hz=8s) and minimum state time of approximately 1s useful for heaters driven by a relay
 // If the temperature difference between the target temperature and the actual temperature
 // is more then PID_FUNCTIONAL_RANGE then the PID will be shut off and the heater will be set to min/max.
-#define PID_FUNCTIONAL_RANGE 10 // degC
-#define PID_INTEGRAL_DRIVE_MAX PID_MAX // Limit for the integral term
-#define K1 0.95 // Smoothing factor within the PID
+#define PID_FUNCTIONAL_RANGE 10         // degC
+#define PID_INTEGRAL_DRIVE_MAX PID_MAX  // Limit for the integral term
+#define K1 0.95                         // Smoothing factor within the PID
 #define MAX_OVERSHOOT_PID_AUTOTUNE 20   // Max valor for overshoot autotune
 
 //             HotEnd{HE0,HE1,HE2,HE3}
@@ -337,6 +337,11 @@
 //#define VIKI2
 //#define miniVIKI
 
+// This is a new controller currently under development.
+// https://github.com/eboston/Adafruit-ST7565-Full-Graphic-Controller/
+// ==> REMEMBER TO INSTALL U8glib to your ARDUINO library folder: http://code.google.com/p/u8glib/wiki/u8glib
+//#define ELB_FULL_GRAPHIC_CONTROLLER
+
 // The RepRapDiscount Smart Controller (white PCB)
 // http://reprap.org/wiki/RepRapDiscount_Smart_Controller
 //#define REPRAP_DISCOUNT_SMART_CONTROLLER
@@ -361,7 +366,10 @@
 // REMEMBER TO INSTALL LiquidCrystal_I2C.h in your ARDUINO library folder: https://github.com/kiyoshigawa/LiquidCrystal_I2C
 //#define RA_CONTROL_PANEL
 
-// I2C Panels
+/**
+ * I2C Panels
+ */
+
 //#define LCD_I2C_SAINSMART_YWROBOT
 
 // PANELOLU2 LCD with status LEDs, separate encoder and click inputs
@@ -432,6 +440,14 @@
 //#define DISABLE_M503
 //===========================================================================
 
+//========================== EXTRA SETTINGS ON SD ===========================
+// Uncomment SD SETTINGS to enable the firmware to write some configuration, that require frequent update, on the SD card.
+//#define SD_SETTINGS
+#define SD_CFG_SECONDS        300         //seconds between update
+#define CFG_SD_FILE           "INFO.CFG"  //name of the configuration file
+#define CFG_SD_MAX_KEY_LEN    3+1         //icrease this if you add key name longer than the actual value.
+#define CFG_SD_MAX_VALUE_LEN  12+1        //this should be enought for int, long and float if you need to retrive strings increase this carefully
+//===========================================================================
 
 //==================== Bowden Filament management ===========================
 //#define EASY_LOAD
