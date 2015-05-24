@@ -412,6 +412,7 @@ static void lcd_status_screen() {
 
 static void lcd_return_to_status() { lcd_goto_menu(lcd_status_screen); }
 
+#ifdef SDSUPPORT
 static void lcd_sdcard_pause() { card.pauseSDPrint(); }
 
 static void lcd_sdcard_resume() { card.startFileprint(); }
@@ -424,6 +425,7 @@ static void lcd_sdcard_stop() {
   cancel_heatup = true;
   lcd_setstatus(MSG_PRINT_ABORTED, true);
 }
+#endif
 
 /**
  *
@@ -1369,6 +1371,7 @@ static void lcd_control_volumetric_menu() {
   }
 #endif // FWRETRACT
 
+#ifdef SDSUPPORT
 #if SDCARDDETECT == -1
   static void lcd_sd_refresh() {
     card.initsd();
@@ -1420,6 +1423,7 @@ void lcd_sdcard_menu() {
   }
   END_MENU();
 }
+#endif
 
 /**
  *
@@ -1556,6 +1560,7 @@ static void menu_action_back(menuFunc_t func) { lcd_goto_menu(func); }
 static void menu_action_submenu(menuFunc_t func) { lcd_goto_menu(func); }
 static void menu_action_gcode(const char* pgcode) { enqueuecommands_P(pgcode); }
 static void menu_action_function(menuFunc_t func) { (*func)(); }
+#ifdef SDSUPPORT
 static void menu_action_sdfile(const char* filename, char* longFilename) {
   char cmd[30];
   char* c;
@@ -1569,6 +1574,7 @@ static void menu_action_sddirectory(const char* filename, char* longFilename) {
   card.chdir(filename);
   encoderPosition = 0;
 }
+#endif
 static void menu_action_setting_edit_bool(const char* pstr, bool* ptr) { *ptr = !(*ptr); }
 static void menu_action_setting_edit_callback_bool(const char* pstr, bool* ptr, menuFunc_t callback) {
   menu_action_setting_edit_bool(pstr, ptr);
@@ -1585,18 +1591,18 @@ void lcd_init() {
 
     SET_INPUT(BTN_EN1);
     SET_INPUT(BTN_EN2);
-    WRITE(BTN_EN1,HIGH);
-    WRITE(BTN_EN2,HIGH);
+    PULLUP(BTN_EN1,HIGH);
+    PULLUP(BTN_EN2,HIGH);
   #if BTN_ENC > 0
     SET_INPUT(BTN_ENC);
-    WRITE(BTN_ENC,HIGH);
+    PULLUP(BTN_ENC,HIGH);
   #endif
   #ifdef REPRAPWORLD_KEYPAD
     pinMode(SHIFT_CLK,OUTPUT);
     pinMode(SHIFT_LD,OUTPUT);
     pinMode(SHIFT_OUT,INPUT);
-    WRITE(SHIFT_OUT,HIGH);
-    WRITE(SHIFT_LD,HIGH);
+    PULLUP(SHIFT_OUT,HIGH);
+    PULLUP(SHIFT_LD,HIGH);
   #endif
 #else  // Not NEWPANEL
   #ifdef SR_LCD_2W_NL // Non latching 2 wire shift register
@@ -1607,15 +1613,15 @@ void lcd_init() {
      pinMode(SHIFT_LD,OUTPUT);
      pinMode(SHIFT_EN,OUTPUT);
      pinMode(SHIFT_OUT,INPUT);
-     WRITE(SHIFT_OUT,HIGH);
-     WRITE(SHIFT_LD,HIGH);
-     WRITE(SHIFT_EN,LOW);
+     PULLUP(SHIFT_OUT,HIGH);
+     PULLUP(SHIFT_LD,HIGH);
+     PULLUP(SHIFT_EN,LOW);
   #endif // SR_LCD_2W_NL
 #endif//!NEWPANEL
 
   #if defined(SDSUPPORT) && defined(SDCARDDETECT) && (SDCARDDETECT > 0)
     pinMode(SDCARDDETECT, INPUT);
-    WRITE(SDCARDDETECT, HIGH);
+    PULLUP(SDCARDDETECT, HIGH);
     lcd_oldcardstatus = IS_SD_INSERTED;
   #endif //(SDCARDDETECT > 0)
 
@@ -1959,12 +1965,13 @@ void lcd_reset_alert_level() { lcd_status_message_level = 0; }
 
   void lcd_buzz(long duration, uint16_t freq) {
     if (freq > 0) {
-      #ifdef LCD_USE_I2C_BUZZER
-        lcd.buzz(duration, freq);
-      #elif defined(BEEPER) && BEEPER >= 0
+      #if BEEPER > 0
         SET_OUTPUT(BEEPER);
-        tone(BEEPER, freq, duration);
+        tone(BEEPER, freq);
         delay(duration);
+        noTone(BEEPER);
+      #elif defined(LCD_USE_I2C_BUZZER)
+        lcd.buzz(duration, freq);
       #else
         delay(duration);
       #endif
