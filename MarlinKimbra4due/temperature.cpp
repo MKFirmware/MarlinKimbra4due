@@ -733,7 +733,7 @@ static float analog2temp(int raw, uint8_t e) {
   #endif
     {
       ECHO_LVM(ER, (int)e, MSG_INVALID_EXTRUDER_NUM);
-      kill();
+      kill(PSTR(MSG_KILLED));
       return 0.0;
     }
 
