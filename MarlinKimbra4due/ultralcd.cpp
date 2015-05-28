@@ -414,19 +414,19 @@ static void lcd_status_screen() {
 
 static void lcd_return_to_status() { lcd_goto_menu(lcd_status_screen); }
 
-#ifdef SDSUPPORT
-static void lcd_sdcard_pause() { card.pauseSDPrint(); }
+#if ENABLED(SDSUPPORT)
+  static void lcd_sdcard_pause() { card.pauseSDPrint(); }
 
-static void lcd_sdcard_resume() { card.startFileprint(); }
+  static void lcd_sdcard_resume() { card.startFileprint(); }
 
-static void lcd_sdcard_stop() {
-  quickStop();
-  card.sdprinting = false;
-  card.closeFile();
-  autotempShutdown();
-  cancel_heatup = true;
-  lcd_setstatus(MSG_PRINT_ABORTED, true);
-}
+  static void lcd_sdcard_stop() {
+    quickStop();
+    card.sdprinting = false;
+    card.closeFile();
+    autotempShutdown();
+    cancel_heatup = true;
+    lcd_setstatus(MSG_PRINT_ABORTED, true);
+  }
 #endif
 
 /**
@@ -1380,59 +1380,59 @@ static void lcd_control_volumetric_menu() {
   }
 #endif // FWRETRACT
 
-#ifdef SDSUPPORT
-#if SDCARDDETECT == -1
-  static void lcd_sd_refresh() {
-    card.initsd();
+#if ENABLED(SDSUPPORT)
+  #if SDCARDDETECT == -1
+    static void lcd_sd_refresh() {
+      card.initsd();
+      currentMenuViewOffset = 0;
+    }
+  #endif
+
+  static void lcd_sd_updir() {
+    card.updir();
     currentMenuViewOffset = 0;
   }
-#endif
 
-static void lcd_sd_updir() {
-  card.updir();
-  currentMenuViewOffset = 0;
-}
-
-/**
- *
- * "Print from SD" submenu
- *
- */
-void lcd_sdcard_menu() {
-  if (lcdDrawUpdate == 0 && LCD_CLICKED == 0) return;	// nothing to do (so don't thrash the SD card)
-  uint16_t fileCnt = card.getnrfilenames();
-  START_MENU(lcd_main_menu);
-  MENU_ITEM(back, MSG_MAIN, lcd_main_menu);
-  card.getWorkDirName();
-  if (card.filename[0] == '/') {
-    #if SDCARDDETECT == -1
-      MENU_ITEM(function, LCD_STR_REFRESH MSG_REFRESH, lcd_sd_refresh);
-    #endif
-  }
-  else {
-    MENU_ITEM(function, LCD_STR_FOLDER "..", lcd_sd_updir);
-  }
-
-  for (uint16_t i = 0; i < fileCnt; i++) {
-    if (_menuItemNr == _lineNr) {
-      card.getfilename(
-        #ifdef SDCARD_RATHERRECENTFIRST
-          fileCnt-1 -
-        #endif
-        i
-      );
-      if (card.filenameIsDir)
-        MENU_ITEM(sddirectory, MSG_CARD_MENU, card.filename, card.longFilename);
-      else
-        MENU_ITEM(sdfile, MSG_CARD_MENU, card.filename, card.longFilename);
+  /**
+  *
+  * "Print from SD" submenu
+  *
+  */
+  void lcd_sdcard_menu() {
+    if (lcdDrawUpdate == 0 && LCD_CLICKED == 0) return;	// nothing to do (so don't thrash the SD card)
+    uint16_t fileCnt = card.getnrfilenames();
+    START_MENU(lcd_main_menu);
+    MENU_ITEM(back, MSG_MAIN, lcd_main_menu);
+    card.getWorkDirName();
+    if (card.filename[0] == '/') {
+      #if SDCARDDETECT == -1
+        MENU_ITEM(function, LCD_STR_REFRESH MSG_REFRESH, lcd_sd_refresh);
+      #endif
     }
     else {
-      MENU_ITEM_DUMMY();
+      MENU_ITEM(function, LCD_STR_FOLDER "..", lcd_sd_updir);
     }
+
+    for (uint16_t i = 0; i < fileCnt; i++) {
+      if (_menuItemNr == _lineNr) {
+        card.getfilename(
+          #ifdef SDCARD_RATHERRECENTFIRST
+            fileCnt-1 -
+          #endif
+          i
+        );
+        if (card.filenameIsDir)
+          MENU_ITEM(sddirectory, MSG_CARD_MENU, card.filename, card.longFilename);
+        else
+          MENU_ITEM(sdfile, MSG_CARD_MENU, card.filename, card.longFilename);
+      }
+      else {
+        MENU_ITEM_DUMMY();
+      }
+    }
+    END_MENU();
   }
-  END_MENU();
-}
-#endif
+#endif // SDSUPPORT
 
 /**
  *
@@ -1569,21 +1569,23 @@ static void menu_action_back(menuFunc_t func) { lcd_goto_menu(func); }
 static void menu_action_submenu(menuFunc_t func) { lcd_goto_menu(func); }
 static void menu_action_gcode(const char* pgcode) { enqueuecommands_P(pgcode); }
 static void menu_action_function(menuFunc_t func) { (*func)(); }
-#ifdef SDSUPPORT
-static void menu_action_sdfile(const char* filename, char* longFilename) {
-  char cmd[30];
-  char* c;
-  sprintf_P(cmd, PSTR("M23 %s"), filename);
-  for(c = &cmd[4]; *c; c++) *c = tolower(*c);
-  enqueuecommand(cmd);
-  enqueuecommands_P(PSTR("M24"));
-  lcd_return_to_status();
-}
-static void menu_action_sddirectory(const char* filename, char* longFilename) {
-  card.chdir(filename);
-  encoderPosition = 0;
-}
-#endif
+
+#if ENABLED(SDSUPPORT)
+  static void menu_action_sdfile(const char* filename, char* longFilename) {
+    char cmd[30];
+    char* c;
+    sprintf_P(cmd, PSTR("M23 %s"), filename);
+    for(c = &cmd[4]; *c; c++) *c = tolower(*c);
+    enqueuecommand(cmd);
+    enqueuecommands_P(PSTR("M24"));
+    lcd_return_to_status();
+  }
+  static void menu_action_sddirectory(const char* filename, char* longFilename) {
+    card.chdir(filename);
+    encoderPosition = 0;
+  }
+#endif // SDSUPPORT
+
 static void menu_action_setting_edit_bool(const char* pstr, bool* ptr) { *ptr = !(*ptr); }
 static void menu_action_setting_edit_callback_bool(const char* pstr, bool* ptr, menuFunc_t callback) {
   menu_action_setting_edit_bool(pstr, ptr);
