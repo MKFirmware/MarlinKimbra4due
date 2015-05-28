@@ -84,7 +84,7 @@ static void lcd_status_screen();
   #endif
   static void lcd_sdcard_menu();
   
-  #ifdef DELTA
+  #if ENABLED(DELTA)
     static void lcd_delta_calibrate_menu();
   #endif // DELTA
 
@@ -116,7 +116,7 @@ static void lcd_status_screen();
 
   #define ENCODER_FEEDRATE_DEADZONE 10
 
-  #if !defined(LCD_I2C_VIKI)
+  #if DISABLED(LCD_I2C_VIKI)
     #ifndef ENCODER_STEPS_PER_MENU_ITEM
       #define ENCODER_STEPS_PER_MENU_ITEM 5
     #endif
@@ -138,7 +138,7 @@ static void lcd_status_screen();
   /**
    * START_MENU generates the init code for a menu function
    */
-#if defined(BTN_BACK) && BTN_BACK > 0
+#if ENABLED(BTN_BACK) && BTN_BACK > 0
   #define START_MENU(last_menu) do { \
     encoderRateMultiplierEnabled = false; \
     if (encoderPosition > 0x8000) encoderPosition = 0; \
@@ -352,7 +352,7 @@ static void lcd_status_screen() {
     }
   #endif
 
-#ifdef ULTIPANEL
+#if ENABLED(ULTIPANEL)
 
     bool current_click = LCD_CLICKED;
 
@@ -443,7 +443,7 @@ static void lcd_main_menu() {
   }
   else {
     MENU_ITEM(submenu, MSG_PREPARE, lcd_prepare_menu);
-    #ifdef DELTA
+    #if ENABLED(DELTA)
       MENU_ITEM(submenu, MSG_DELTA_CALIBRATE, lcd_delta_calibrate_menu);
     #endif // DELTA
   }
@@ -476,7 +476,7 @@ static void lcd_main_menu() {
   END_MENU();
 }
 
-#if defined(SDSUPPORT) && defined(MENU_ADDAUTOSTART)
+#if ENABLED(SDSUPPORT) && ENABLED(MENU_ADDAUTOSTART)
   static void lcd_autostart_sd() {
     card.autostart_index = 0;
     card.setroot();
@@ -561,7 +561,7 @@ static void lcd_tune_menu() {
   END_MENU();
 }
 
-#if defined(EASY_LOAD)
+#if ENABLED(EASY_LOAD)
   static void lcd_extrude(float length, float feedrate) {
     current_position[E_AXIS] += length;
     #ifdef DELTA
@@ -587,12 +587,11 @@ static void lcd_tune_menu() {
 
 void _lcd_preheat(int endnum, const float temph, const float tempb, const int fan) {
   if (temph > 0) setTargetHotend(temph, endnum);
-  setTargetBed(tempb);
+  #if TEMP_SENSOR_BED != 0
+    setTargetBed(tempb);
+  #endif
   fanSpeed = fan;
   lcd_return_to_status();
-  #ifdef WATCH_TEMP_PERIOD
-    if (endnum >= 0) start_watching_heater(endnum);
-  #endif
 }
 void lcd_preheat_pla0() { _lcd_preheat(0, plaPreheatHotendTemp, plaPreheatHPBTemp, plaPreheatFanSpeed); }
 void lcd_preheat_abs0() { _lcd_preheat(0, absPreheatHotendTemp, absPreheatHPBTemp, absPreheatFanSpeed); }
@@ -813,10 +812,10 @@ static void lcd_prepare_menu() {
   //
   // Level Bed
   //
-  #ifdef ENABLE_AUTO_BED_LEVELING
+  #if ENABLED(ENABLE_AUTO_BED_LEVELING)
     if (axis_known_position[X_AXIS] && axis_known_position[Y_AXIS])
       MENU_ITEM(gcode, MSG_LEVEL_BED, PSTR("G29"));
-  #elif !defined(DELTA) && !defined(Z_SAFE_HOMING) && !defined(DOGLCD)
+  #elif DISABLED(DELTA) && DISABLED(Z_SAFE_HOMING)
     MENU_ITEM(function, MSG_BED_SETTING, config_lcd_level_bed);
   #endif
 
@@ -827,7 +826,7 @@ static void lcd_prepare_menu() {
   //MENU_ITEM(gcode, MSG_SET_ORIGIN, PSTR("G92 X0 Y0 Z0"));
   
   //Add Preset menu for LASER setting '14. 7. 22
-  #ifdef LASERBEAM
+  #if ENABLED(LASERBEAM)
     MENU_ITEM_EDIT(int3, MSG_LASER, &laser_ttl_modulation, 0, 255);
     if(laser_ttl_modulation == 0) { 
       WRITE(LASER_PWR_PIN, LOW);
@@ -872,7 +871,7 @@ static void lcd_prepare_menu() {
   //
   // Easy Load
   //
-  #if defined(EASY_LOAD) 
+  #if ENABLED(EASY_LOAD) 
     MENU_ITEM(function, MSG_E_BOWDEN_LENGTH, lcd_easy_load);
     MENU_ITEM(function, MSG_R_BOWDEN_LENGTH, lcd_easy_unload);
     MENU_ITEM(function, MSG_PURGE_XMM, lcd_purge);
@@ -892,14 +891,14 @@ static void lcd_prepare_menu() {
   //
   // Autostart
   //
-  #if defined(SDSUPPORT) && defined(MENU_ADDAUTOSTART)
+  #if ENABLED(SDSUPPORT) && ENABLED(MENU_ADDAUTOSTART)
     MENU_ITEM(function, MSG_AUTOSTART, lcd_autostart_sd);
   #endif
 
   END_MENU();
 }
 
-#ifdef DELTA
+#if ENABLED(DELTA)
 
   static void lcd_delta_calibrate_menu() {
     START_MENU(lcd_main_menu);
@@ -1115,14 +1114,14 @@ static void lcd_control_temperature_menu() {
   // Fan Speed
   //
   MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_FAN_SPEED, &fanSpeed, 0, 255);
-  #ifdef IDLE_OOZING_PREVENT
+  #if ENABLED(IDLE_OOZING_PREVENT)
     MENU_ITEM_EDIT(bool, MSG_IDLEOOZING, &idleoozing_enabled);
   #endif
 
   //
   // Autotemp, Min, Max, Fact
   //
-  #if defined(AUTOTEMP) && (TEMP_SENSOR_0 != 0)
+  #if ENABLED(AUTOTEMP) && (TEMP_SENSOR_0 != 0)
     MENU_ITEM_EDIT(bool, MSG_AUTOTEMP, &autotemp_enabled);
     MENU_ITEM_EDIT(float3, MSG_MIN, &autotemp_min, 0, HEATER_0_MAXTEMP + LCD_MAX_TEMP_OFFSET);
     MENU_ITEM_EDIT(float3, MSG_MAX, &autotemp_max, 0, HEATER_0_MAXTEMP + LCD_MAX_TEMP_OFFSET);
@@ -1132,7 +1131,7 @@ static void lcd_control_temperature_menu() {
   //
   // PID-P, PID-I, PID-D
   //
-  #ifdef PIDTEMP
+  #if ENABLED(PIDTEMP)
     // set up temp variables - undo the default scaling
     raw_Ki = unscalePID_i(PID_PARAM(Ki,0));
     raw_Kd = unscalePID_d(PID_PARAM(Kd,0));
@@ -1289,10 +1288,10 @@ static void lcd_control_motion_menu() {
   #if EXTRUDERS > 3
     MENU_ITEM_EDIT(float51, MSG_E3STEPS, &axis_steps_per_unit[E_AXIS+3], 5, 9999);
   #endif
-  #ifdef ABORT_ON_ENDSTOP_HIT_FEATURE_ENABLED
+  #if ENABLED(ABORT_ON_ENDSTOP_HIT_FEATURE_ENABLED)
     MENU_ITEM_EDIT(bool, MSG_ENDSTOP_ABORT, &abort_on_endstop_hit);
   #endif
-  #ifdef SCARA
+  #if ENABLED(SCARA)
     MENU_ITEM_EDIT(float52, MSG_XSCALE, &axis_scaling[X_AXIS],0.5,2);
     MENU_ITEM_EDIT(float52, MSG_YSCALE, &axis_scaling[Y_AXIS],0.5,2);
   #endif
@@ -1331,16 +1330,27 @@ static void lcd_control_volumetric_menu() {
  * "Control" > "Contrast" submenu
  *
  */
-#ifdef HAS_LCD_CONTRAST
+#if HAS_LCD_CONTRAST
   static void lcd_set_contrast() {
     if (encoderPosition != 0) {
-      lcd_contrast -= encoderPosition;
-      lcd_contrast &= 0x3F;
+      #ifdef U8GLIB_LM6059_AF
+        lcd_contrast += encoderPosition;
+        lcd_contrast &= 0xFF;
+      #else
+        lcd_contrast -= encoderPosition;
+        lcd_contrast &= 0x3F;
+      #endif
       encoderPosition = 0;
       lcdDrawUpdate = 1;
       u8g.setContrast(lcd_contrast);
     }
-    if (lcdDrawUpdate) lcd_implementation_drawedit(PSTR(MSG_CONTRAST), itostr2(lcd_contrast));
+    if (lcdDrawUpdate) {
+      #ifdef U8GLIB_LM6059_AF
+        lcd_implementation_drawedit(PSTR(MSG_CONTRAST), itostr3(lcd_contrast));
+      #else
+        lcd_implementation_drawedit(PSTR(MSG_CONTRAST), itostr2(lcd_contrast));
+      #endif
+    }
     if (LCD_CLICKED) lcd_goto_menu(lcd_control_menu);
   }
 #endif // HAS_LCD_CONTRAST
@@ -1618,7 +1628,7 @@ void lcd_init() {
   #endif // SR_LCD_2W_NL
 #endif//!NEWPANEL
 
-  #if defined(SDSUPPORT) && defined(SDCARDDETECT) && (SDCARDDETECT > 0)
+  #if ENABLED(SDSUPPORT) && ENABLED(SDCARDDETECT) && (SDCARDDETECT > 0)
     pinMode(SDCARDDETECT, INPUT);
     PULLUP(SDCARDDETECT, HIGH);
     lcd_oldcardstatus = IS_SD_INSERTED;
@@ -1731,7 +1741,7 @@ void lcd_update() {
                 if (encoderStepRate >= ENCODER_100X_STEPS_PER_SEC)     encoderMultiplier = 100;
                 else if (encoderStepRate >= ENCODER_10X_STEPS_PER_SEC) encoderMultiplier = 10;
 
-                #ifdef ENCODER_RATE_MULTIPLIER_DEBUG
+                #if ENABLED(ENCODER_RATE_MULTIPLIER_DEBUG)
                   ECHO_SMV(DB, "Enc Step Rate: ", encoderStepRate);
                   ECHO_MV("  Multiplier: ", encoderMultiplier);
                   ECHO_MV("  ENCODER_10X_STEPS_PER_SEC: ", ENCODER_10X_STEPS_PER_SEC);
@@ -1813,7 +1823,7 @@ void lcd_finishstatus(bool persist=false) {
   #endif
 }
 
-#if defined(LCD_PROGRESS_BAR) && PROGRESS_MSG_EXPIRE > 0
+#if ENABLED(LCD_PROGRESS_BAR) && PROGRESS_MSG_EXPIRE > 0
   void dontExpireStatus() { expire_status_ms = 0; }
 #endif
 
@@ -1882,7 +1892,7 @@ void lcd_reset_alert_level() { lcd_status_message_level = 0; }
   void lcd_buttons_update() {
     #ifdef NEWPANEL
       uint8_t newbutton = 0;
-      #ifdef INVERT_ROTARY_SWITCH
+      #if ENABLED(INVERT_ROTARY_SWITCH)
         if (READ(BTN_EN1) == 0) newbutton |= EN_B;
         if (READ(BTN_EN2) == 0) newbutton |= EN_A;
       #else
@@ -1955,7 +1965,7 @@ void lcd_reset_alert_level() { lcd_status_message_level = 0; }
   }
 
   bool lcd_detected(void) {
-    #if (defined(LCD_I2C_TYPE_MCP23017) || defined(LCD_I2C_TYPE_MCP23008)) && defined(DETECT_DEVICE)
+    #if (ENABLED(LCD_I2C_TYPE_MCP23017) || ENABLED(LCD_I2C_TYPE_MCP23008)) && ENABLED(DETECT_DEVICE)
       return lcd.LcdDetected() == 1;
     #else
       return true;

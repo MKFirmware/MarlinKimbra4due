@@ -377,8 +377,6 @@ unsigned long printer_usage_seconds;
   float z_probe_deploy_end_location[] = Z_PROBE_DEPLOY_END_LOCATION;
   float z_probe_retract_start_location[] = Z_PROBE_RETRACT_START_LOCATION;
   float z_probe_retract_end_location[] = Z_PROBE_RETRACT_END_LOCATION;
-  #define SIN_60 0.8660254037844386
-  #define COS_60 0.5
   float endstop_adj[3] = { 0 };
   static float bed_level[7][7] = {
       { 0, 0, 0, 0, 0, 0, 0 },
@@ -808,11 +806,8 @@ void loop() {
     commands_in_queue--;
     cmd_queue_index_r = (cmd_queue_index_r + 1) % BUFSIZE;
   }
-  // Check heater every n milliseconds
-  manage_heater();
-  manage_inactivity();
   checkHitEndstops();
-  lcd_update();
+  idle();
 }
 
 void gcode_line_error(const char *err, bool doFlush = true) {
@@ -2504,10 +2499,6 @@ static void setup_for_endstop_move() {
 
 inline void wait_heater() {
 
-  #ifdef THERMAL_PROTECTION_HOTENDS
-    start_watching_heater(target_extruder);
-  #endif
-
   millis_t temp_ms = millis();
 
   /* See if we are heating up or cooling down */
@@ -2527,8 +2518,8 @@ inline void wait_heater() {
 
     { // while loop
       if (millis() > temp_ms + 1000UL) { //Print temp & remaining time every 1s while waiting
-        ECHO_MV("T:", degHotend(target_extruder),1);
-        ECHO_MV(" E:", target_extruder);
+        ECHO_MV("T:", degHotend(target_extruder), 1);
+        ECHO_MV(" E:", (int)target_extruder);
         #ifdef TEMP_RESIDENCY_TIME
           ECHO_M(" W:");
           if (residency_start_ms > -1) {
@@ -2543,9 +2534,9 @@ inline void wait_heater() {
         #endif
         temp_ms = millis();
       }
-      manage_heater();
-      manage_inactivity();
-      lcd_update();
+
+      idle();
+
       #ifdef TEMP_RESIDENCY_TIME
         // start/restart the TEMP_RESIDENCY_TIME timer whenever we reach target temp for the first time
         // or when current temp falls outside the hysteresis after target temp was reached
@@ -2815,11 +2806,7 @@ inline void gcode_G4() {
 
   if (!lcd_hasstatus()) LCD_MESSAGEPGM(MSG_DWELL);
 
-  while (millis() < codenum) {
-    manage_heater();
-    manage_inactivity();
-    lcd_update();
-  }
+  while (millis() < codenum) idle();
 }
 
 #ifdef FWRETRACT
@@ -3431,9 +3418,7 @@ inline void gcode_G28(boolean home_XY = false) {
 
           probePointCounter++;
 
-          manage_heater();
-          manage_inactivity();
-          lcd_update();
+          idle();
 
         } //xProbe
       } //yProbe
@@ -3705,7 +3690,7 @@ inline void gcode_G92() {
    * M1: // M1 - Conditional stop - Wait for user button press on LCD
    */
   inline void gcode_M0_M1() {
-    char *src = seen_pointer + 2;
+    char *args = current_command_args;
 
     millis_t codenum = 0;
     bool hasP = false, hasS = false;
@@ -3714,14 +3699,12 @@ inline void gcode_G92() {
       hasP = codenum > 0;
     }
     if (code_seen('S')) {
-      codenum = code_value_short() * 1000UL; // seconds to wait
+      codenum = code_value() * 1000; // seconds to wait
       hasS = codenum > 0;
     }
-    char* starpos = strchr(src, '*');
-    if (starpos != NULL) *(starpos) = '\0';
-    while (*src == ' ') ++src;
-    if (!hasP && !hasS && *src != '\0')
-      lcd_setstatus(src, true);
+
+    if (!hasP && !hasS && *args != '\0')
+      lcd_setstatus(args, true);
     else {
       LCD_MESSAGEPGM(MSG_USERWAIT);
       #if defined(LCD_PROGRESS_BAR) && PROGRESS_MSG_EXPIRE > 0
@@ -3734,20 +3717,12 @@ inline void gcode_G92() {
     refresh_cmd_timeout();
     if (codenum > 0) {
       codenum += previous_cmd_ms;  // keep track of when we started waiting
-      while(millis() < codenum && !lcd_clicked()) {
-        manage_heater();
-        manage_inactivity();
-        lcd_update();
-      }
+      while(millis() < codenum && !lcd_clicked()) idle();
       lcd_ignore_click(false);
     }
     else {
       if (!lcd_detected()) return;
-      while (!lcd_clicked()) {
-        manage_heater();
-        manage_inactivity();
-        lcd_update();
-      }
+      while (!lcd_clicked()) idle();
     }
     if (IS_SD_PRINTING)
       LCD_MESSAGEPGM(MSG_RESUMING);
@@ -5036,11 +5011,7 @@ inline void gcode_M226() {
             break;
         }
 
-        while(digitalRead(pin_number) != target) {
-          manage_heater();
-          manage_inactivity();
-          lcd_update();
-        }
+        while(digitalRead(pin_number) != target) idle();
 
       } // pin_number > -1
     } // pin_state -1 0 1
@@ -5550,7 +5521,7 @@ inline void gcode_M503() {
   inline void gcode_M600() {
     float target[NUM_AXIS], fr60 = feedrate / 60;
     filament_changing = true;
-    for (int i=0; i < NUM_AXIS; i++)
+    for (int i = 0; i < NUM_AXIS; i++)
       target[i] = lastpos[i] = current_position[i];
 
     #ifdef DELTA
@@ -5604,11 +5575,10 @@ inline void gcode_M503() {
     delay(100);
     boolean beep = true;
     boolean sleep = false;
-    int cnt = 0;
+    uint8_t cnt = 0;
     
     int old_target_temperature[HOTENDS] = { 0 };
-    for (int8_t e = 0; e < HOTENDS; e++)
-    {
+    for (int8_t e = 0; e < HOTENDS; e++) {
       old_target_temperature[e] = target_temperature[e];
     }
     int old_target_temperature_bed = target_temperature_bed;
@@ -5617,9 +5587,8 @@ inline void gcode_M503() {
     PRESSBUTTON:
     LCD_ALERTMESSAGEPGM(MSG_FILAMENTCHANGE);
     while (!lcd_clicked()) {
-      manage_heater();
-      manage_inactivity(true);
-      lcd_update();
+      if (++cnt == 0) lcd_quick_feedback(); // every 256th frame till the lcd is clicked
+      idle(true);
       if ((millis() - last_set > 60000) && cnt <= FILAMENTCHANGE_PRINTEROFF) beep = true;
       if (cnt >= FILAMENTCHANGE_PRINTEROFF && !sleep) {
         disable_all_heaters();
@@ -5634,9 +5603,8 @@ inline void gcode_M503() {
           lcd_buzz(100, 1000);
         }
         beep = false;
-        cnt += 1;
       }
-    }
+    } // while(!lcd_clicked)
 
     //reset LCD alert message
     lcd_reset_alert_level();
@@ -6948,6 +6916,15 @@ void disable_all_steppers() {
   disable_e1();
   disable_e2();
   disable_e3();
+}
+
+/**
+ * Standard idle routine keeps the machine alive
+ */
+void idle(bool ignore_stepper_queue/*=false*/) {
+  manage_heater();
+  manage_inactivity(ignore_stepper_queue);
+  lcd_update();
 }
 
 /**

@@ -80,7 +80,7 @@ static inline void digitalFastWrite(int pin, bool v) {
 /// write to a pin
 //#define	  WRITE(pin, v)   do{if(v) {g_APinDescription[pin].pPort->PIO_SODR = g_APinDescription[pin].ulPin;} \
                           else {g_APinDescription[pin].pPort->PIO_CODR = g_APinDescription[pin].ulPin; }}while(0)
-#define WRITE_VAR(pin, v)   digitalFastWrite(pin, v)
+#define WRITE_VAR(pin, v)   digitalWrite(pin, v)
 #define WRITE(pin, v)       _FASTWRITE(pin, v)
 
 /// set pin as input
