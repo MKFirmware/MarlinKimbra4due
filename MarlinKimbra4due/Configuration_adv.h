@@ -423,7 +423,7 @@ const unsigned int dropsegments = 5; // everything with less than this number of
   #define RETRACT_RECOVER_FEEDRATE    8   //default feedrate for recovering from retraction (mm/s)
 #endif
 
-// Add support for experimental filament exchange support M600; requires display
+// Add support for filament exchange support M600; requires display
 #if ENABLED(ULTIPANEL)
   #define FILAMENTCHANGEENABLE
   #if ENABLED(FILAMENTCHANGEENABLE)
