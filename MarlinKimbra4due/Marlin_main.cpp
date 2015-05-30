@@ -2580,11 +2580,6 @@ inline void wait_bed() {
   refresh_cmd_timeout();
 }
 
-void error_invalid_extruder(int code, int e) {
-  ECHO_SMV(DB, "M", code);
-  ECHO_EMV(MSG_INVALID_EXTRUDER, e);
-}
-
 /******************************************************************************
 ***************************** G-Code Functions ********************************
 *******************************************************************************/
@@ -3007,110 +3002,7 @@ inline void gcode_G28(boolean home_XY = false) {
     // Home Z last if homing towards the bed
     #if Z_HOME_DIR < 0
       #ifndef Z_SAFE_HOMING
-        if (code_seen('M') && !(homeX || homeY)) {
-          // Manual G28 bed level
-          #ifdef ULTIPANEL
-            ECHO_LM(DB, " --LEVEL PLATE SCRIPT--");
-            set_ChangeScreen(true);
-            while(!lcd_clicked()) {
-              set_pageShowInfo(0);
-              lcd_update();
-            }
-            saved_feedrate = feedrate;
-            saved_feedrate_multiplier = feedrate_multiplier;
-            feedrate_multiplier = 100;
-            refresh_cmd_timeout();
-
-            enable_endstops(true);
-            for(int8_t i=0; i < NUM_AXIS; i++) {
-              destination[i] = current_position[i];
-            }
-            feedrate = 0.0;
-            #if Z_HOME_DIR > 0  // If homing away from BED do Z first
-              HOMEAXIS(Z);
-            #endif
-            HOMEAXIS(X);
-            HOMEAXIS(Y);
-            #if Z_HOME_DIR < 0
-              HOMEAXIS(Z);
-            #endif
-            sync_plan_position();
-
-            #ifdef ENDSTOPS_ONLY_FOR_HOMING
-              enable_endstops(false);
-            #endif
-
-            feedrate = saved_feedrate;
-            feedrate_multiplier = saved_feedrate_multiplier;
-            refresh_cmd_timeout();
-            endstops_hit_on_purpose(); // clear endstop hit flags
-
-            sync_plan_position();
-
-            do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS], Z_MIN_POS + 5);
-
-            // PROBE FIRST POINT
-            set_pageShowInfo(1);
-            set_ChangeScreen(true);
-            do_blocking_move_to(LEFT_PROBE_BED_POSITION, FRONT_PROBE_BED_POSITION, current_position[Z_AXIS]);
-            do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS], Z_MIN_POS);
-            while(!lcd_clicked()) {          
-              manage_heater();
-              manage_inactivity();
-            }
-
-            // PROBE SECOND POINT
-            set_ChangeScreen(true);
-            set_pageShowInfo(2);
-            do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS],Z_MIN_POS + 5);
-            do_blocking_move_to(RIGHT_PROBE_BED_POSITION, FRONT_PROBE_BED_POSITION, current_position[Z_AXIS]);
-            do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS],Z_MIN_POS);
-            while(!lcd_clicked()) {
-              manage_heater();
-              manage_inactivity();
-            }
-
-            // PROBE THIRD POINT
-            set_ChangeScreen(true);
-            set_pageShowInfo(3);
-            do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS],Z_MIN_POS + 5);
-            do_blocking_move_to(RIGHT_PROBE_BED_POSITION, BACK_PROBE_BED_POSITION, current_position[Z_AXIS]);
-            do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS],Z_MIN_POS);
-            while(!lcd_clicked()) {
-              manage_heater();
-              manage_inactivity();
-            }     
-
-            // PROBE FOURTH POINT
-            set_ChangeScreen(true);
-            set_pageShowInfo(4);
-            do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS],Z_MIN_POS + 5);
-            do_blocking_move_to(LEFT_PROBE_BED_POSITION, BACK_PROBE_BED_POSITION, current_position[Z_AXIS]);
-            do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS],Z_MIN_POS);
-            while(!lcd_clicked()) {
-              manage_heater();
-              manage_inactivity();
-            }
-
-            // PROBE CENTER
-            set_ChangeScreen(true);
-            set_pageShowInfo(5);
-            do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS],Z_MIN_POS + 5);
-            do_blocking_move_to((X_MAX_POS-X_MIN_POS)/2, (Y_MAX_POS-Y_MIN_POS)/2, current_position[Z_AXIS]);
-            do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS],Z_MIN_POS);
-            while(!lcd_clicked()) {
-              manage_heater();
-              manage_inactivity();
-            }
-
-            // FINISH MANUAL BED LEVEL
-            set_ChangeScreen(true);
-            set_pageShowInfo(6);
-            do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS],Z_MIN_POS + 5);
-            enqueuecommands_P(PSTR("G28 X0 Y0\nG4 P0\nG4 P0\nG4 P0"));
-          #endif // ULTIPANEL
-        }
-        else if (home_all_axis || homeZ) HOMEAXIS(Z);
+        if (home_all_axis || homeZ) HOMEAXIS(Z);
       #elif defined(Z_SAFE_HOMING) && defined(ENABLE_AUTO_BED_LEVELING)// Z Safe mode activated.
         if (home_all_axis) {
 
@@ -4647,7 +4539,7 @@ inline void gcode_M140() {
   if (code_seen('S')) setTargetBed(code_value());
 }
 
-#ifdef ULTIPANEL
+#if ENABLED(ULTIPANEL) && TEMP_SENSOR_0 != 0
 
   /**
    * M145: Set the heatup state for a material in the LCD menu
@@ -4749,19 +4641,14 @@ inline void gcode_M140() {
 #endif // HAS_TEMP_BED
 
 /**
- * M200: Set filament diameter and set E axis units to cubic millimeters (use S0 to set back to millimeters).
- *       T<extruder>
- *       D<millimeters>
+ * M200: Set filament diameter and set E axis units to cubic millimetres
+ *
+ *    T<extruder> - Optional extruder number. Current extruder if omitted.
+ *    D<mm> - Diameter of the filament. Use "D0" to set units back to millimetres.
  */
 inline void gcode_M200() {
-  int tmp_extruder = active_extruder;
-  if (code_seen('T')) {
-    tmp_extruder = code_value_short();
-    if (tmp_extruder >= EXTRUDERS) {
-      error_invalid_extruder(200, tmp_extruder);
-      return;
-    }
-  }
+
+  if (setTargetedHotend(200)) return;
 
   if (code_seen('D')) {
     float diameter = code_value();
@@ -4770,10 +4657,10 @@ inline void gcode_M200() {
     // for all extruders
     volumetric_enabled = (diameter != 0.0);
     if (volumetric_enabled) {
-      filament_size[tmp_extruder] = diameter;
+      filament_size[target_extruder] = diameter;
       // make sure all extruders have some sane value for the filament size
-      for (int i=0; i<EXTRUDERS; i++)
-        if (! filament_size[i]) filament_size[i] = DEFAULT_NOMINAL_FILAMENT_DIA;
+      for (int i = 0; i < EXTRUDERS; i++)
+        if (!filament_size[i]) filament_size[i] = DEFAULT_NOMINAL_FILAMENT_DIA;
     }
   }
   else {
@@ -4787,7 +4674,7 @@ inline void gcode_M200() {
  * M201: Set max acceleration in units/s^2 for print moves (M201 X1000 Y1000)
  */
 inline void gcode_M201() {
-  for (int8_t i=0; i < NUM_AXIS; i++) {
+  for (int8_t i = 0; i < NUM_AXIS; i++) {
     if (code_seen(axis_codes[i])) {
       max_acceleration_units_per_sq_second[i] = code_value();
     }
@@ -4798,7 +4685,7 @@ inline void gcode_M201() {
 
 #if 0 // Not used for Sprinter/grbl gen6
   inline void gcode_M202() {
-    for(int8_t i=0; i < NUM_AXIS; i++) {
+    for(int8_t i = 0; i < NUM_AXIS; i++) {
       if(code_seen(axis_codes[i])) axis_travel_steps_per_sqr_second[i] = code_value() * axis_steps_per_unit[i];
     }
   }
@@ -7256,15 +7143,8 @@ bool setTargetedHotend(int code) {
   if (code_seen('T')) {
     target_extruder = code_value_short();
     if (target_extruder >= EXTRUDERS) {
-      switch(code) {
-        case 104:
-        case 105:
-        case 109:
-        case 218:
-        case 221:
-          error_invalid_extruder(code, target_extruder);
-          break;
-      }
+      ECHO_SMV(ER, "M", code);
+      ECHO_EMV(" " MSG_INVALID_EXTRUDER, target_extruder);
       return true;
     }
   }

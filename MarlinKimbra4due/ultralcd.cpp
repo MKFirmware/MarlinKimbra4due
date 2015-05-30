@@ -14,10 +14,7 @@ int32_t lastEncoderMovementMillis;
 
 int  pageShowInfo = 0;
 boolean ChangeScreen = false;
-void set_pageShowInfo(int value){ pageShowInfo = value; }
-void set_ChangeScreen(boolean state) { ChangeScreen = state; }
 
-/* Configuration settings */
 int plaPreheatHotendTemp;
 int plaPreheatHPBTemp;
 int plaPreheatFanSpeed;
@@ -38,8 +35,6 @@ int gumPreheatFanSpeed;
   millis_t print_millis = 0;
 #endif
 
-/* !Configuration settings */
-
 // Function pointer to menu functions.
 typedef void (*menuFunc_t)();
 
@@ -48,10 +43,8 @@ char lcd_status_message[3*LCD_WIDTH+1] = WELCOME_MSG; // worst case is kana with
 
 #ifdef DOGLCD
   #include "dogm_lcd_implementation.h"
-  #define LCD_Printpos(x, y)  u8g.setPrintPos(LCD_PIXEL_WIDTH - DOG_CHAR_WIDTH * x, (y + 1) * DOG_CHAR_HEIGHT)
 #else
   #include "ultralcd_implementation_hitachi_HD44780.h"
-  #define LCD_Printpos(x, y)  lcd.setCursor(x, y)
 #endif
 
 // The main status screen
@@ -74,8 +67,6 @@ static void lcd_status_screen();
   static void lcd_control_temperature_preheat_gum_settings_menu();
   static void lcd_control_motion_menu();
   static void lcd_control_volumetric_menu();
-  static void config_lcd_level_bed();
-  static void lcd_level_bed();
   #ifdef HAS_LCD_CONTRAST
     static void lcd_set_contrast();
   #endif
@@ -86,6 +77,10 @@ static void lcd_status_screen();
   
   #if ENABLED(DELTA)
     static void lcd_delta_calibrate_menu();
+  #elif DISABLED(DELTA) && DISABLED(Z_SAFE_HOMING)
+    static void _lcd_level_bed();
+    static void _lcd_level_bed_homing();
+    static void lcd_level_bed();
   #endif // DELTA
 
   /* Different types of actions that can be used in menu items. */
@@ -138,7 +133,7 @@ static void lcd_status_screen();
   /**
    * START_MENU generates the init code for a menu function
    */
-#if ENABLED(BTN_BACK) && BTN_BACK > 0
+#if defined(BTN_BACK) && BTN_BACK > 0
   #define START_MENU(last_menu) do { \
     encoderRateMultiplierEnabled = false; \
     if (encoderPosition > 0x8000) encoderPosition = 0; \
@@ -681,7 +676,7 @@ void lcd_preheat_gum0() { _lcd_preheat(0, gumPreheatHotendTemp, gumPreheatHPBTem
     }
 
     static void lcd_preheat_gum_menu() {
-      START_MENU();
+      START_MENU(lcd_prepare_menu);
       MENU_ITEM(back, MSG_PREPARE, lcd_prepare_menu);
       MENU_ITEM(function, MSG_PREHEAT_GUM " 1", lcd_preheat_gum0);
       #if TEMP_SENSOR_1 != 0 //2 extruder preheat
@@ -703,91 +698,9 @@ void lcd_preheat_gum0() { _lcd_preheat(0, gumPreheatHotendTemp, gumPreheatHPBTem
 #endif //more than one extruder present
 
 void lcd_cooldown() {
-  setTargetHotend0(0);
-  setTargetHotend1(0);
-  setTargetHotend2(0);
-  setTargetHotend3(0);
-  setTargetBed(0);
+  disable_all_heaters();
   fanSpeed = 0;
   lcd_return_to_status();
-}
-
-static void config_lcd_level_bed() {
-	setTargetHotend(0,0);
-
-	ECHO_EM("Leveling...");	
-	currentMenu = lcd_level_bed;
-	enqueuecommands_P(PSTR("G28 M"));
-	pageShowInfo = 0;
-}
-
-static void lcd_level_bed() {
-  if(ChangeScreen) {
-    lcd_implementation_clear();
-    switch(pageShowInfo) {
-      case 0:
-        {
-          LCD_Printpos(0, 1);
-          lcd_printPGM(PSTR(MSG_LP_INTRO));
-          currentMenu = lcd_level_bed;
-          ChangeScreen = false;
-        }
-      break;
-      case 1:
-        {
-          LCD_Printpos(0, 1);
-          lcd_printPGM(PSTR(MSG_LP_1));
-          currentMenu = lcd_level_bed;
-          ChangeScreen = false;
-        }
-      break;
-      case 2:
-        {
-          LCD_Printpos(0, 1);
-          lcd_printPGM(PSTR(MSG_LP_2));
-          currentMenu = lcd_level_bed;
-          ChangeScreen = false;
-        }
-      break;
-      case 3:
-        {
-          LCD_Printpos(0, 1);
-          lcd_printPGM(PSTR(MSG_LP_3));
-          currentMenu = lcd_level_bed;
-          ChangeScreen = false;
-        }
-      break;
-      case 4:
-        {
-          LCD_Printpos(0, 1);
-          lcd_printPGM(PSTR(MSG_LP_4));
-          currentMenu = lcd_level_bed;
-          ChangeScreen = false;
-        }
-      break;
-      case 5:
-        {
-          LCD_Printpos(0, 1);
-          lcd_printPGM(PSTR(MSG_LP_5));
-          currentMenu = lcd_level_bed;
-          ChangeScreen = false;
-        }
-      break;
-      case 6:
-        {
-          LCD_Printpos(2, 2);
-          lcd_printPGM(PSTR(MSG_LP_6));
-          ChangeScreen = false;
-          delay(1200);
-          encoderPosition = 0;
-          lcd_implementation_clear();
-          currentMenu = lcd_status_screen;
-          lcd_status_screen();
-          pageShowInfo = 0;
-        }
-      break;
-    }
-  }
 }
 
 /**
@@ -816,7 +729,7 @@ static void lcd_prepare_menu() {
     if (axis_known_position[X_AXIS] && axis_known_position[Y_AXIS])
       MENU_ITEM(gcode, MSG_LEVEL_BED, PSTR("G29"));
   #elif DISABLED(DELTA) && DISABLED(Z_SAFE_HOMING)
-    MENU_ITEM(function, MSG_BED_SETTING, config_lcd_level_bed);
+    MENU_ITEM(submenu, MSG_MBL_SETTING, lcd_level_bed);
   #endif
 
   //
@@ -1794,10 +1707,19 @@ void lcd_update() {
     #endif
 
     #ifdef ULTIPANEL
-      if (currentMenu != lcd_status_screen && millis() > return_to_status_ms) {
+
+      // Return to Status Screen after a timeout
+      if (currentMenu != lcd_status_screen &&
+        #if DISABLED(DELTA) && DISABLED(Z_SAFE_HOMING)
+          currentMenu != _lcd_level_bed &&
+          currentMenu != _lcd_level_bed_homing &&
+        #endif
+        millis() > return_to_status_ms
+      ) {
         lcd_return_to_status();
         lcdDrawUpdate = 2;
       }
+
     #endif // ULTIPANEL
 
     if (lcdDrawUpdate == 2) lcd_implementation_clear();
@@ -2271,5 +2193,140 @@ char *ftostr52(const float &x) {
   return conv;
 }
 
+#if DISABLED(DELTA) && DISABLED(Z_SAFE_HOMING)
+
+  /**
+   * MBL Wait for controller movement and clicks:
+   *
+   */
+  static void _lcd_level_bed() {
+    static bool debounce_click = false;
+    if(ChangeScreen) {
+      switch(pageShowInfo) {
+        case 0:
+          {
+            lcd_implementation_clear();
+            lcd_implementation_drawedit(PSTR(MSG_MBL_INTRO), "");
+            ChangeScreen = false;
+          }
+        break;
+        case 1:
+          {
+            // PROBE FIRST POINT
+            lcd_implementation_clear();
+            current_position[Z_AXIS] = Z_MIN_POS + 5;
+            plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+            current_position[X_AXIS] = LEFT_PROBE_BED_POSITION;
+            current_position[Y_AXIS] = FRONT_PROBE_BED_POSITION;
+            current_position[Z_AXIS] = Z_MIN_POS;
+            line_to_current(manual_feedrate[X_AXIS] <= manual_feedrate[Y_AXIS] ? X_AXIS : Y_AXIS);
+            ChangeScreen = false;
+            lcd_implementation_drawedit(PSTR(MSG_MBL_1), "");
+            debounce_click = false;
+          }
+        break;
+        case 2:
+          {
+            // PROBE SECOND POINT
+            lcd_implementation_clear();
+            current_position[Z_AXIS] = Z_MIN_POS + 5;
+            plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+            current_position[X_AXIS] = RIGHT_PROBE_BED_POSITION;
+            current_position[Y_AXIS] = FRONT_PROBE_BED_POSITION;
+            current_position[Z_AXIS] = Z_MIN_POS;
+            line_to_current(manual_feedrate[X_AXIS] <= manual_feedrate[Y_AXIS] ? X_AXIS : Y_AXIS);
+            ChangeScreen = false;
+            lcd_implementation_drawedit(PSTR(MSG_MBL_1), "");
+            debounce_click = false;
+          }
+        break;
+        case 3:
+          {
+            // PROBE THIRD POINT
+            lcd_implementation_clear();
+            current_position[Z_AXIS] = Z_MIN_POS + 5;
+            plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+            current_position[X_AXIS] = RIGHT_PROBE_BED_POSITION;
+            current_position[Y_AXIS] = BACK_PROBE_BED_POSITION;
+            current_position[Z_AXIS] = Z_MIN_POS;
+            line_to_current(manual_feedrate[X_AXIS] <= manual_feedrate[Y_AXIS] ? X_AXIS : Y_AXIS);
+            ChangeScreen = false;
+            lcd_implementation_drawedit(PSTR(MSG_MBL_1), "");
+            debounce_click = false;
+          }
+        break;
+        case 4:
+          {
+            // PROBE FOURTH POINT
+            lcd_implementation_clear();
+            current_position[Z_AXIS] = Z_MIN_POS + 5;
+            plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+            current_position[X_AXIS] = LEFT_PROBE_BED_POSITION;
+            current_position[Y_AXIS] = BACK_PROBE_BED_POSITION;
+            current_position[Z_AXIS] = Z_MIN_POS;
+            line_to_current(manual_feedrate[X_AXIS] <= manual_feedrate[Y_AXIS] ? X_AXIS : Y_AXIS);
+            ChangeScreen = false;
+            lcd_implementation_drawedit(PSTR(MSG_MBL_1), "");
+            debounce_click = false;
+          }
+        break;
+        case 5:
+          {
+            // PROBE CENTER
+            lcd_implementation_clear();
+            current_position[Z_AXIS] = Z_MIN_POS + 5;
+            plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+            current_position[X_AXIS] = (X_MAX_POS - X_MIN_POS) / 2;
+            current_position[Y_AXIS] = (Y_MAX_POS - Y_MIN_POS) / 2;
+            current_position[Z_AXIS] = Z_MIN_POS;
+            line_to_current(manual_feedrate[X_AXIS] <= manual_feedrate[Y_AXIS] ? X_AXIS : Y_AXIS);
+            ChangeScreen = false;
+            lcd_implementation_drawedit(PSTR(MSG_MBL_2), "");
+            debounce_click = false;
+          }
+        break;
+        case 6:
+          {
+            // FINISH MANUAL BED LEVEL
+            lcd_implementation_clear();
+            lcd_implementation_drawedit(PSTR(MSG_MBL_3), "");
+            delay(3000);
+            enqueuecommands_P(PSTR("G28"));
+            lcd_return_to_status();
+          }
+        break;
+      }
+    }
+
+    if (LCD_CLICKED && !debounce_click) {
+      ++pageShowInfo;
+      ChangeScreen = true;
+      debounce_click = true;
+    }
+  }
+
+  /**
+   * MBL Homing
+   */
+  static void _lcd_level_bed_homing() {
+    if (lcdDrawUpdate) lcd_implementation_drawedit(PSTR("XYZ"), "Homing");
+    if (axis_known_position[X_AXIS] && axis_known_position[Y_AXIS] && axis_known_position[Z_AXIS]) {
+      pageShowInfo = 0;
+      ChangeScreen = true;
+      lcd_goto_menu(_lcd_level_bed);
+    }
+  }
+
+  /**
+   * MBL entry-point
+   */
+  static void lcd_level_bed() {
+    axis_known_position[X_AXIS] = axis_known_position[Y_AXIS] = axis_known_position[Z_AXIS] = false;
+    enqueuecommands_P(PSTR("G28"));
+    lcdDrawUpdate = 2;
+    lcd_goto_menu(_lcd_level_bed_homing);
+  }
+
+#endif // DISABLED(DELTA) && DISABLED(Z_SAFE_HOMING)
 
 #endif //ULTRA_LCD
