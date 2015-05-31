@@ -104,14 +104,14 @@
 #define MSG_FILE_PRINTED                    "Done printing file"
 #define MSG_BEGIN_FILE_LIST                 "Begin file list"
 #define MSG_END_FILE_LIST                   "End file list"
-#define MSG_INVALID_EXTRUDER                "Invalid extruder "
+#define MSG_INVALID_EXTRUDER                " Invalid extruder "
 #define MSG_INVALID_SOLENOID                "Invalid solenoid"
 #define MSG_ERR_NO_THERMISTORS              "No thermistors - no temperature"
 #define MSG_HEATING                         "Heating..."
 #define MSG_HEATING_COMPLETE                "Heating done."
 #define MSG_BED_HEATING                     "Bed Heating."
 #define MSG_BED_DONE                        "Bed done."
-#define MSG_M115_REPORT                     "FIRMWARE_NAME:MarlinKimbra " BUILD_VERSION " FIRMWARE_URL:" FIRMWARE_URL " PROTOCOL_VERSION:" PROTOCOL_VERSION " MACHINE_TYPE:" MACHINE_NAME " EXTRUDER_COUNT:" STRINGIFY(EXTRUDERS) " UUID:" MACHINE_UUID "\n"
+#define MSG_M115_REPORT                     "FIRMWARE_NAME: MarlinKimbra " BUILD_VERSION " FIRMWARE_URL:" FIRMWARE_URL " PROTOCOL_VERSION:" PROTOCOL_VERSION " MACHINE_TYPE:" MACHINE_NAME " EXTRUDER_COUNT:" STRINGIFY(EXTRUDERS) " UUID:" MACHINE_UUID "\n"
 #define MSG_COUNT_X                         " Count X: "
 #define MSG_ERR_KILLED                      "Printer halted. kill() called!"
 #define MSG_ERR_STOPPED                     "Printer stopped due to errors. Fix the error and use M999 to restart. (Temperature is reset. Set it after restarting)"
@@ -197,9 +197,9 @@
 #define MSG_KP                              " Kp: "
 #define MSG_KI                              " Ki: "
 #define MSG_KD                              " Kd: "
-#define MSG_B                               " B:"
-#define MSG_T                               " T:"
-#define MSG_AT                              " @:"
+#define MSG_T                               "T:"
+#define MSG_B                               "B:"
+#define MSG_AT                              "@:"
 #define MSG_PID_AUTOTUNE_FINISHED           MSG_PID_AUTOTUNE " finished! Put the last Kp, Ki and Kd constants from above into Configuration.h or send command M500 for save in EEPROM the new value!"
 #define MSG_PID_DEBUG                       " PID_DEBUG "
 #define MSG_PID_DEBUG_INPUT                 ": Input "
@@ -232,7 +232,8 @@
 #define MSG_BED_LEVELLING_Z                 " Z: "
 
 // LCD Menu Messages
-#if !(ENABLED(DISPLAY_CHARSET_HD44780_JAPAN) || ENABLED(DISPLAY_CHARSET_HD44780_WESTERN) || ENABLED(DISPLAY_CHARSET_HD44780_CYRILLIC))
+
+#if !(defined( DISPLAY_CHARSET_HD44780_JAPAN ) || defined( DISPLAY_CHARSET_HD44780_WESTERN ) || defined( DISPLAY_CHARSET_HD44780_CYRILLIC ))
   #define DISPLAY_CHARSET_HD44780_JAPAN
 #endif
 
