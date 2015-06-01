@@ -74,6 +74,7 @@ unsigned char soft_pwm_bed;
 
 #if defined(THERMAL_PROTECTION_HOTENDS) || defined(THERMAL_PROTECTION_BED)
   enum TRState { TRReset, TRInactive, TRFirstHeating, TRStable, TRRunaway };
+  static float tr_target_temperature[HOTENDS + 1] = { 0.0 };
   void thermal_runaway_protection(TRState *state, millis_t *timer, float temperature, float target_temperature, int heater_id, int period_seconds, int hysteresis_degc);
   #ifdef THERMAL_PROTECTION_HOTENDS
     static TRState thermal_runaway_state_machine[4] = { TRReset, TRReset, TRReset, TRReset };
@@ -315,7 +316,7 @@ void PID_autotune(float temp, int hotend, int ncycles) {
       if (hotend < 0) {
         p = soft_pwm_bed;
         ECHO_SMV(OK, MSG_B, input);
-        ECHO_EMV(MSG_AT, p);
+        ECHO_EMV(" " MSG_AT, p);
       }
       else {
         p = soft_pwm[hotend];
@@ -1083,8 +1084,6 @@ void tp_init() {
 
   void thermal_runaway_protection(TRState *state, millis_t *timer, float temperature, float target_temperature, int heater_id, int period_seconds, int hysteresis_degc) {
 
-    static float tr_target_temperature[EXTRUDERS+1] = { 0.0 };
-
     /*
         ECHO_SM(DB, "Thermal Thermal Runaway Running. Heater ID: ");
         if (heater_id < 0) ECHO_M("bed"); else ECHO_V(heater_id);
@@ -1094,7 +1093,7 @@ void tp_init() {
         ECHO_EMV(" ;  Target Temp:", target_temperature);
     */
 
-    int heater_index = heater_id >= 0 ? heater_id : EXTRUDERS;
+    int heater_index = heater_id >= 0 ? heater_id : HOTENDS;
 
     // If the target temperature changes, restart
     if (tr_target_temperature[heater_index] != target_temperature)
