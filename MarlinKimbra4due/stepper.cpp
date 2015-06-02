@@ -849,21 +849,21 @@ void st_init() {
 
   #if HAS_Y_MAX
     SET_INPUT(Y_MAX_PIN);
-    #if ENABLED(ENDSTOPPULLUP_YMAX)
+    #ifdef ENDSTOPPULLUP_YMAX
       PULLUP(Y_MAX_PIN, HIGH);
     #endif
   #endif
 
   #if HAS_Z_MAX
     SET_INPUT(Z_MAX_PIN);
-    #if ENABLED(ENDSTOPPULLUP_ZMAX)
+    #ifdef ENDSTOPPULLUP_ZMAX
       PULLUP(Z_MAX_PIN, HIGH);
     #endif
   #endif
 
   #if HAS_Z2_MAX
     SET_INPUT(Z2_MAX_PIN);
-    #if ENABLED(ENDSTOPPULLUP_ZMAX)
+    #ifdef ENDSTOPPULLUP_ZMAX
       PULLUP(Z2_MAX_PIN, HIGH);
     #endif
   #endif
