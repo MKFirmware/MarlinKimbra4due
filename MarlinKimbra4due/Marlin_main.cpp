@@ -5873,7 +5873,7 @@ inline void gcode_T(uint8_t tmp_extruder) {
   long csteps;
   if (tmp_extruder >= EXTRUDERS) {
     ECHO_SMV(DB, "T", tmp_extruder);
-    ECHO_EM(MSG_INVALID_EXTRUDER);
+    ECHO_EM(" " MSG_INVALID_EXTRUDER);
   }
   else {
     target_extruder = tmp_extruder;

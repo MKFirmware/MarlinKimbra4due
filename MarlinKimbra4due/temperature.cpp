@@ -24,6 +24,7 @@
 #include "watchdog.h"
 #include "language.h"
 
+
 //===========================================================================
 //================================== macros =================================
 //===========================================================================
@@ -108,11 +109,6 @@ static volatile bool temp_meas_ready = false;
   static float temp_iState_min[HOTENDS];
   static float temp_iState_max[HOTENDS];
   static bool pid_reset[HOTENDS];
-  #ifdef DEAD_TIME
-    static millis_t previous_millis_heater[HOTENDS];
-    static float temp_m1[HOTENDS] = { 0 };
-    static float m_4[HOTENDS];
-  #endif
 #endif //PIDTEMP
 #ifdef PIDTEMPBED
   //static cannot be external:
@@ -316,12 +312,14 @@ void PID_autotune(float temp, int hotend, int ncycles) {
       if (hotend < 0) {
         p = soft_pwm_bed;
         ECHO_SMV(OK, MSG_B, input);
+        ECHO_MV(" /", temp, 1);
         ECHO_EMV(" " MSG_AT, p);
       }
       else {
         p = soft_pwm[hotend];
         ECHO_SMV(OK, MSG_T, input, 1);
-        ECHO_EMV(MSG_AT, p);
+        ECHO_MV(" /", temp, 1);
+        ECHO_EMV(" " MSG_AT, p);
       }
 
       temp_ms = ms;
@@ -484,21 +482,6 @@ float get_pid_output(int e) {
   #ifdef PIDTEMP
     #ifdef PID_OPENLOOP
       pid_output = constrain(target_temperature[e], 0, PID_MAX);
-    #elif defined(DEAD_TIME)
-      float m_1;
-      pid_error[e] = target_temperature[e] - current_temperature[e];
-      if (pid_error[e] > PID_FUNCTIONAL_RANGE) {
-        pid_output = BANG_MAX;
-      }
-      else if (pid_error[e] < -PID_FUNCTIONAL_RANGE || target_temperature[e] == 0) {
-        pid_output = 0;
-      }
-      else {
-        m_1 = (current_temperature[e] - temp_m1[e]) * RECI_PID_dT;
-        temp_iState[e] = 1 / PID_PARAM(Kd,e) * ( (PID_PARAM(Kd,e) - 1) * temp_iState[e] + m_1);
-        temp_m1[e] = current_temperature[e];
-        pid_output = (((current_temperature[e] + temp_iState[e] * PID_PARAM(Kp,e)) < target_temperature[e]) ? PID_PARAM(Km,e) : 0);
-      }
     #else
       pid_error[e] = target_temperature[e] - current_temperature[e];
       if (pid_error[e] > PID_FUNCTIONAL_RANGE) {
@@ -541,15 +524,6 @@ float get_pid_output(int e) {
       ECHO_MV(MSG_PID_DEBUG_ITERM, iTerm[e]);
       ECHO_EMV(MSG_PID_DEBUG_DTERM, dTerm[e]);
     #endif //PID_DEBUG
-    //#define DEADTIME_DEBUG
-    #ifdef DEADTIME_DEBUG
-      SECHO_SMV(DB, " PID_DEBUG ", e);
-      ECHO_MV("m1 ", m_1);
-      ECHO_EMV("tmp_i ", temp_iState[e]);
-      ECHO_MV("pid_output = ", pid_output);
-      ECHO_MV("current_temp ", current_temperature[e]);
-      ECHO_EMV(" * tmp_i * Kp ", temp_iState[e] * PID_PARAM(Kp,e));
-    #endif //DEADTIME_DEBUG
 
   #else /* PID off */
     pid_output = (current_temperature[e] < target_temperature[e]) ? PID_MAX : 0;
@@ -761,12 +735,7 @@ static float analog2temp(int raw, uint8_t e) {
 
     return celsius;
   }
-
-  #ifdef __SAM3X8E__
-    return ((raw * ((3.3 * 100) / 1024) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN) + TEMP_SENSOR_AD595_OFFSET;
-  #else
-    return ((raw * ((5.0 * 100.0) / 1024.0) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN) + TEMP_SENSOR_AD595_OFFSET;
-  #endif
+    return ((raw * ((3.3 * 100.0) / 1024.0) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN) + TEMP_SENSOR_AD595_OFFSET;
 }
 
 // Derived from RepRap FiveD extruder::getTemperature()
@@ -791,12 +760,8 @@ static float analog2tempBed(int raw) {
 
     return celsius;
   #elif defined BED_USES_AD595
-    #ifdef __SAM3X8E__
-      return ((raw * ((3.3 * 100) / 1024) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN) + TEMP_SENSOR_AD595_OFFSET;
-    #else
-      return ((raw * ((5.0 * 100.0) / 1024.0) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN) + TEMP_SENSOR_AD595_OFFSET;
-    #endif
-  #else //NO BED_USES_THERMISTOR
+      return ((raw * ((3.3 * 100.0) / 1024.0) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN) + TEMP_SENSOR_AD595_OFFSET;
+  #else
     return 0;
   #endif
 }
@@ -944,51 +909,15 @@ void tp_init() {
 
   #endif // HEATER_0_USES_MAX6675
 
-#ifdef __SAM3X8E__
-  // Use timer0 for temperature measurement
-  // Interleave temperature interrupt with millies interrupt
-  HAL_temp_timer_start(TEMP_TIMER_NUM);
-  HAL_timer_enable_interrupt (TEMP_TIMER_NUM);
-#else
-  #ifdef DIDR2
-    #define ANALOG_SELECT(pin) do{ if (pin < 8) DIDR0 |= BIT(pin); else DIDR2 |= BIT(pin - 8); }while(0)
-  #else
-    #define ANALOG_SELECT(pin) do{ DIDR0 |= BIT(pin); }while(0)
-  #endif
-
   // Set analog inputs
-  ADCSRA = BIT(ADEN) | BIT(ADSC) | BIT(ADIF) | 0x07;
-  DIDR0 = 0;
-  #ifdef DIDR2
-    DIDR2 = 0;
-  #endif
-  #if HAS_TEMP_0
-    ANALOG_SELECT(TEMP_0_PIN);
-  #endif
-  #if HAS_TEMP_1
-    ANALOG_SELECT(TEMP_1_PIN);
-  #endif
-  #if HAS_TEMP_2
-    ANALOG_SELECT(TEMP_2_PIN);
-  #endif
-  #if HAS_TEMP_3
-    ANALOG_SELECT(TEMP_3_PIN);
-  #endif
-  #if HAS_TEMP_BED
-    ANALOG_SELECT(TEMP_BED_PIN);
-  #endif
-  #if HAS_FILAMENT_SENSOR
-    ANALOG_SELECT(FILWIDTH_PIN);
-  #endif
-  #if HAS_POWER_CONSUMPTION_SENSOR
-    ANALOG_SELECT(POWER_CONSUMPTION_PIN);
-  #endif
+  
+  // nothing todo for ARM
   
   // Use timer0 for temperature measurement
   // Interleave temperature interrupt with millies interrupt
-  OCR0B = 128;
-  TIMSK0 |= BIT(OCIE0B);  
-#endif
+
+  HAL_temp_timer_start(TEMP_TIMER_NUM);
+  HAL_timer_enable_interrupt (TEMP_TIMER_NUM);
 
   // Wait for temperature measurement to settle
   delay(250);
@@ -1043,7 +972,6 @@ void tp_init() {
   #endif // HOTENDS > 1
 
   #ifdef BED_MINTEMP
-    /* No bed MINTEMP error implemented?!? */ /*
     while(analog2tempBed(bed_minttemp_raw) < BED_MINTEMP) {
       #if HEATER_BED_RAW_LO_TEMP < HEATER_BED_RAW_HI_TEMP
         bed_minttemp_raw += OVERSAMPLENR;
@@ -1051,7 +979,6 @@ void tp_init() {
         bed_minttemp_raw -= OVERSAMPLENR;
       #endif
     }
-    */
   #endif //BED_MINTEMP
   #ifdef BED_MAXTEMP
     while(analog2tempBed(bed_maxttemp_raw) > BED_MAXTEMP) {
@@ -1194,8 +1121,8 @@ void disable_all_heaters() {
     WRITE(MAX6675_SS, 0);
 
     // ensure 100ns delay - a bit extra is fine
-    asm("nop");// 50ns on 20Mhz, 62.5ns on 16Mhz
-    asm("nop");// 50ns on 20Mhz, 62.5ns on 16Mhz
+    asm("nop");//50ns on 20Mhz, 62.5ns on 16Mhz
+    asm("nop");//50ns on 20Mhz, 62.5ns on 16Mhz
 
     // read MSB
     SPDR = 0;
@@ -1592,7 +1519,11 @@ HAL_TEMP_TIMER_ISR {
       break;
     case Measure_FILWIDTH:
       #if HAS_FILAMENT_SENSOR
-        raw_filwidth_value = analogRead (FILWIDTH_PIN);
+        // raw_filwidth_value += ADC;  //remove to use an IIR filter approach
+        if (ADC > 102) { //check that ADC is reading a voltage > 0.5 volts, otherwise don't take in the data.
+          raw_filwidth_value -= (raw_filwidth_value>>7);  //multiply raw_filwidth_value by 127/128
+          raw_filwidth_value += ((unsigned long)ADC<<7);  //add new ADC reading
+        }
       #endif
       temp_state = Prepare_POWCONSUMPTION;
       break;
@@ -1637,7 +1568,7 @@ HAL_TEMP_TIMER_ISR {
     for(int i = 0; i < MEDIAN_COUNT; i++) sum += raw_median_temp[temp_id][i]; \
     redundant_temperature_raw = (sum / MEDIAN_COUNT + 4) >> 2
   
-  if(temp_count >= OVERSAMPLENR + 2) { // 12 * 16 * 1/(16000000/64/256)  = 164ms.
+  if(temp_count >= OVERSAMPLENR + 2) { // 14 * 16 * 1/(16000000/64/256)  = 164ms.
     if (!temp_meas_ready) { //Only update the raw values if they have been read. Else we could be updating them during reading.
       unsigned long sum = 0;
       #ifndef HEATER_0_USES_MAX6675

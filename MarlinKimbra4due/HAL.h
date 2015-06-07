@@ -74,12 +74,9 @@ static inline void digitalFastWrite(int pin, bool v) {
 
                             
 /// Read a pin
-//#define   READ(pin)       PIO_Get(g_APinDescription[pin].pPort, PIO_INPUT, g_APinDescription[pin].ulPin)
 #define READ(pin)           _FASTREAD(pin)
 
 /// write to a pin
-//#define	  WRITE(pin, v)   do{if(v) {g_APinDescription[pin].pPort->PIO_SODR = g_APinDescription[pin].ulPin;} \
-                          else {g_APinDescription[pin].pPort->PIO_CODR = g_APinDescription[pin].ulPin; }}while(0)
 #define WRITE_VAR(pin, v)   digitalWrite(pin, v)
 #define WRITE(pin, v)       _FASTWRITE(pin, v)
 
@@ -117,7 +114,6 @@ static inline void digitalFastWrite(int pin, bool v) {
 
 // reset reason set by bootloader
 extern uint8_t MCUSR;
-static uint32_t tone_pin;
 volatile static uint32_t debug_counter;
 
 // --------------------------------------------------------------------------

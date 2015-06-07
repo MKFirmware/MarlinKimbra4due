@@ -379,6 +379,9 @@ const unsigned int dropsegments = 5; // everything with less than this number of
 // Control heater 0 and heater 1 in parallel.
 //#define HEATERS_PARALLEL
 
+// for smoother temperature
+#define MEDIAN_COUNT 3
+
 //===========================================================================
 //================================= Buffers =================================
 //===========================================================================
