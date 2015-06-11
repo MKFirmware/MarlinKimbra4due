@@ -251,7 +251,7 @@ float homing_feedrate[] = HOMING_FEEDRATE;
 bool axis_relative_modes[] = AXIS_RELATIVE_MODES;
 int feedrate_multiplier = 100; //100->1 200->2
 int saved_feedrate_multiplier;
-int extruder_multiply[EXTRUDERS] = ARRAY_BY_EXTRUDERS(100, 100, 100, 100);
+int extruder_multiplier[EXTRUDERS] = ARRAY_BY_EXTRUDERS(100, 100, 100, 100);
 bool volumetric_enabled = false;
 float filament_size[EXTRUDERS] = ARRAY_BY_EXTRUDERS(DEFAULT_NOMINAL_FILAMENT_DIA, DEFAULT_NOMINAL_FILAMENT_DIA, DEFAULT_NOMINAL_FILAMENT_DIA, DEFAULT_NOMINAL_FILAMENT_DIA);
 float volumetric_multiplier[EXTRUDERS] = ARRAY_BY_EXTRUDERS(1.0, 1.0, 1.0, 1.0);
@@ -1046,7 +1046,7 @@ static const PROGMEM type array##_P[3] =        \
 static inline type array(int axis)          \
     { return pgm_read_any(&array##_P[axis]); }
 
-#if defined(CARTESIAN) || defined(COREXY) || defined(SCARA)
+#if defined(CARTESIAN) || defined(COREXY) || defined(COREXZ) || defined(SCARA)
   XYZ_CONSTS_FROM_CONFIG(float, base_max_pos,  MAX_POS);
   XYZ_CONSTS_FROM_CONFIG(float, base_home_pos, HOME_POS);
   XYZ_CONSTS_FROM_CONFIG(float, max_length,    MAX_LENGTH);
@@ -1217,7 +1217,7 @@ static void setup_for_endstop_move() {
   enable_endstops(true);
 }
 
-#if defined(CARTESIAN) || defined(COREXY) || defined(SCARA)
+#if defined(CARTESIAN) || defined(COREXY) || defined(COREXZ) || defined(SCARA)
 
   static void do_blocking_move_to(float x, float y, float z) {
     float oldFeedRate = feedrate;
@@ -1538,7 +1538,7 @@ static void setup_for_endstop_move() {
     }
   }
   #define HOMEAXIS(LETTER) homeaxis(LETTER##_AXIS)
-#endif // Cartesian || CoreXY || Scara
+#endif // CARTESIAN || COREXY || COREXZ || SCARA
 
 #ifdef DELTA
 
@@ -3204,10 +3204,10 @@ inline void gcode_G28() {
 
 #ifdef ENABLE_AUTO_BED_LEVELING
 
-  void out_of_range_error(const char *edge) {
-    char msg[40];
-    sprintf_P(msg, PSTR("?Probe %s position out of range.\n"), edge);
-    ECHO_V(msg);
+  void out_of_range_error(const char *p_edge) {
+    ECHO_M("?Probe ");
+    PS_PGM(p_edge);
+    ECHO_EM(" position out of range.");
   }
 
   /**
@@ -4941,10 +4941,10 @@ inline void gcode_M221() {
     int sval = code_value();
     if (code_seen('T')) {
       if (setTargetedHotend(221)) return;
-      extruder_multiply[target_extruder] = sval;
+      extruder_multiplier[target_extruder] = sval;
     }
     else {
-      extruder_multiply[active_extruder] = sval;
+      extruder_multiplier[active_extruder] = sval;
     }
   }
 }
@@ -5123,21 +5123,20 @@ inline void gcode_M226() {
 
 #endif // PREVENT_DANGEROUS_EXTRUDE
 
-/**
- * M303: PID relay autotune
- *       S<temperature> sets the target temperature. (default target temperature = 150C)
- *       E<extruder> (-1 for the bed)
- *       C<cycles>
- */
-inline void gcode_M303() {
-  int e = code_seen('E') ? code_value_short() : 0;
-  int c = code_seen('C') ? code_value_short() : 5;
-  float temp = code_seen('S') ? code_value() : (e < 0 ? 70.0 : 150.0);
-  PID_autotune(temp, e, c);
-  // Suppress a line mismatch error
-  gcode_LastN += 1;
-  FlushSerialRequestResend();
-}
+#if defined(PIDTEMP) || defined(PIDTEMPBED)
+  /**
+   * M303: PID relay autotune
+   *       S<temperature> sets the target temperature. (default target temperature = 150C)
+   *       E<extruder> (-1 for the bed)
+   *       C<cycles>
+   */
+  inline void gcode_M303() {
+    int e = code_seen('E') ? code_value_short() : 0;
+    int c = code_seen('C') ? code_value_short() : 5;
+    float temp = code_seen('S') ? code_value() : (e < 0 ? 70.0 : 150.0);
+    PID_autotune(temp, e, c);
+  }
+#endif
 
 #ifdef PIDTEMPBED
   // M304: Set bed PID parameters P I and D
@@ -5372,7 +5371,7 @@ inline void gcode_M400() { st_synchronize(); }
     filament_sensor = true;
 
     //ECHO_SMV(DB, "Filament dia (measured mm):", filament_width_meas);
-    //ECHO_EMV("Extrusion ratio(%):", extruder_multiply[active_extruder]);
+    //ECHO_EMV("Extrusion ratio(%):", extruder_multiplier[active_extruder]);
   }
 
   /**
@@ -5506,50 +5505,50 @@ inline void gcode_M503() {
    *
    */
   inline void gcode_M600() {
-    float fr60 = feedrate / 60;
+    float target[NUM_AXIS], fr60 = feedrate / 60;
     filament_changing = true;
     for (int i = 0; i < NUM_AXIS; i++)
-      lastpos[i] = destination[i] = current_position[i];
+      target[i] = lastpos[i] = current_position[i];
 
     #ifdef DELTA
-      #define RUNPLAN calculate_delta(destination); \
-                      plan_buffer_line(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], destination[E_AXIS], fr60, active_extruder, active_driver);
+      #define RUNPLAN calculate_delta(target); \
+                      plan_buffer_line(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], target[E_AXIS], fr60, active_extruder, active_driver);
     #else
-      #define RUNPLAN line_to_destination();
+      #define RUNPLAN plan_buffer_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], target[E_AXIS], fr60, active_extruder, active_driver);
     #endif
 
     //retract by E
-    if (code_seen('E')) destination[E_AXIS] += code_value();
+    if (code_seen('E')) target[E_AXIS] += code_value();
     #ifdef FILAMENTCHANGE_FIRSTRETRACT
-      else destination[E_AXIS] += FILAMENTCHANGE_FIRSTRETRACT;
+      else target[E_AXIS] += FILAMENTCHANGE_FIRSTRETRACT;
     #endif
 
     RUNPLAN;
 
     //lift Z
-    if (code_seen('Z')) destination[Z_AXIS] += code_value();
+    if (code_seen('Z')) target[Z_AXIS] += code_value();
     #ifdef FILAMENTCHANGE_ZADD
-      else destination[Z_AXIS] += FILAMENTCHANGE_ZADD;
+      else target[Z_AXIS] += FILAMENTCHANGE_ZADD;
     #endif
 
     RUNPLAN;
 
     //move xy
-    if (code_seen('X')) destination[X_AXIS] = code_value();
+    if (code_seen('X')) target[X_AXIS] = code_value();
     #ifdef FILAMENTCHANGE_XPOS
-      else destination[X_AXIS] = FILAMENTCHANGE_XPOS;
+      else target[X_AXIS] = FILAMENTCHANGE_XPOS;
     #endif
 
-    if (code_seen('Y')) destination[Y_AXIS] = code_value();
+    if (code_seen('Y')) target[Y_AXIS] = code_value();
     #ifdef FILAMENTCHANGE_YPOS
-      else destination[Y_AXIS] = FILAMENTCHANGE_YPOS;
+      else target[Y_AXIS] = FILAMENTCHANGE_YPOS;
     #endif
 
     RUNPLAN;
 
-    if (code_seen('L')) destination[E_AXIS] += code_value();
+    if (code_seen('L')) target[E_AXIS] += code_value();
     #ifdef FILAMENTCHANGE_FINALRETRACT
-      else destination[E_AXIS] += FILAMENTCHANGE_FINALRETRACT;
+      else target[E_AXIS] += FILAMENTCHANGE_FINALRETRACT;
     #endif
 
     RUNPLAN;
@@ -5610,12 +5609,12 @@ inline void gcode_M503() {
     }
 
     //return to normal
-    if (code_seen('L')) destination[E_AXIS] -= code_value();
+    if (code_seen('L')) target[E_AXIS] -= code_value();
     #ifdef FILAMENTCHANGE_FINALRETRACT
-      else destination[E_AXIS] -= FILAMENTCHANGE_FINALRETRACT;
+      else target[E_AXIS] -= FILAMENTCHANGE_FINALRETRACT;
     #endif
 
-    current_position[E_AXIS] = destination[E_AXIS]; //the long retract of L is compensated by manual filament feeding
+    current_position[E_AXIS] = target[E_AXIS]; //the long retract of L is compensated by manual filament feeding
     plan_set_e_position(current_position[E_AXIS]);
 
     RUNPLAN; // should do nothing
@@ -5624,17 +5623,12 @@ inline void gcode_M503() {
 
     #ifdef DELTA
       calculate_delta(lastpos);
-      plan_buffer_line(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], destination[E_AXIS], fr60, active_extruder, active_driver); //move xyz back
+      plan_buffer_line(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], target[E_AXIS], fr60, active_extruder, active_driver); //move xyz back
       plan_buffer_line(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], lastpos[E_AXIS], fr60, active_extruder, active_driver); //final unretract
     #else
-      // Move XY to starting position, then Z, then E
-      destination[X_AXIS] = lastpos[X_AXIS];
-      destination[Y_AXIS] = lastpos[Y_AXIS];
-      line_to_destination();
-      destination[Z_AXIS] = lastpos[Z_AXIS];
-      line_to_destination();
-      destination[E_AXIS] = lastpos[E_AXIS];
-      line_to_destination();
+      plan_buffer_line(lastpos[X_AXIS], lastpos[Y_AXIS], target[Z_AXIS], target[E_AXIS], fr60, active_extruder, active_driver); //move xy back
+      plan_buffer_line(lastpos[X_AXIS], lastpos[Y_AXIS], lastpos[Z_AXIS], target[E_AXIS], fr60, active_extruder, active_driver); //move z back
+      plan_buffer_line(lastpos[X_AXIS], lastpos[Y_AXIS], lastpos[Z_AXIS], lastpos[E_AXIS], fr60, active_extruder, active_driver); //final untretract
     #endif
 
     #if HAS_FILRUNOUT
@@ -6115,11 +6109,12 @@ void process_next_command() {
 
   // Sanitize the current command:
   //  - Skip leading spaces
-  //  - Bypass N...
+  //  - Bypass N[0-9][0-9]*[ ]*
   //  - Overwrite * with nul to mark the end
   while (*current_command == ' ') ++current_command;
   if (*current_command == 'N' && current_command[1] >= '0' && current_command[1] <= '9') {
-    while (*current_command != ' ' && *current_command != 'G' && *current_command != 'M' && *current_command != 'T') ++current_command;
+    current_command += 2; // skip N[0-9]
+    while (*current_command >= '0' && *current_command <= '9') ++current_command; // skip [0-9]*
     while (*current_command == ' ') ++current_command;
   }
   char *starpos = strchr(current_command, '*');  // * should always be the last parameter
@@ -6139,7 +6134,7 @@ void process_next_command() {
   // Args pointer optimizes code_seen, especially those taking XYZEF
   // This wastes a little cpu on commands that expect no arguments.
   current_command_args = current_command;
-  while (*current_command_args != ' ') ++current_command_args;
+  while (*current_command_args && *current_command_args != ' ') ++current_command_args;
   while (*current_command_args == ' ') ++current_command_args;
 
   // Interpret the code int
@@ -6432,8 +6427,10 @@ void process_next_command() {
           gcode_M302(); break;
       #endif // PREVENT_DANGEROUS_EXTRUDE
 
-      case 303: // M303 PID autotune
-        gcode_M303(); break;
+      #if defined(PIDTEMP) || defined(PIDTEMPBED)
+        case 303: // M303 PID autotune
+          gcode_M303(); break;
+      #endif
 
       #ifdef PIDTEMPBED
         case 304: // M304
@@ -6757,7 +6754,7 @@ FORCE_INLINE void clamp_to_software_endstops(float target[3]) {
 
 #endif // DUAL_X_CARRIAGE
 
-#if defined(CARTESIAN) || defined(COREXY)
+#if defined(CARTESIAN) || defined(COREXY) || defined(COREXZ)
 
   inline bool prepare_move_cartesian() {
     // Do not use feedrate_multiplier for E or Z only moves
@@ -6770,7 +6767,7 @@ FORCE_INLINE void clamp_to_software_endstops(float target[3]) {
     return true;
   }
 
-#endif // CARTESIAN || COREXY
+#endif // CARTESIAN || COREXY || COREXZ
 
 /**
  * Prepare a single move and get ready for the next one
@@ -6793,7 +6790,7 @@ void prepare_move() {
     if (!prepare_move_dual_x_carriage()) return;
   #endif
 
-  #if defined(CARTESIAN) || defined(COREXY)
+  #if defined(CARTESIAN) || defined(COREXY) || defined(COREXZ)
     if (!prepare_move_cartesian()) return;
   #endif
 

@@ -25,7 +25,6 @@
 #include "planner.h"
 #include "stepper.h"
 
-
 // public functions
 void tp_init();  //initialize the heating
 void manage_heater(); //it is critical that this is called periodically.
@@ -65,14 +64,17 @@ extern float current_temperature_bed;
 #ifdef PIDTEMP
   extern float Kp[HOTENDS], Ki[HOTENDS], Kd[HOTENDS];
   #define PID_PARAM(param, e) param[e] // use macro to point to array value
-  float scalePID_i(float i);
-  float scalePID_d(float d);
-  float unscalePID_i(float i);
-  float unscalePID_d(float d);
 #endif
 
 #ifdef PIDTEMPBED
   extern float bedKp,bedKi,bedKd;
+#endif
+
+#if defined(PIDTEMP) || defined(PIDTEMPBED)
+  float scalePID_i(float i);
+  float scalePID_d(float d);
+  float unscalePID_i(float i);
+  float unscalePID_d(float d);
 #endif
 
 #ifdef BABYSTEPPING

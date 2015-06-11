@@ -28,8 +28,6 @@
         #define DEFAULT_LCD_CONTRAST 40
       #elif defined(ELB_FULL_GRAPHIC_CONTROLLER)
         #define DEFAULT_LCD_CONTRAST 110
-        #define SDCARDDETECTINVERTED
-        #define SDSLOW
         #define U8GLIB_LM6059_AF
       #endif
 
@@ -62,7 +60,6 @@
     #ifdef RADDS_DISPLAY
       #define ENCODER_PULSES_PER_STEP 2
       #define ENCODER_STEPS_PER_MENU_ITEM 1
-    
       #define ULTIPANEL
       #define NEWPANEL
     #endif
@@ -103,11 +100,11 @@
       #define LCD_I2C_ADDRESS 0x20 // I2C Address of the port expander
       #define LCD_USE_I2C_BUZZER //comment out to disable buzzer on LCD
 
-      #if !defined(ENCODER_PULSES_PER_STEP)
+      #ifndef ENCODER_PULSES_PER_STEP
         #define ENCODER_PULSES_PER_STEP 4
       #endif
 
-      #if !defined(ENCODER_STEPS_PER_MENU_ITEM)
+      #ifndef ENCODER_STEPS_PER_MENU_ITEM
         #define ENCODER_STEPS_PER_MENU_ITEM 1
       #endif
 
@@ -221,7 +218,7 @@
     /**
      * SPLASH_SCREEN_DURATION for no DOGLCD display
      */
-    #if !defined(DOGLCD)
+    #ifndef DOGLCD
       #undef SPLASH_SCREEN_DURATION
       #define SPLASH_SCREEN_DURATION 500
     #endif
@@ -384,15 +381,15 @@
      * MAX_STEP_FREQUENCY differs for TOSHIBA OR ARDUINO DUE OR ARDUINO MEGA
      */
     #ifdef __SAM3X8E__
-      #ifdef CONFIG_STEPPERS_TOSHIBA
-        #define MAX_STEP_FREQUENCY 120000 // Max step frequency for Toshiba Stepper Controllers
+      #if defined(CONFIG_STEPPERS_TOSHIBA) || !defined(ENABLE_HIGH_SPEED_STEPPING)
+        #define MAX_STEP_FREQUENCY 150000 // Max step frequency for Toshiba Stepper Controllers
         #define DOUBLE_STEP_FREQUENCY MAX_STEP_FREQUENCY
       #else
         #define MAX_STEP_FREQUENCY 500000    // Max step frequency for the Due is approx. 330kHz
         #define DOUBLE_STEP_FREQUENCY 120000  //96kHz is close to maximum for an Arduino Due
       #endif
     #else
-      #ifdef CONFIG_STEPPERS_TOSHIBA
+      #if defined(CONFIG_STEPPERS_TOSHIBA) || !defined(ENABLE_HIGH_SPEED_STEPPING)
         #define MAX_STEP_FREQUENCY 10000 // Max step frequency for Toshiba Stepper Controllers
         #define DOUBLE_STEP_FREQUENCY MAX_STEP_FREQUENCY
       #else
@@ -417,7 +414,7 @@
      */
     #ifdef ADVANCE
       #define EXTRUSION_AREA (0.25 * D_FILAMENT * D_FILAMENT * M_PI)
-      #define STEPS_PER_CUBIC_MM_E (axis_steps_per_unit[E_AXIS] / EXTRUSION_AREA)
+      #define STEPS_PER_CUBIC_MM_E (axis_steps_per_unit[E_AXIS + active_extruder] / EXTRUSION_AREA)
     #endif
 
     #ifdef ULTIPANEL

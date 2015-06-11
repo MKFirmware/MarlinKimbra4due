@@ -442,12 +442,17 @@ void check_axes_activity() {
         } else {
           fan_kick_end = 0;
         }
-    #endif//FAN_KICKSTART_TIME
-    #ifdef FAN_SOFT_PWM
-      fanSpeedSoftPwm = tail_fan_speed;
+    #endif //FAN_KICKSTART_TIME
+    #ifdef FAN_MIN_PWM
+      #define CALC_FAN_SPEED (tail_fan_speed ? ( FAN_MIN_PWM + (tail_fan_speed * (255 - FAN_MIN_PWM)) / 255 ) : 0)
     #else
-      analogWrite(FAN_PIN, tail_fan_speed);
-    #endif //!FAN_SOFT_PWM
+      #define CALC_FAN_SPEED tail_fan_speed
+    #endif // FAN_MIN_PWM
+    #ifdef FAN_SOFT_PWM
+      fanSpeedSoftPwm = CALC_FAN_SPEED;
+    #else
+      analogWrite(FAN_PIN, CALC_FAN_SPEED);
+    #endif // FAN_SOFT_PWM
   #endif // HAS_FAN
 
   #ifdef AUTOTEMP
@@ -498,7 +503,7 @@ float junction_deviation = 0.1;
   target[X_AXIS] = lround(x * axis_steps_per_unit[X_AXIS]);
   target[Y_AXIS] = lround(y * axis_steps_per_unit[Y_AXIS]);
   target[Z_AXIS] = lround(z * axis_steps_per_unit[Z_AXIS]);     
-  target[E_AXIS] = lround(e * axis_steps_per_unit[E_AXIS + active_extruder]);
+  target[E_AXIS] = lround(e * axis_steps_per_unit[E_AXIS + extruder]);
 
   float dx = target[X_AXIS] - position[X_AXIS],
         dy = target[Y_AXIS] - position[Y_AXIS],
@@ -547,16 +552,22 @@ float junction_deviation = 0.1;
     // these equations follow the form of the dA and dB equations on http://www.corexy.com/theory.html
     block->steps[A_AXIS] = labs(dx + dy);
     block->steps[B_AXIS] = labs(dx - dy);
+    block->steps[Z_AXIS] = labs(dz);
+  #elif defined(COREXZ)
+    // corexz planning
+    block->steps[A_AXIS] = labs(dx + dz);
+    block->steps[Y_AXIS] = labs(dy);
+    block->steps[C_AXIS] = labs(dx - dz);
   #else
     // default non-h-bot planning
     block->steps[X_AXIS] = labs(dx);
     block->steps[Y_AXIS] = labs(dy);
+    block->steps[Z_AXIS] = labs(dz);
   #endif
 
-  block->steps[Z_AXIS] = labs(dz);
   block->steps[E_AXIS] = labs(de);
   block->steps[E_AXIS] *= volumetric_multiplier[extruder];
-  block->steps[E_AXIS] *= extruder_multiply[extruder];
+  block->steps[E_AXIS] *= extruder_multiplier[extruder];
   block->steps[E_AXIS] /= 100;
   block->step_event_count = max(block->steps[X_AXIS], max(block->steps[Y_AXIS], max(block->steps[Z_AXIS], block->steps[E_AXIS])));
 
@@ -579,13 +590,20 @@ float junction_deviation = 0.1;
   #ifdef COREXY
     if (dx < 0) db |= BIT(X_HEAD); // Save the real Extruder (head) direction in X Axis
     if (dy < 0) db |= BIT(Y_HEAD); // ...and Y
+    if (dz < 0) db |= BIT(Z_AXIS);
     if (dx + dy < 0) db |= BIT(A_AXIS); // Motor A direction
     if (dx - dy < 0) db |= BIT(B_AXIS); // Motor B direction
+  #elif defined(COREXZ)
+    if (dx < 0) db |= BIT(X_HEAD); // Save the real Extruder (head) direction in X Axis
+    if (dy < 0) db |= BIT(Y_AXIS);
+    if (dz < 0) db |= BIT(Z_HEAD); // ...and Z
+    if (dx + dz < 0) db |= BIT(A_AXIS); // Motor A direction
+    if (dx - dz < 0) db |= BIT(C_AXIS); // Motor B direction
   #else
     if (dx < 0) db |= BIT(X_AXIS);
     if (dy < 0) db |= BIT(Y_AXIS); 
+    if (dz < 0) db |= BIT(Z_AXIS);
   #endif
-  if (dz < 0) db |= BIT(Z_AXIS);
   if (de < 0) db |= BIT(E_AXIS); 
   block->direction_bits = db;
 
@@ -597,13 +615,20 @@ float junction_deviation = 0.1;
       enable_x();
       enable_y();
     }
+    #ifndef Z_LATE_ENABLE
+      if (block->steps[Z_AXIS]) enable_z();
+    #endif
+  #elif defined(COREXZ)
+    if (block->steps[A_AXIS] || block->steps[C_AXIS]) {
+      enable_x();
+      enable_z();
+    }
   #else
     if (block->steps[X_AXIS]) enable_x();
     if (block->steps[Y_AXIS]) enable_y();
-  #endif
-
-  #ifndef Z_LATE_ENABLE
-    if (block->steps[Z_AXIS]) enable_z();
+    #ifndef Z_LATE_ENABLE
+      if (block->steps[Z_AXIS]) enable_z();
+    #endif
   #endif
 
   // Enable extruder(s)
@@ -706,15 +731,23 @@ float junction_deviation = 0.1;
     float delta_mm[6];
     delta_mm[X_HEAD] = dx / axis_steps_per_unit[A_AXIS];
     delta_mm[Y_HEAD] = dy / axis_steps_per_unit[B_AXIS];
+    delta_mm[Z_AXIS] = dz / axis_steps_per_unit[Z_AXIS];
     delta_mm[A_AXIS] = (dx + dy) / axis_steps_per_unit[A_AXIS];
     delta_mm[B_AXIS] = (dx - dy) / axis_steps_per_unit[B_AXIS];
+  #elif defined(COREXZ)
+    float delta_mm[6];
+    delta_mm[X_HEAD] = dx / axis_steps_per_unit[A_AXIS];
+    delta_mm[Y_AXIS] = dy / axis_steps_per_unit[Y_AXIS];
+    delta_mm[Z_HEAD] = dz / axis_steps_per_unit[C_AXIS];
+    delta_mm[A_AXIS] = (dx + dz) / axis_steps_per_unit[A_AXIS];
+    delta_mm[C_AXIS] = (dx - dz) / axis_steps_per_unit[C_AXIS];
   #else
     float delta_mm[4];
     delta_mm[X_AXIS] = dx / axis_steps_per_unit[X_AXIS];
     delta_mm[Y_AXIS] = dy / axis_steps_per_unit[Y_AXIS];
+    delta_mm[Z_AXIS] = dz / axis_steps_per_unit[Z_AXIS];
   #endif
-  delta_mm[Z_AXIS] = dz / axis_steps_per_unit[Z_AXIS];
-  delta_mm[E_AXIS] = (de / axis_steps_per_unit[E_AXIS + extruder]) * volumetric_multiplier[extruder] * extruder_multiply[extruder] / 100.0;
+  delta_mm[E_AXIS] = (de / axis_steps_per_unit[E_AXIS + extruder]) * volumetric_multiplier[extruder] * extruder_multiplier[extruder] / 100.0;
 
   if (block->steps[X_AXIS] <= dropsegments && block->steps[Y_AXIS] <= dropsegments && block->steps[Z_AXIS] <= dropsegments) {
     block->millimeters = fabs(delta_mm[E_AXIS]);
@@ -722,11 +755,12 @@ float junction_deviation = 0.1;
   else {
     block->millimeters = sqrt(
       #ifdef COREXY
-        square(delta_mm[X_HEAD]) + square(delta_mm[Y_HEAD])
+        square(delta_mm[X_HEAD]) + square(delta_mm[Y_HEAD]) + square(delta_mm[Z_AXIS])
+      #elif defined(COREXZ)
+        square(delta_mm[X_HEAD]) + square(delta_mm[Y_AXIS]) + square(delta_mm[Z_HEAD])
       #else
-        square(delta_mm[X_AXIS]) + square(delta_mm[Y_AXIS])
+        square(delta_mm[X_AXIS]) + square(delta_mm[Y_AXIS]) + square(delta_mm[Z_AXIS])
       #endif
-      + square(delta_mm[Z_AXIS])
     );
   }
   float inverse_millimeters = 1.0 / block->millimeters;  // Inverse millimeters to remove multiple divides 

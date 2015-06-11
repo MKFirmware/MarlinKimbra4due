@@ -57,6 +57,7 @@
  ***********************************************************************/
 #define CARTESIAN
 //#define COREXY
+//#define COREXZ
 //#define DELTA
 //#define SCARA
 /***********************************************************************\
@@ -67,7 +68,9 @@
 #if defined(CARTESIAN)
   #include "Configuration_Cartesian.h"
 #elif defined(COREXY)
-  #include "Configuration_Corexy.h"
+  #include "Configuration_Core.h"
+#elif defined(COREXZ)
+  #include "Configuration_Core.h"
 #elif defined(DELTA)
   #include "Configuration_Delta.h"
 #elif defined(SCARA)
@@ -215,10 +218,13 @@
 //============================= PID Settings ================================
 //===========================================================================
 // PID Tuning Guide here: http://reprap.org/wiki/PID_Tuning
-// Comment the following line to disable PID and enable bang-bang.
-#define PIDTEMP
 #define BANG_MAX 255       // limits current to nozzle while in bang-bang mode; 255=full current
 #define PID_MAX BANG_MAX   // limits current to nozzle while PID is active (see PID_FUNCTIONAL_RANGE below); 255=full current
+#define K1 0.95            // Smoothing factor within the PID
+#define MAX_OVERSHOOT_PID_AUTOTUNE 20   // Max valor for overshoot autotune
+
+// Comment the following line to disable PID and enable bang-bang.
+#define PIDTEMP
 #ifdef PIDTEMP
   //#define PID_DEBUG        // Sends debug data to the serial port.
   //#define PID_OPENLOOP 1   // Puts PID in open loop. M104/M140 sets the output power from 0 to PID_MAX
@@ -227,16 +233,12 @@
   // is more then PID_FUNCTIONAL_RANGE then the PID will be shut off and the heater will be set to min/max.
   #define PID_FUNCTIONAL_RANGE 10         // degC
   #define PID_INTEGRAL_DRIVE_MAX PID_MAX  // Limit for the integral term
-  #define K1 0.95                         // Smoothing factor within the PID
-  #define MAX_OVERSHOOT_PID_AUTOTUNE 20   // Max valor for overshoot autotune
 
   //             HotEnd{HE0,HE1,HE2,HE3}
   #define DEFAULT_Kp {40, 40, 40, 40}     // Kp for E0, E1, E2, E3
   #define DEFAULT_Ki {07, 07, 07, 07}     // Ki for E0, E1, E2, E3
   #define DEFAULT_Kd {60, 60, 60, 60}     // Kd for E0, E1, E2, E3
 #endif // PIDTEMP
-//===========================================================================
-
 
 //===========================================================================
 //============================= PID > Bed Temperature Control ===============
@@ -356,8 +358,10 @@
 
 // This is a new controller currently under development.
 // https://github.com/eboston/Adafruit-ST7565-Full-Graphic-Controller/
+//
 // ==> REMEMBER TO INSTALL U8glib to your ARDUINO library folder: http://code.google.com/p/u8glib/wiki/u8glib
 //#define ELB_FULL_GRAPHIC_CONTROLLER
+//#define SDCARDDETECTINVERTED
 
 // The RepRapDiscount Smart Controller (white PCB)
 // http://reprap.org/wiki/RepRapDiscount_Smart_Controller

@@ -106,6 +106,11 @@
 // before setting a PWM value. (Does not work with software PWM for fan on Sanguinololu)
 //#define FAN_KICKSTART_TIME 100
 
+// This defines the minimal speed for the main fan, run in PWM mode
+// to enable uncomment and set minimal PWM speed for reliable running (1-255)
+// if fan speed is [1 - (FAN_MIN_PWM-1)] it is set to FAN_MIN_PWM
+//#define FAN_MIN_PWM 50
+
 // Extruder cooling fans
 // Configure fan pin outputs to automatically turn on/off when the associated
 // extruder temperature is above/below EXTRUDER_AUTO_FAN_TEMPERATURE.
@@ -230,8 +235,8 @@
 // Default stepper release if idle. Set to 0 to deactivate.
 #define DEFAULT_STEPPER_DEACTIVE_TIME 60
 
-// Default step delay for any driver
-#define STEPPER_HIGH_LOW_DELAY 1  // Delay in microseconds
+// Uncomment it if you have High speed stepping driver
+//#define ENABLE_HIGH_SPEED_STEPPING
 
 #define DEFAULT_MINIMUMFEEDRATE       0.0     // minimum feedrate
 #define DEFAULT_MINTRAVELFEEDRATE     0.0
@@ -292,7 +297,9 @@
   // You can get round this by connecting a push button or single throw switch to the pin defined as SDCARDCARDDETECT
   // in the pins.h file.  When using a push button pulling the pin to ground this will need inverted.  This setting should
   // be commented out otherwise
-  #define SDCARDDETECTINVERTED
+  #ifndef ELB_FULL_GRAPHIC_CONTROLLER
+    #define SDCARDDETECTINVERTED
+  #endif
 
   #define SD_FINISHED_STEPPERRELEASE true  //if sd support and the file is finished: disable steppers?
   #define SD_FINISHED_RELEASECOMMAND "M84 X Y Z E" // You might want to keep the z enabled so your bed stays in place.
@@ -368,7 +375,7 @@
   #define EXTRUDER_ADVANCE_K .0
   #define D_FILAMENT 2.85
   #define STEPS_MM_E 836
-#endif // ADVANCE
+#endif
 
 // Arc interpretation settings:
 #define MM_PER_ARC_SEGMENT 1
@@ -389,15 +396,15 @@ const unsigned int dropsegments = 5; // everything with less than this number of
 // The number of linear motions that can be in the plan at any give time.
 // THE BLOCK_BUFFER_SIZE NEEDS TO BE A POWER OF 2, i.g. 8,16,32 because shifts and ors are used to do the ring-buffering.
 #ifdef SDSUPPORT
-  #define BLOCK_BUFFER_SIZE 16   // SD,LCD,Buttons take more memory, block buffer needs to be smaller
+  #define BLOCK_BUFFER_SIZE 32   // SD,LCD,Buttons take more memory, block buffer needs to be smaller
 #else
-  #define BLOCK_BUFFER_SIZE 16 // maximize block buffer
+  #define BLOCK_BUFFER_SIZE 32 // maximize block buffer
 #endif
 
 
 //The ASCII buffer for receiving from the serial:
 #define MAX_CMD_SIZE 96
-#define BUFSIZE 4
+#define BUFSIZE 8
 
 // Bad Serial-connections can miss a received command by sending an 'ok'
 // Therefore some clients abort after 30 seconds in a timeout.
