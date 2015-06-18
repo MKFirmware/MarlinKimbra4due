@@ -47,6 +47,7 @@
 #include "language.h"
 #include "pins_arduino.h"
 #include "math.h"
+#include "buzzer.h"
 
 #ifdef BLINKM
   #include "blinkm.h"
@@ -92,8 +93,12 @@
  * G30 - Single Z Probe, probes bed at current XY location. - Bed Probe and Delta geometry Autocalibration
  * G31 - Dock sled (Z_PROBE_SLED only)
  * G32 - Undock sled (Z_PROBE_SLED only)
- * G60 - Store in memory actual position
- * G61 - Move X Y Z to position in memory
+ * G60 - Save current position coordinates (all axes, for active extruder).
+ *        S<SLOT> - specifies memory slot # (0-based) to save into (default 0).
+ * G61 - Apply/restore saved coordinates to the active extruder.
+ *        X Y Z E - Value to add at stored coordinates.
+ *        F<speed> - Set Feedrate.
+ *        S<SLOT> - specifies memory slot # (0-based) to restore from (default 0).
  * G90 - Use Absolute Coordinates
  * G91 - Use Relative Coordinates
  * G92 - Set current position to coordinates given
@@ -235,8 +240,10 @@ uint8_t debugLevel = DEBUG_INFO|DEBUG_ERRORS;
 static float feedrate = 1500.0, saved_feedrate;
 float current_position[NUM_AXIS] = { 0.0 };
 float destination[NUM_AXIS] = { 0.0 };
-float lastpos[NUM_AXIS] = { 0.0 };
 bool axis_known_position[3] = { false };
+
+bool pos_saved = false;
+float stored_position[NUM_POSITON_SLOTS][NUM_AXIS];
 
 static long gcode_N, gcode_LastN, Stopped_gcode_LastN = 0;
 
@@ -562,7 +569,9 @@ bool enqueuecommand(const char *cmd) {
     SET_OUTPUT(EXP_VOLTAGE_LEVEL_PIN);
     WRITE(EXP_VOLTAGE_LEVEL_PIN,UI_VOLTAGE_LEVEL);
     ExternalDac::begin(); //initialize ExternalDac
-    lcd_buzz(10,10);
+    #if HAS_BUZZER
+      buzz(10,10);
+    #endif
   }
 #endif
 
@@ -1834,7 +1843,7 @@ static void clean_up_after_endstop_move() {
 
   float probe_bed(float x, float y) {
     //Probe bed at specified location and return z height of bed
-    float probe_bed_z, probe_z, probe_h, probe_l;
+    float probe_bed_z, probe_z;
     int probe_count;
     //  feedrate = homing_feedrate[Z_AXIS];
     destination[X_AXIS] = x - z_probe_offset[X_AXIS];
@@ -1849,14 +1858,9 @@ static void clean_up_after_endstop_move() {
 
     probe_count = 0;
     probe_z = -100;
-    probe_h = -100;
-    probe_l = 100;
-    do
-    {
+    do {
       probe_bed_z = probe_z;
       probe_z = z_probe() + z_probe_offset[Z_AXIS];
-      if (probe_z > probe_h) probe_h = probe_z;
-      if (probe_z < probe_l) probe_l = probe_z;
       probe_count ++;
     } while ((probe_z != probe_bed_z) and (probe_count < 21));
 
@@ -3639,36 +3643,71 @@ inline void gcode_G28() {
   }
 #endif // DELTA && Z_PROBE_ENDSTOP
 
-// G60: Store in memory actual position
+/**
+ * G60:  save current position
+ *        S<slot> specifies memory slot # (0-based) to save into (default 0)
+ */
 inline void gcode_G60() {
-  memcpy(lastpos, current_position, sizeof(lastpos));
-  //ECHO_SMV(DB, " Lastpos X: ", lastpos[X_AXIS]);
-  //ECHO_MV(" Lastpos Y: ", lastpos[Y_AXIS]);
-  //ECHO_MV(" Lastpos Z: ", lastpos[Z_AXIS]);
-  //ECHO_EMV(" Lastpos E: ", lastpos[E_AXIS]);
+  int slot = 0;
+  if (code_seen('S')) slot = code_value();
+
+  if (slot < 0 || slot >= NUM_POSITON_SLOTS) {
+    ECHO_LMV(ER, MSG_INVALID_POS_SLOT, (int)NUM_POSITON_SLOTS);
+    return;
+  } 
+  memcpy(stored_position[slot], current_position, sizeof(*stored_position));
+  pos_saved = true;
+
+  ECHO_SM(DB, MSG_SAVED_POS);
+  ECHO_MV(" S", slot);
+  ECHO_MV("<-X:", stored_position[slot][X_AXIS]);
+  ECHO_MV(" Y:", stored_position[slot][Y_AXIS]);
+  ECHO_MV(" Z:", stored_position[slot][Z_AXIS]);
+  ECHO_EMV(" E:", stored_position[slot][E_AXIS]);
 }
 
-// G61: move to X Y Z in memory
+/**
+ * G61:  Apply/restore saved coordinates to the active extruder.
+ *        X Y Z E - Value to add at stored coordinates.
+ *        F<speed> - Set Feedrate.
+ *        S<slot> specifies memory slot # (0-based) to save into (default 0).
+ */
 inline void gcode_G61() {
+  if (!pos_saved) return;
+
+  bool make_move = false;
+  int slot = 0;
+  if (code_seen('S')) slot = code_value();
+
+  if (slot < 0 || slot >= NUM_POSITON_SLOTS) {
+    ECHO_LMV(ER, MSG_INVALID_POS_SLOT, (int)NUM_POSITON_SLOTS);
+    return;
+  }
+
+  ECHO_SM(DB, MSG_RESTORING_POS);
+  ECHO_MV(" S", slot);
+  ECHO_M("->");
+
+  if (code_seen('F')) {
+    float next_feedrate = code_value();
+    if (next_feedrate > 0.0) feedrate = next_feedrate;
+  }
+
   for(int8_t i = 0; i < NUM_AXIS; i++) {
     if(code_seen(axis_codes[i])) {
-      destination[i] = (float)code_value() + lastpos[i];
+      destination[i] = (float)code_value() + stored_position[slot][i];
     }
     else {
       destination[i] = current_position[i];
     }
+    ECHO_MV(" ", axis_codes[i]);
+    ECHO_MV(":", destination[i]);
   }
-  //ECHO_SMV(DB, " Move to X: ", destination[X_AXIS]);
-  //ECHO_MV(" Move to Y: ", destination[Y_AXIS]);
-  //ECHO_MV(" Move to Z: ", destination[Z_AXIS]);
-  //ECHO_EMV(" Move to E: ", destination[E_AXIS]);
+  ECHO_E;
 
-  if(code_seen('F')) {
-    float next_feedrate = code_value();
-    if(next_feedrate > 0.0) feedrate = next_feedrate;
-  }
   //finish moves
   prepare_move();
+  st_synchronize();
 }
 
 /**
@@ -4316,22 +4355,19 @@ inline void gcode_M85() {
  * M92: Set axis_steps_per_unit
  */
 inline void gcode_M92() {
-  for(int8_t i = 0; i <= Z_AXIS; i++) {
-    if (code_seen(axis_codes[i])) axis_steps_per_unit[i] = code_value();
-  }
+  if (setTargetedHotend(92)) return;
 
-  if (code_seen('E')) {
-    int tmp_extruder = 0;
-    tmp_extruder = code_value();
-    float value = code_seen('S') ? code_value() : axis_steps_per_unit[E_AXIS + tmp_extruder];
-    if (value < 20.0) {
-      float factor = axis_steps_per_unit[E_AXIS + tmp_extruder] / value; // increase e constants if M92 E14 is given for netfab.
-      max_e_jerk *= factor;
-      max_feedrate[E_AXIS + tmp_extruder] *= factor;
-      axis_steps_per_sqr_second[E_AXIS + tmp_extruder] *= factor;
+  for(int8_t i = 0; i <= NUM_AXIS; i++) {
+    if (code_seen(axis_codes[i])) {
+      if (i == E_AXIS)
+        axis_steps_per_unit[i + target_extruder] = code_value();
+      else
+        axis_steps_per_unit[i] = code_value();
     }
-    axis_steps_per_unit[E_AXIS + tmp_extruder] = value;
   }
+  st_synchronize();
+  // This recalculates position in steps in case user has changed steps/unit
+  plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
 }
 
 /**
@@ -4782,31 +4818,37 @@ inline void gcode_M201() {
 
 
 /**
- * M203: Set maximum feedrate that your machine can sustain (M203 X200 Y200 Z300 E10000) in mm/sec
+ * M203: Set maximum feedrate that your machine can sustain in mm/sec
+ *
+ *    X,Y,Z   = AXIS
+ *    T* E    = E_AXIS
+ *
  */
 inline void gcode_M203() {
-  for(int8_t i = 0; i <= Z_AXIS; i++) {
-    if (code_seen(axis_codes[i])) max_feedrate[i] = code_value();
-  }
+  if (setTargetedHotend(203)) return;
 
-  if (code_seen('E')) {
-    int tmp_extruder = 0;
-    tmp_extruder = code_value();
-    float value = code_seen('S') ? code_value() : max_feedrate[E_AXIS + tmp_extruder];
-    max_feedrate[E_AXIS + tmp_extruder] = value;
+  for(int8_t i = 0; i < NUM_AXIS; i++) {
+    if (code_seen(axis_codes[i])) {
+      if (i == E_AXIS)
+        max_feedrate[i + target_extruder] = code_value();
+      else
+        max_feedrate[i] = code_value();
+    }
   }
 }
 
 /**
- * M204: Set Accelerations in mm/sec^2 (M204 P1200 R3000 T3000)
+ * M204: Set Accelerations in mm/sec^2 (M204 P1200 T0 R3000 V3000)
  *
- *    P = Printing moves
- *    R = Retract only (no X, Y, Z) moves
- *    T = Travel (non printing) moves
+ *    P     = Printing moves
+ *    T* R  = Retract only (no X, Y, Z) moves
+ *    V     = Travel (non printing) moves
  *
  *  Also sets minimum segment time in ms (B20000) to prevent buffer under-runs and M20 minimum feedrate
  */
 inline void gcode_M204() {
+  if (setTargetedHotend(204)) return;
+
   if (code_seen('S')) {  // Kept for legacy compatibility. Should NOT BE USED for new developments.
     acceleration = code_value();
     travel_acceleration = acceleration;
@@ -4817,10 +4859,10 @@ inline void gcode_M204() {
     ECHO_LMV(DB, "Setting Print Acceleration: ", acceleration );
   }
   if (code_seen('R')) {
-    retract_acceleration = code_value();
-    ECHO_LMV(DB, "Setting Retract Acceleration: ", retract_acceleration );
+    retract_acceleration[target_extruder] = code_value();
+    ECHO_LMV(DB, "Setting Retract Acceleration: ", retract_acceleration[target_extruder]);
   }
-  if (code_seen('T')) {
+  if (code_seen('V')) {
     travel_acceleration = code_value();
     ECHO_LMV(DB, "Setting Travel Acceleration: ", travel_acceleration );
   }
@@ -4830,19 +4872,21 @@ inline void gcode_M204() {
  * M205: Set Advanced Settings
  *
  *    S = Min Feed Rate (mm/s)
- *    T = Min Travel Feed Rate (mm/s)
+ *    V = Min Travel Feed Rate (mm/s)
  *    B = Min Segment Time (µs)
  *    X = Max XY Jerk (mm/s/s)
  *    Z = Max Z Jerk (mm/s/s)
  *    E = Max E Jerk (mm/s/s)
  */
 inline void gcode_M205() {
+  if (setTargetedHotend(205)) return;
+
   if (code_seen('S')) minimumfeedrate = code_value();
-  if (code_seen('T')) mintravelfeedrate = code_value();
+  if (code_seen('V')) mintravelfeedrate = code_value();
   if (code_seen('B')) minsegmenttime = code_value();
   if (code_seen('X')) max_xy_jerk = code_value();
   if (code_seen('Z')) max_z_jerk = code_value();
-  if (code_seen('E')) max_e_jerk = code_value();
+  if (code_seen('E')) max_e_jerk[target_extruder] = code_value();
 }
 
 /**
@@ -5086,7 +5130,7 @@ inline void gcode_M226() {
   }
 #endif // NUM_SERVOS > 0
 
-#if HAS_LCD_BUZZ
+#if HAS_BUZZER
 
   /**
    * M300: Play beep sound S<frequency Hz> P<duration ms>
@@ -5095,10 +5139,10 @@ inline void gcode_M226() {
     uint16_t beepS = code_seen('S') ? code_value_short() : 100;
     uint32_t beepP = code_seen('P') ? code_value_long() : 1000;
     if (beepP > 5000) beepP = 5000; // limit to 5 seconds
-    lcd_buzz(beepP, beepS);
+    buzz(beepP, beepS);
   }
 
-#endif // HAS_LCD_BUZZ
+#endif // HAS_BUZZER
 
 
 #ifdef PIDTEMP
@@ -5445,7 +5489,7 @@ inline void gcode_M428() {
       else {
         ECHO_LM(ER, MSG_ERR_M428_TOO_FAR);
         LCD_ALERTMESSAGEPGM("Err: Too far!");
-        #if HAS_LCD_BUZZ
+        #if HAS_BUZZER
           enqueuecommands_P(PSTR("M300 S40 P200"));
         #endif
         err = true;
@@ -5464,7 +5508,7 @@ inline void gcode_M428() {
     #endif
     ECHO_LM(DB, "Offset applied.");
     LCD_ALERTMESSAGEPGM("Offset applied.");
-    #if HAS_LCD_BUZZ
+    #if HAS_BUZZER
       enqueuecommands_P(PSTR("M300 S659 P200\nM300 S698 P200"));
     #endif
   }
@@ -5523,7 +5567,7 @@ inline void gcode_M503() {
    *
    */
   inline void gcode_M600() {
-    float target[NUM_AXIS], fr60 = feedrate / 60;
+    float lastpos[NUM_AXIS], target[NUM_AXIS], fr60 = feedrate / 60;
     filament_changing = true;
     for (int i = 0; i < NUM_AXIS; i++)
       target[i] = lastpos[i] = current_position[i];
@@ -5600,7 +5644,7 @@ inline void gcode_M503() {
         LCD_ALERTMESSAGEPGM("Zzzz Zzzz Zzzz");
       }
       if (beep) {
-        for(int8_t i = 0; i < 3; i++) lcd_buzz(100, 1000);
+        for(int8_t i = 0; i < 3; i++) buzz(100, 1000);
         last_set = millis();
         beep = false;
         ++cnt;
@@ -6204,14 +6248,14 @@ void process_next_command() {
 
       #if defined(DELTA) && defined(Z_PROBE_ENDSTOP)
         case 29: // G29 Detailed Z-Probe, probes the bed at more points.
-          gcode_G29(); break;
+          gcode_G29(); gcode_M114(); break;
         case 30:  // G30 Delta AutoCalibration
           gcode_G30(); break;
       #endif // DELTA && Z_PROBE_ENDSTOP
 
-      case 60: // G60 Store in memory actual position
+      case 60: // G60 Saved Coordinates
         gcode_G60(); break;
-      case 61: // G61 move to X Y Z in memory
+      case 61: // G61 Restore Coordinates
         gcode_G61(); break;
       case 90: // G90
         relative_mode = false; break;
@@ -6220,7 +6264,6 @@ void process_next_command() {
       case 92: // G92
         gcode_G92(); break;
     }
-    code_is_good = false;
     break;
 
     case 'M': switch (codenum) {
@@ -6432,10 +6475,10 @@ void process_next_command() {
           gcode_M280(); break;
       #endif // NUM_SERVOS > 0
 
-      #if HAS_LCD_BUZZ
+      #if HAS_BUZZER
         case 300: // M300 - Play beep tone
           gcode_M300(); break;
-      #endif // HAS_LCD_BUZZ
+      #endif // HAS_BUZZER
 
       #ifdef PIDTEMP
         case 301: // M301
@@ -6459,11 +6502,9 @@ void process_next_command() {
 
       #if HAS_MICROSTEPS
         case 350: // M350 Set microstepping mode. Warning: Steps per unit remains unchanged. S code sets stepping mode for all drivers.
-          gcode_M350();
-          break;
+          gcode_M350(); break;
         case 351: // M351 Toggle MS1 MS2 pins directly, S# determines MS1 or MS2, X# sets the pin high/low.
-          gcode_M351();
-          break;
+          gcode_M351(); break;
       #endif // HAS_MICROSTEPS
 
       #ifdef SCARA
@@ -6558,7 +6599,6 @@ void process_next_command() {
           gcode_SET_Z_PROBE_OFFSET(); break;
       #endif // CUSTOM_M_CODE_SET_Z_PROBE_OFFSET
     }
-    code_is_good = false;
     break;
 
     case 'T':

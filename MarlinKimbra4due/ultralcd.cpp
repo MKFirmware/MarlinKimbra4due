@@ -520,16 +520,16 @@ static void lcd_tune_menu() {
   MENU_ITEM(back, MSG_MAIN, lcd_main_menu);
   MENU_ITEM_EDIT(int3, MSG_SPEED, &feedrate_multiplier, 10, 999);
   #if TEMP_SENSOR_0 != 0
-    MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE, &target_temperature[0], 0, HEATER_0_MAXTEMP + LCD_MAX_TEMP_OFFSET);
+    MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 0", &target_temperature[0], 0, HEATER_0_MAXTEMP + LCD_MAX_TEMP_OFFSET);
   #endif
   #if TEMP_SENSOR_1 != 0
-    MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 2", &target_temperature[1], 0, HEATER_1_MAXTEMP + LCD_MAX_TEMP_OFFSET);
+    MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 1", &target_temperature[1], 0, HEATER_1_MAXTEMP + LCD_MAX_TEMP_OFFSET);
   #endif
   #if TEMP_SENSOR_2 != 0
-    MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 3", &target_temperature[2], 0, HEATER_2_MAXTEMP + LCD_MAX_TEMP_OFFSET);
+    MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 2", &target_temperature[2], 0, HEATER_2_MAXTEMP + LCD_MAX_TEMP_OFFSET);
   #endif
   #if TEMP_SENSOR_3 != 0
-    MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 4", &target_temperature[3], 0, HEATER_3_MAXTEMP + LCD_MAX_TEMP_OFFSET);
+    MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 3", &target_temperature[3], 0, HEATER_3_MAXTEMP + LCD_MAX_TEMP_OFFSET);
   #endif
   #if TEMP_SENSOR_BED != 0
     MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_BED, &target_temperature_bed, 0, BED_MAXTEMP + LCD_MAX_TEMP_OFFSET);
@@ -641,15 +641,15 @@ void lcd_preheat_gum0() { _lcd_preheat(0, gumPreheatHotendTemp, gumPreheatHPBTem
     static void lcd_preheat_pla_menu() {
       START_MENU(lcd_prepare_menu);
       MENU_ITEM(back, MSG_PREPARE, lcd_prepare_menu);
-      MENU_ITEM(function, MSG_PREHEAT_PLA " 1", lcd_preheat_pla0);
+      MENU_ITEM(function, MSG_PREHEAT_PLA " 0", lcd_preheat_pla0);
       #if TEMP_SENSOR_1 != 0 //2 extruder preheat
-        MENU_ITEM(function, MSG_PREHEAT_PLA " 2", lcd_preheat_pla1);
+        MENU_ITEM(function, MSG_PREHEAT_PLA " 1", lcd_preheat_pla1);
       #endif //2 extruder preheat
       #if TEMP_SENSOR_2 != 0 //3 extruder preheat
-        MENU_ITEM(function, MSG_PREHEAT_PLA " 3", lcd_preheat_pla2);
+        MENU_ITEM(function, MSG_PREHEAT_PLA " 2", lcd_preheat_pla2);
       #endif //3 extruder preheat
       #if TEMP_SENSOR_3 != 0 //4 extruder preheat
-        MENU_ITEM(function, MSG_PREHEAT_PLA " 4", lcd_preheat_pla3);
+        MENU_ITEM(function, MSG_PREHEAT_PLA " 3", lcd_preheat_pla3);
       #endif //4 extruder preheat
       MENU_ITEM(function, MSG_PREHEAT_PLA_ALL, lcd_preheat_pla0123);
       #if TEMP_SENSOR_BED != 0
@@ -661,15 +661,15 @@ void lcd_preheat_gum0() { _lcd_preheat(0, gumPreheatHotendTemp, gumPreheatHPBTem
     static void lcd_preheat_abs_menu() {
       START_MENU(lcd_prepare_menu);
       MENU_ITEM(back, MSG_PREPARE, lcd_prepare_menu);
-      MENU_ITEM(function, MSG_PREHEAT_ABS " 1", lcd_preheat_abs0);
+      MENU_ITEM(function, MSG_PREHEAT_ABS " 0", lcd_preheat_abs0);
       #if TEMP_SENSOR_1 != 0 //2 extruder preheat
-        MENU_ITEM(function, MSG_PREHEAT_ABS " 2", lcd_preheat_abs1);
+        MENU_ITEM(function, MSG_PREHEAT_ABS " 1", lcd_preheat_abs1);
       #endif //2 extruder preheat
       #if TEMP_SENSOR_2 != 0 //3 extruder preheat
-        MENU_ITEM(function, MSG_PREHEAT_ABS " 3", lcd_preheat_abs2);
+        MENU_ITEM(function, MSG_PREHEAT_ABS " 2", lcd_preheat_abs2);
       #endif //3 extruder preheat
       #if TEMP_SENSOR_3 != 0 //4 extruder preheat
-        MENU_ITEM(function, MSG_PREHEAT_ABS " 4", lcd_preheat_abs3);
+        MENU_ITEM(function, MSG_PREHEAT_ABS " 3", lcd_preheat_abs3);
       #endif //4 extruder preheat
       MENU_ITEM(function, MSG_PREHEAT_ABS_ALL, lcd_preheat_abs0123);
       #if TEMP_SENSOR_BED != 0
@@ -681,15 +681,15 @@ void lcd_preheat_gum0() { _lcd_preheat(0, gumPreheatHotendTemp, gumPreheatHPBTem
     static void lcd_preheat_gum_menu() {
       START_MENU(lcd_prepare_menu);
       MENU_ITEM(back, MSG_PREPARE, lcd_prepare_menu);
-      MENU_ITEM(function, MSG_PREHEAT_GUM " 1", lcd_preheat_gum0);
+      MENU_ITEM(function, MSG_PREHEAT_GUM " 0", lcd_preheat_gum0);
       #if TEMP_SENSOR_1 != 0 //2 extruder preheat
-        MENU_ITEM(function, MSG_PREHEAT_GUM " 2", lcd_preheat_gum1);
+        MENU_ITEM(function, MSG_PREHEAT_GUM " 1", lcd_preheat_gum1);
       #endif //2 extruder preheat
       #if TEMP_SENSOR_2 != 0 //3 extruder preheat
-        MENU_ITEM(function, MSG_PREHEAT_GUM " 3", lcd_preheat_gum2);
+        MENU_ITEM(function, MSG_PREHEAT_GUM " 2", lcd_preheat_gum2);
       #endif //3 extruder preheat
       #if TEMP_SENSOR_3 != 0 //4 extruder preheat
-        MENU_ITEM(function, MSG_PREHEAT_GUM " 4", lcd_preheat_gum3);
+        MENU_ITEM(function, MSG_PREHEAT_GUM " 3", lcd_preheat_gum3);
       #endif //all extruder preheat
       MENU_ITEM(function, MSG_PREHEAT_GUM_ALL, lcd_preheat_gum0123);
       #if TEMP_SENSOR_BED != 0
@@ -967,17 +967,17 @@ static void lcd_control_menu() {
     PID_PARAM(Kd, e) = scalePID_d(raw_Kd);
     updatePID();
   }
-  void copy_and_scalePID_i_E1() { copy_and_scalePID_i(0); }
-  void copy_and_scalePID_d_E1() { copy_and_scalePID_d(0); }
+  void copy_and_scalePID_i_H0() { copy_and_scalePID_i(0); }
+  void copy_and_scalePID_d_H0() { copy_and_scalePID_d(0); }
   #if HOTENDS > 1
-    void copy_and_scalePID_i_E2() { copy_and_scalePID_i(1); }
-    void copy_and_scalePID_d_E2() { copy_and_scalePID_d(1); }
+    void copy_and_scalePID_i_H1() { copy_and_scalePID_i(1); }
+    void copy_and_scalePID_d_H1() { copy_and_scalePID_d(1); }
     #if HOTENDS > 2
-      void copy_and_scalePID_i_E3() { copy_and_scalePID_i(2); }
-      void copy_and_scalePID_d_E3() { copy_and_scalePID_d(2); }
+      void copy_and_scalePID_i_H2() { copy_and_scalePID_i(2); }
+      void copy_and_scalePID_d_H2() { copy_and_scalePID_d(2); }
       #if HOTENDS > 3
-        void copy_and_scalePID_i_E4() { copy_and_scalePID_i(3); }
-        void copy_and_scalePID_d_E4() { copy_and_scalePID_d(3); }
+        void copy_and_scalePID_i_H3() { copy_and_scalePID_i(3); }
+        void copy_and_scalePID_d_H4() { copy_and_scalePID_d(3); }
       #endif //HOTENDS > 3
     #endif //HOTENDS > 2
   #endif //HOTENDS > 1
@@ -1001,19 +1001,19 @@ static void lcd_control_temperature_menu() {
   // Nozzle, Nozzle 2, Nozzle 3, Nozzle 4
   //
   #if TEMP_SENSOR_0 != 0
-    MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE, &target_temperature[0], 0, HEATER_0_MAXTEMP + LCD_MAX_TEMP_OFFSET);
+    MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 0", &target_temperature[0], 0, HEATER_0_MAXTEMP + LCD_MAX_TEMP_OFFSET);
   #endif
   #if HOTENDS > 1
     #if TEMP_SENSOR_1 != 0
-      MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 2", &target_temperature[1], 0, HEATER_1_MAXTEMP + LCD_MAX_TEMP_OFFSET);
+      MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 1", &target_temperature[1], 0, HEATER_1_MAXTEMP + LCD_MAX_TEMP_OFFSET);
     #endif
     #if HOTENDS > 2
       #if TEMP_SENSOR_2 != 0
-        MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 3", &target_temperature[2], 0, HEATER_2_MAXTEMP + LCD_MAX_TEMP_OFFSET);
+        MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 2", &target_temperature[2], 0, HEATER_2_MAXTEMP + LCD_MAX_TEMP_OFFSET);
       #endif
       #if HOTENDS > 3
         #if TEMP_SENSOR_3 != 0
-          MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 4", &target_temperature[3], 0, HEATER_3_MAXTEMP + LCD_MAX_TEMP_OFFSET);
+          MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 3", &target_temperature[3], 0, HEATER_3_MAXTEMP + LCD_MAX_TEMP_OFFSET);
         #endif
       #endif //HOTENDS > 3
     #endif //HOTENDS > 2
@@ -1053,32 +1053,32 @@ static void lcd_control_temperature_menu() {
     raw_Kd = unscalePID_d(PID_PARAM(Kd,0));
     MENU_ITEM_EDIT(float52, MSG_PID_P, &PID_PARAM(Kp,0), 1, 9990);
     // i is typically a small value so allows values below 1
-    MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_I, &raw_Ki, 0.01, 9990, copy_and_scalePID_i_E1);
-    MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_D, &raw_Kd, 1, 9990, copy_and_scalePID_d_E1);
+    MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_I, &raw_Ki, 0.01, 9990, copy_and_scalePID_i_H0);
+    MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_D, &raw_Kd, 1, 9990, copy_and_scalePID_d_H0);
     #if HOTENDS > 1
       // set up temp variables - undo the default scaling
       raw_Ki = unscalePID_i(PID_PARAM(Ki,1));
       raw_Kd = unscalePID_d(PID_PARAM(Kd,1));
-      MENU_ITEM_EDIT(float52, MSG_PID_P MSG_E2, &PID_PARAM(Kp,1), 1, 9990);
+      MENU_ITEM_EDIT(float52, MSG_PID_P MSG_H1, &PID_PARAM(Kp,1), 1, 9990);
       // i is typically a small value so allows values below 1
-      MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_I MSG_E2, &raw_Ki, 0.01, 9990, copy_and_scalePID_i_E2);
-      MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_D MSG_E2, &raw_Kd, 1, 9990, copy_and_scalePID_d_E2);
+      MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_I MSG_H1, &raw_Ki, 0.01, 9990, copy_and_scalePID_i_H1);
+      MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_D MSG_H1, &raw_Kd, 1, 9990, copy_and_scalePID_d_H1);
       #if HOTENDS > 2
         // set up temp variables - undo the default scaling
         raw_Ki = unscalePID_i(PID_PARAM(Ki,2));
         raw_Kd = unscalePID_d(PID_PARAM(Kd,2));
-        MENU_ITEM_EDIT(float52, MSG_PID_P MSG_E3, &PID_PARAM(Kp,2), 1, 9990);
+        MENU_ITEM_EDIT(float52, MSG_PID_P MSG_H2, &PID_PARAM(Kp,2), 1, 9990);
         // i is typically a small value so allows values below 1
-        MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_I MSG_E3, &raw_Ki, 0.01, 9990, copy_and_scalePID_i_E3);
-        MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_D MSG_E3, &raw_Kd, 1, 9990, copy_and_scalePID_d_E3);
+        MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_I MSG_H2, &raw_Ki, 0.01, 9990, copy_and_scalePID_i_H2);
+        MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_D MSG_H2, &raw_Kd, 1, 9990, copy_and_scalePID_d_H2);
         #if HOTENDS > 3
           // set up temp variables - undo the default scaling
           raw_Ki = unscalePID_i(PID_PARAM(Ki,3));
           raw_Kd = unscalePID_d(PID_PARAM(Kd,3));
-          MENU_ITEM_EDIT(float52, MSG_PID_P MSG_E4, &PID_PARAM(Kp,3), 1, 9990);
+          MENU_ITEM_EDIT(float52, MSG_PID_P MSG_H3, &PID_PARAM(Kp,3), 1, 9990);
           // i is typically a small value so allows values below 1
-          MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_I MSG_E4, &raw_Ki, 0.01, 9990, copy_and_scalePID_i_E4);
-          MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_D MSG_E4, &raw_Kd, 1, 9990, copy_and_scalePID_d_E4);
+          MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_I MSG_H3, &raw_Ki, 0.01, 9990, copy_and_scalePID_i_H3);
+          MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_D MSG_H3, &raw_Kd, 1, 9990, copy_and_scalePID_d_H3);
         #endif //HOTENDS > 3
       #endif //HOTENDS > 2
     #endif //HOTENDS > 1
@@ -1178,38 +1178,53 @@ static void lcd_control_motion_menu() {
   MENU_ITEM_EDIT(float5, MSG_ACC, &acceleration, 10, 99000);
   MENU_ITEM_EDIT(float3, MSG_VXY_JERK, &max_xy_jerk, 1, 990);
   MENU_ITEM_EDIT(float52, MSG_VZ_JERK, &max_z_jerk, 0.1, 990);
-  MENU_ITEM_EDIT(float3, MSG_VE_JERK, &max_e_jerk, 1, 990);
   MENU_ITEM_EDIT(float3, MSG_VMAX MSG_X, &max_feedrate[X_AXIS], 1, 999);
   MENU_ITEM_EDIT(float3, MSG_VMAX MSG_Y, &max_feedrate[Y_AXIS], 1, 999);
   MENU_ITEM_EDIT(float3, MSG_VMAX MSG_Z, &max_feedrate[Z_AXIS], 1, 999);
-  MENU_ITEM_EDIT(float3, MSG_VMAX MSG_E, &max_feedrate[E_AXIS], 1, 999);
   MENU_ITEM_EDIT(float3, MSG_VMIN, &minimumfeedrate, 0, 999);
   MENU_ITEM_EDIT(float3, MSG_VTRAV_MIN, &mintravelfeedrate, 0, 999);
   MENU_ITEM_EDIT_CALLBACK(long5, MSG_AMAX MSG_X, &max_acceleration_units_per_sq_second[X_AXIS], 100, 99000, reset_acceleration_rates);
   MENU_ITEM_EDIT_CALLBACK(long5, MSG_AMAX MSG_Y, &max_acceleration_units_per_sq_second[Y_AXIS], 100, 99000, reset_acceleration_rates);
   MENU_ITEM_EDIT_CALLBACK(long5, MSG_AMAX MSG_Z, &max_acceleration_units_per_sq_second[Z_AXIS], 10, 99000, reset_acceleration_rates);
-  MENU_ITEM_EDIT_CALLBACK(long5, MSG_AMAX MSG_E, &max_acceleration_units_per_sq_second[E_AXIS], 100, 99000, reset_acceleration_rates);
-  MENU_ITEM_EDIT(float5, MSG_A_RETRACT, &retract_acceleration, 100, 99000);
   MENU_ITEM_EDIT(float5, MSG_A_TRAVEL, &travel_acceleration, 100, 99000);
   MENU_ITEM_EDIT(float52, MSG_XSTEPS, &axis_steps_per_unit[X_AXIS], 5, 9999);
   MENU_ITEM_EDIT(float52, MSG_YSTEPS, &axis_steps_per_unit[Y_AXIS], 5, 9999);
   MENU_ITEM_EDIT(float51, MSG_ZSTEPS, &axis_steps_per_unit[Z_AXIS], 5, 9999);
-  MENU_ITEM_EDIT(float51, MSG_E0STEPS, &axis_steps_per_unit[E_AXIS+0], 5, 9999);
-  #if EXTRUDERS > 1 
-    MENU_ITEM_EDIT(float51, MSG_E1STEPS, &axis_steps_per_unit[E_AXIS+1], 5, 9999);
-  #endif 
-  #if EXTRUDERS > 2
-    MENU_ITEM_EDIT(float51, MSG_E2STEPS, &axis_steps_per_unit[E_AXIS+2], 5, 9999);
-  #endif 
-  #if EXTRUDERS > 3
-    MENU_ITEM_EDIT(float51, MSG_E3STEPS, &axis_steps_per_unit[E_AXIS+3], 5, 9999);
-  #endif
+  #if EXTRUDERS > 0
+    MENU_ITEM_EDIT(float3, MSG_VE_JERK MSG_E "0", &max_e_jerk[0], 1, 990);
+    MENU_ITEM_EDIT(float3, MSG_VMAX MSG_E "0", &max_feedrate[E_AXIS], 1, 999);
+    MENU_ITEM_EDIT(long5, MSG_AMAX MSG_E "0", &max_acceleration_units_per_sq_second[E_AXIS], 100, 99000);
+    MENU_ITEM_EDIT(float5, MSG_A_RETRACT MSG_E "0", &retract_acceleration[0], 100, 99000);
+    MENU_ITEM_EDIT(float51, MSG_E0STEPS, &axis_steps_per_unit[E_AXIS], 5, 9999);
+    #if EXTRUDERS > 1
+      MENU_ITEM_EDIT(float3, MSG_VE_JERK MSG_E "1", &max_e_jerk[1], 1, 990);
+      MENU_ITEM_EDIT(float3, MSG_VMAX MSG_E "1", &max_feedrate[E_AXIS + 1], 1, 999);
+      MENU_ITEM_EDIT(long5, MSG_AMAX MSG_E "1", &max_acceleration_units_per_sq_second[E_AXIS + 1], 100, 99000);
+      MENU_ITEM_EDIT(float5, MSG_A_RETRACT MSG_E "1", &retract_acceleration[1], 100, 99000);
+      MENU_ITEM_EDIT(float51, MSG_E1STEPS, &axis_steps_per_unit[E_AXIS + 1], 5, 9999);
+      #if EXTRUDERS > 2
+        MENU_ITEM_EDIT(float3, MSG_VE_JERK MSG_E "2", &max_e_jerk[2], 1, 990);
+        MENU_ITEM_EDIT(float3, MSG_VMAX MSG_E "2", &max_feedrate[E_AXIS + 2], 1, 999);
+        MENU_ITEM_EDIT(long5, MSG_AMAX MSG_E "2", &max_acceleration_units_per_sq_second[E_AXIS + 2], 100, 99000);
+        MENU_ITEM_EDIT(float5, MSG_A_RETRACT MSG_E "2", &retract_acceleration[2], 100, 99000);
+        MENU_ITEM_EDIT(float51, MSG_E2STEPS, &axis_steps_per_unit[E_AXIS + 2], 5, 9999);
+        #if EXTRUDERS > 3
+          MENU_ITEM_EDIT(float3, MSG_VE_JERK MSG_E  "3", &max_e_jerk[3], 1, 990);
+          MENU_ITEM_EDIT(float3, MSG_VMAX MSG_E "3", &max_feedrate[E_AXIS + 3], 1, 999);
+          MENU_ITEM_EDIT(long5, MSG_AMAX MSG_E "3", &max_acceleration_units_per_sq_second[E_AXIS + 3], 100, 99000);
+          MENU_ITEM_EDIT(float5, MSG_A_RETRACT MSG_E "3", &retract_acceleration[3], 100, 99000);
+          MENU_ITEM_EDIT(float51, MSG_E3STEPS, &axis_steps_per_unit[E_AXIS + 3], 5, 9999);
+        #endif // EXTRUDERS > 3
+      #endif // EXTRUDERS > 2
+    #endif // EXTRUDERS > 1
+  #endif // EXTRUDERS > 0
+
   #ifdef ABORT_ON_ENDSTOP_HIT_FEATURE_ENABLED
     MENU_ITEM_EDIT(bool, MSG_ENDSTOP_ABORT, &abort_on_endstop_hit);
   #endif
   #ifdef SCARA
-    MENU_ITEM_EDIT(float52, MSG_XSCALE, &axis_scaling[X_AXIS],0.5,2);
-    MENU_ITEM_EDIT(float52, MSG_YSCALE, &axis_scaling[Y_AXIS],0.5,2);
+    MENU_ITEM_EDIT(float74, MSG_XSCALE, &axis_scaling[X_AXIS],0.5,2);
+    MENU_ITEM_EDIT(float74, MSG_YSCALE, &axis_scaling[Y_AXIS],0.5,2);
   #endif
   END_MENU();
 }
@@ -1226,13 +1241,13 @@ static void lcd_control_volumetric_menu() {
   MENU_ITEM_EDIT_CALLBACK(bool, MSG_VOLUMETRIC_ENABLED, &volumetric_enabled, calculate_volumetric_multipliers);
 
   if (volumetric_enabled) {
-    MENU_MULTIPLIER_ITEM_EDIT_CALLBACK(float43, MSG_FILAMENT_SIZE_EXTRUDER " 1", &filament_size[0], DEFAULT_NOMINAL_FILAMENT_DIA - .5, DEFAULT_NOMINAL_FILAMENT_DIA + .5, calculate_volumetric_multipliers);
+    MENU_MULTIPLIER_ITEM_EDIT_CALLBACK(float43, MSG_FILAMENT_SIZE_EXTRUDER " 0", &filament_size[0], DEFAULT_NOMINAL_FILAMENT_DIA - .5, DEFAULT_NOMINAL_FILAMENT_DIA + .5, calculate_volumetric_multipliers);
     #if EXTRUDERS > 1
-      MENU_MULTIPLIER_ITEM_EDIT_CALLBACK(float43, MSG_FILAMENT_SIZE_EXTRUDER " 2", &filament_size[1], DEFAULT_NOMINAL_FILAMENT_DIA - .5, DEFAULT_NOMINAL_FILAMENT_DIA + .5, calculate_volumetric_multipliers);
+      MENU_MULTIPLIER_ITEM_EDIT_CALLBACK(float43, MSG_FILAMENT_SIZE_EXTRUDER " 1", &filament_size[1], DEFAULT_NOMINAL_FILAMENT_DIA - .5, DEFAULT_NOMINAL_FILAMENT_DIA + .5, calculate_volumetric_multipliers);
       #if EXTRUDERS > 2
-        MENU_MULTIPLIER_ITEM_EDIT_CALLBACK(float43, MSG_FILAMENT_SIZE_EXTRUDER " 3", &filament_size[2], DEFAULT_NOMINAL_FILAMENT_DIA - .5, DEFAULT_NOMINAL_FILAMENT_DIA + .5, calculate_volumetric_multipliers);
+        MENU_MULTIPLIER_ITEM_EDIT_CALLBACK(float43, MSG_FILAMENT_SIZE_EXTRUDER " 2", &filament_size[2], DEFAULT_NOMINAL_FILAMENT_DIA - .5, DEFAULT_NOMINAL_FILAMENT_DIA + .5, calculate_volumetric_multipliers);
         #if EXTRUDERS > 3
-          MENU_MULTIPLIER_ITEM_EDIT_CALLBACK(float43, MSG_FILAMENT_SIZE_EXTRUDER " 4", &filament_size[3], DEFAULT_NOMINAL_FILAMENT_DIA - .5, DEFAULT_NOMINAL_FILAMENT_DIA + .5, calculate_volumetric_multipliers);
+          MENU_MULTIPLIER_ITEM_EDIT_CALLBACK(float43, MSG_FILAMENT_SIZE_EXTRUDER " 3", &filament_size[3], DEFAULT_NOMINAL_FILAMENT_DIA - .5, DEFAULT_NOMINAL_FILAMENT_DIA + .5, calculate_volumetric_multipliers);
         #endif //EXTRUDERS > 3
       #endif //EXTRUDERS > 2
     #endif //EXTRUDERS > 1
@@ -1459,7 +1474,7 @@ void lcd_quick_feedback() {
     #ifndef LCD_FEEDBACK_FREQUENCY_DURATION_MS
       #define LCD_FEEDBACK_FREQUENCY_DURATION_MS (1000/6)
     #endif    
-    lcd_buzz(LCD_FEEDBACK_FREQUENCY_DURATION_MS, LCD_FEEDBACK_FREQUENCY_HZ);
+    buzz(LCD_FEEDBACK_FREQUENCY_DURATION_MS, LCD_FEEDBACK_FREQUENCY_HZ);
   #elif defined(BEEPER) && BEEPER >= 0
     #ifndef LCD_FEEDBACK_FREQUENCY_HZ
       #define LCD_FEEDBACK_FREQUENCY_HZ 5000
@@ -1467,7 +1482,7 @@ void lcd_quick_feedback() {
     #ifndef LCD_FEEDBACK_FREQUENCY_DURATION_MS
       #define LCD_FEEDBACK_FREQUENCY_DURATION_MS 2
     #endif
-    lcd_buzz(LCD_FEEDBACK_FREQUENCY_DURATION_MS, LCD_FEEDBACK_FREQUENCY_HZ);
+    buzz(LCD_FEEDBACK_FREQUENCY_DURATION_MS, LCD_FEEDBACK_FREQUENCY_HZ);
   #else
     #ifndef LCD_FEEDBACK_FREQUENCY_DURATION_MS
       #define LCD_FEEDBACK_FREQUENCY_DURATION_MS 2
@@ -1896,24 +1911,6 @@ void lcd_reset_alert_level() { lcd_status_message_level = 0; }
     #else
       return true;
     #endif
-  }
-
-  void lcd_buzz(long duration, uint16_t freq) {
-    if (freq > 0) {
-      #if BEEPER > 0
-        SET_OUTPUT(BEEPER);
-        tone(BEEPER, freq);
-        delay(duration);
-        noTone(BEEPER);
-      #elif defined(LCD_USE_I2C_BUZZER)
-        lcd.buzz(duration, freq);
-      #else
-        delay(duration);
-      #endif
-    }
-    else {
-      delay(duration);
-    }
   }
 
   bool lcd_clicked() { return LCD_CLICKED; }
