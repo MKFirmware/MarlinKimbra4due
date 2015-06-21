@@ -45,7 +45,11 @@
 //FAN pin
 #define FAN_PIN       ORIG_FAN_PIN
 
-//============================================================================
+//=========================== START YOUR CHANGE ==============================
+// Example for change X_MIN_PIN
+// #undef X_MIN_PIN
+// #define X_MIN_PIN newpin
+
 
 #define E0E1_CHOICE_PIN    40
 #define E0E2_CHOICE_PIN    41
