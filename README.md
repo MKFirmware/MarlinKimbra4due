@@ -1,5 +1,6 @@
-# MarlinKimbra4due 3D Printer Firmware
 <img align="right" src="Documentation/Logo/MarlinKimbra%20Logo%20GitHub.png" />
+# MarlinKimbra4due 3D Printer Firmware
+## Version 4.1.3 dev
 
 ### Special thanks
 * Wurstnase
