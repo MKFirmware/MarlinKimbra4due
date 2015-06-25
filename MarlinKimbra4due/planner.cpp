@@ -1003,8 +1003,6 @@ float junction_deviation = 0.1;
   block->nominal_length_flag = (block->nominal_speed <= v_allowable);
   block->recalculate_flag = true; // Always calculate trapezoid for new block
 
-  calculate_trapezoid_for_block(block, block->entry_speed / block->nominal_speed, safe_speed / block->nominal_speed);
-
   // Update previous path unit_vector and nominal speed
   memcpy(previous_speed, current_speed, sizeof(previous_speed)); // previous_speed[] = current_speed[]
   previous_nominal_speed = block->nominal_speed;
@@ -1026,6 +1024,8 @@ float junction_deviation = 0.1;
     ECHO_EMV("advance rate :", block->advance_rate/256);
     */
   #endif // ADVANCE
+
+  calculate_trapezoid_for_block(block, block->entry_speed / block->nominal_speed, safe_speed / block->nominal_speed);
 
   // Move buffer head
   block_buffer_head = next_buffer_head;

@@ -193,6 +193,8 @@
 #define DEFAULT_ACCELERATION            3000                                // X, Y, Z and E* max acceleration in mm/s^2 for printing moves
 #define DEFAULT_TRAVEL_ACCELERATION     5000                                // X, Y, Z acceleration in mm/s^2 for travel (non printing) moves
 
+//#define ENABLE_HIGH_SPEED_STEPPING  // Activate for very high stepping rates, normally only needed for 1/64 or more micro steps (AXIS_STEPS_PER_UNIT * MAX_FEEDRATE > 150,000)
+
 // Offset of the extruders (uncomment if using more than one and relying on firmware to position when changing).
 // The offset has to be X=0, Y=0 for the hotend 0 (default hotend).
 // For the other hotends it is their distance from the hotend 0.
