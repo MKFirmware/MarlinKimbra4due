@@ -51,7 +51,5 @@
 // #define X_MIN_PIN newpin
 
 
-#define E0E1_CHOICE_PIN    40
-#define E0E2_CHOICE_PIN    41
 
 //============================================================================

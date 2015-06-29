@@ -304,6 +304,17 @@ void set_stepper_direction() {
 
 // Initializes the trapezoid generator from the current block. Called whenever a new
 // block begins.
+
+TcChannel *stepperChannel = (STEP_TIMER_COUNTER->TC_CHANNEL + STEP_TIMER_CHANNEL);
+
+FORCE_INLINE
+void HAL_timer_stepper_count(uint32_t count) {
+
+  uint32_t counter_value = stepperChannel->TC_CV + 42;  // we need time for other stuff!
+  //if(count < 105) count = 105;
+  stepperChannel->TC_RC = (counter_value <= count) ? count : counter_value;
+}
+
 FORCE_INLINE void trapezoid_generator_reset() {
 
   if (current_block->direction_bits != out_bits) {
@@ -325,47 +336,17 @@ FORCE_INLINE void trapezoid_generator_reset() {
   step_loops_nominal = step_loops;
   acc_step_rate = current_block->initial_rate;
   acceleration_time = calc_timer(acc_step_rate);
-  HAL_timer_set_count (STEP_TIMER_COUNTER, STEP_TIMER_CHANNEL, acceleration_time);
+  //HAL_timer_stepper_count(acceleration_time);
 }
-
-#define _ENDSTOP_PIN(AXIS, MINMAX) AXIS ##_## MINMAX ##_PIN
-#define _ENDSTOP_INVERTING(AXIS, MINMAX) AXIS ##_## MINMAX ##_ENDSTOP_INVERTING
-#define _AXIS(AXIS) AXIS ##_AXIS
-#define _ENDSTOP_HIT(AXIS) endstop_hit_bits |= BIT(_ENDSTOP(AXIS, MIN))
-#define _ENDSTOP(AXIS, MINMAX) AXIS ##_## MINMAX
-
-// SET_ENDSTOP_BIT: set the current endstop bits for an endstop to its status
-#define SET_ENDSTOP_BIT(AXIS, MINMAX) SET_BIT(current_endstop_bits, _ENDSTOP(AXIS, MINMAX), (READ(_ENDSTOP_PIN(AXIS, MINMAX)) != _ENDSTOP_INVERTING(AXIS, MINMAX)))
-// COPY_BIT: copy the value of COPY_BIT to BIT in bits
-#define COPY_BIT(bits, COPY_BIT, BIT) SET_BIT(bits, BIT, TEST(bits, COPY_BIT))
-// TEST_ENDSTOP: test the old and the current status of an endstop
-#define TEST_ENDSTOP(ENDSTOP) (TEST(current_endstop_bits, ENDSTOP) && TEST(old_endstop_bits, ENDSTOP))
-
-#define UPDATE_ENDSTOP(AXIS,MINMAX) \
-  SET_ENDSTOP_BIT(AXIS, MINMAX); \
-  if (TEST_ENDSTOP(_ENDSTOP(AXIS, MINMAX))  && (current_block->steps[_AXIS(AXIS)] > 0)) { \
-    endstops_trigsteps[_AXIS(AXIS)] = count_position[_AXIS(AXIS)]; \
-    _ENDSTOP_HIT(AXIS); \
-    step_events_completed = current_block->step_event_count; \
-  }
-
-#define _COUNTER(axis) counter_## axis
-#define _APPLY_STEP(AXIS) AXIS ##_APPLY_STEP
-#define _INVERT_STEP_PIN(AXIS) INVERT_## AXIS ##_STEP_PIN
-
-#define STEP_START(axis, AXIS) \
-        _COUNTER(axis) += current_block->steps[_AXIS(AXIS)]; \
-        if (_COUNTER(axis) > 0) { \
-		      _APPLY_STEP(AXIS)(!_INVERT_STEP_PIN(AXIS),0); \
-          _COUNTER(axis) -= current_block->step_event_count; \
-          count_position[_AXIS(AXIS)] += count_direction[_AXIS(AXIS)]; }
-
-#define STEP_END(axis, AXIS) _APPLY_STEP(AXIS)(_INVERT_STEP_PIN(AXIS),0)
 
 // "The Stepper Driver Interrupt" - This timer interrupt is the workhorse.
 // It pops blocks from the block_buffer and executes them by pulsing the stepper pins appropriately.
+
 HAL_STEP_TIMER_ISR {
-  HAL_timer_isr_status (STEP_TIMER_COUNTER, STEP_TIMER_CHANNEL);
+
+  //STEP_TIMER_COUNTER->TC_CHANNEL[STEP_TIMER_CHANNEL].TC_SR;
+  stepperChannel->TC_SR;
+  //stepperChannel->TC_RC = 1000000;
 
   if (cleaning_buffer_counter) {
     current_block = NULL;
@@ -374,7 +355,7 @@ HAL_STEP_TIMER_ISR {
       if ((cleaning_buffer_counter == 1) && (SD_FINISHED_STEPPERRELEASE)) enqueuecommands_P(PSTR(SD_FINISHED_RELEASECOMMAND));
     #endif
     cleaning_buffer_counter--;
-    HAL_timer_set_count (STEP_TIMER_COUNTER, STEP_TIMER_CHANNEL, HAL_TIMER_RATE / 200); //5ms wait
+    HAL_timer_stepper_count(HAL_TIMER_RATE / 200); //5ms wait
     return;
   }
 
@@ -402,7 +383,7 @@ HAL_STEP_TIMER_ISR {
       // #endif
     }
     else {
-      HAL_timer_set_count (STEP_TIMER_COUNTER, STEP_TIMER_CHANNEL, HAL_TIMER_RATE / 1000); // 1kHz
+        HAL_timer_stepper_count(HAL_TIMER_RATE / 1000); // 1kHz
     }
   }
 
@@ -416,7 +397,28 @@ HAL_STEP_TIMER_ISR {
       #else
         byte
       #endif
-      current_endstop_bits;
+          current_endstop_bits = 0;
+
+      #define _ENDSTOP_PIN(AXIS, MINMAX) AXIS ##_## MINMAX ##_PIN
+      #define _ENDSTOP_INVERTING(AXIS, MINMAX) AXIS ##_## MINMAX ##_ENDSTOP_INVERTING
+      #define _AXIS(AXIS) AXIS ##_AXIS
+      #define _ENDSTOP_HIT(AXIS) endstop_hit_bits |= BIT(_ENDSTOP(AXIS, MIN))
+      #define _ENDSTOP(AXIS, MINMAX) AXIS ##_## MINMAX
+
+      // SET_ENDSTOP_BIT: set the current endstop bits for an endstop to its status
+      #define SET_ENDSTOP_BIT(AXIS, MINMAX) SET_BIT(current_endstop_bits, _ENDSTOP(AXIS, MINMAX), (READ(_ENDSTOP_PIN(AXIS, MINMAX)) != _ENDSTOP_INVERTING(AXIS, MINMAX)))
+      // COPY_BIT: copy the value of COPY_BIT to BIT in bits
+      #define COPY_BIT(bits, COPY_BIT, BIT) SET_BIT(bits, BIT, TEST(bits, COPY_BIT))
+      // TEST_ENDSTOP: test the old and the current status of an endstop
+      #define TEST_ENDSTOP(ENDSTOP) (TEST(current_endstop_bits, ENDSTOP) && TEST(old_endstop_bits, ENDSTOP))
+
+      #define UPDATE_ENDSTOP(AXIS,MINMAX) \
+        SET_ENDSTOP_BIT(AXIS, MINMAX); \
+        if (TEST_ENDSTOP(_ENDSTOP(AXIS, MINMAX))  && (current_block->steps[_AXIS(AXIS)] > 0)) { \
+          endstops_trigsteps[_AXIS(AXIS)] = count_position[_AXIS(AXIS)]; \
+          _ENDSTOP_HIT(AXIS); \
+          step_events_completed = current_block->step_event_count; \
+        }
 
       #ifdef COREXY
         // Head direction in -X axis for CoreXY bots.
@@ -556,6 +558,19 @@ HAL_STEP_TIMER_ISR {
       #endif
     }
 
+    #define _COUNTER(axis) counter_## axis
+    #define _APPLY_STEP(AXIS) AXIS ##_APPLY_STEP
+  	#define _INVERT_STEP_PIN(AXIS) INVERT_## AXIS ##_STEP_PIN
+
+    #define STEP_START(axis, AXIS) \
+      _COUNTER(axis) += current_block->steps[_AXIS(AXIS)]; \
+      if (_COUNTER(axis) > 0) { \
+      _APPLY_STEP(AXIS)(!_INVERT_STEP_PIN(AXIS),0); \
+      _COUNTER(axis) -= current_block->step_event_count; \
+      count_position[_AXIS(AXIS)] += count_direction[_AXIS(AXIS)]; }
+
+    #define STEP_END(axis, AXIS) _APPLY_STEP(AXIS)(_INVERT_STEP_PIN(AXIS),0)
+
     #if defined(ENABLE_HIGH_SPEED_STEPPING)
       // Take multiple steps per interrupt (For high speed moves)
       for (int8_t i = 0; i < step_loops; i++) {
@@ -663,7 +678,7 @@ HAL_STEP_TIMER_ISR {
       #endif
     #endif
 
-    HAL_timer_set_count (STEP_TIMER_COUNTER, STEP_TIMER_CHANNEL, timer);
+    HAL_timer_stepper_count(timer);
 
     // If current block is finished, reset pointer
     if (step_events_completed >= current_block->step_event_count) {

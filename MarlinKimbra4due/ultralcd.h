@@ -16,11 +16,15 @@
   void lcd_reset_alert_level();
   bool lcd_detected(void);
 
+  #ifdef LCD_USE_I2C_BUZZER
+    void lcd_buzz(long duration, uint16_t freq);
+  #endif
+
   #if defined(LCD_PROGRESS_BAR) && PROGRESS_MSG_EXPIRE > 0
     void dontExpireStatus();
   #endif
 
-  #if defined(DOGLCD) && LCD_CONTRAST >= 0
+  #ifdef DOGLCD
     extern int lcd_contrast;
     void lcd_setcontrast(uint8_t value);
   #endif
@@ -122,10 +126,6 @@
   #define LCD_ALERTMESSAGEPGM(x) do{}while(0)
 
 #endif //ULTRA_LCD
-
-#if HAS_BUZZER
-  void buzz(long duration,uint16_t freq);
-#endif
 
 char *itostr2(const uint8_t &x);
 char *itostr31(const int &xx);
