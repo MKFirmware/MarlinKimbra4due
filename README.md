@@ -9,12 +9,10 @@
 ### THIS IS A BETA VERSION
 
 ### New features are:
-* Steprates up to 320.000 steps/s (top for 1/128 stepper driver)
-* smoother temperature (median of last 5 values)
+* Stepping-algorithm optmized now for DRV8825 and A4988 (no need for double or quadstepping; no delays)
+* High speed stepping of approx. 295,000 steps/s, if needed (maybe more with less DOUBLE_STEP_FREQUENCY?)
  
 ### known issues:
-  * Watchdog doesn't work, don't activate it
-  * Servo not tested
   * LCD only Reprap full graphics display tested
 
 ---
@@ -63,4 +61,4 @@ More features have been added by:
 ## License
 
 Marlin is published under the [GPL license](/Documentation/COPYING.md) because I believe in open development.
-Please do not use this code in products (3D printers, CNC etc) that are closed source or are crippled by a patent.
+Do not use this code in products (3D printers, CNC etc) that are closed source or are crippled by a patent.
