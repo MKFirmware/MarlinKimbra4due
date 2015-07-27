@@ -6,22 +6,47 @@
   License as published by the Free Software Foundation; either
   version 2.1 of the License, or (at your option) any later version.
 
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-  Lesser General Public License for more details.
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
 
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
-*/
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ */
 
+/*
+
+ A servo is activated by creating an instance of the Servo class passing the desired pin to the attach() method.
+ The servos are pulsed in the background using the value most recently written using the write() method
+
+ Note that analogWrite of PWM on pins associated with the timer are disabled when the first servo is attached.
+ Timers are seized as needed in groups of 12 servos - 24 servos use two timers, 48 servos will use four.
+
+ The methods are:
+
+ Servo - Class for manipulating servo motors connected to Arduino pins.
+
+ attach(pin )  - Attaches a servo motor to an i/o pin.
+ attach(pin, min, max  ) - Attaches to a pin setting min and max values in microseconds
+ default min is 544, max is 2400
+
+ write()     - Sets the servo angle in degrees.  (invalid angle that is valid as pulse in microseconds is treated as microseconds)
+ writeMicroseconds() - Sets the servo pulse width in microseconds
+ move(pin, angle) - Sequence of attach(pin), write(angle).
+                    With DEACTIVATE_SERVOS_AFTER_MOVE it waits SERVO_DEACTIVATION_DELAY and detaches.
+ read()      - Gets the last written servo pulse width as an angle between 0 and 180.
+ readMicroseconds()   - Gets the last written servo pulse width in microseconds. (was read_us() in first release)
+ attached()  - Returns true if there is a servo attached.
+ detach()    - Stops an attached servos from pulsing its i/o pin.
+
+ */
 #include "Configuration.h"
 
 #ifdef NUM_SERVOS
 
 #include <Arduino.h>
-
 #include "servo.h"
 
 #define usToTicks(_us)    (( clockCyclesPerMicrosecond() * _us) / 32)     // converts microseconds to tick
@@ -49,27 +74,27 @@ uint8_t ServoCount = 0;                                     // the total number 
 /// Interrupt handler for the TC0 channel 1.
 //------------------------------------------------------------------------------
 void Servo_Handler(timer16_Sequence_t timer, Tc *pTc, uint8_t channel);
-#ifdef _useTimer1
+#if defined (_useTimer1)
 void HANDLER_FOR_TIMER1(void) {
     Servo_Handler(_timer1, TC_FOR_TIMER1, CHANNEL_FOR_TIMER1);
 }
 #endif
-#ifdef _useTimer2
+#if defined (_useTimer2)
 void HANDLER_FOR_TIMER2(void) {
     Servo_Handler(_timer2, TC_FOR_TIMER2, CHANNEL_FOR_TIMER2);
 }
 #endif
-#ifdef _useTimer3
+#if defined (_useTimer3)
 void HANDLER_FOR_TIMER3(void) {
     Servo_Handler(_timer3, TC_FOR_TIMER3, CHANNEL_FOR_TIMER3);
 }
 #endif
-#ifdef _useTimer4
+#if defined (_useTimer4)
 void HANDLER_FOR_TIMER4(void) {
     Servo_Handler(_timer4, TC_FOR_TIMER4, CHANNEL_FOR_TIMER4);
 }
 #endif
-#ifdef _useTimer5
+#if defined (_useTimer5)
 void HANDLER_FOR_TIMER5(void) {
     Servo_Handler(_timer5, TC_FOR_TIMER5, CHANNEL_FOR_TIMER5);
 }
@@ -214,7 +239,8 @@ void Servo::detach() {
 }
 
 void Servo::write(int value) {
-  if (value < MIN_PULSE_WIDTH) { // treat values less than 544 as angles in degrees (valid values in microseconds are handled as microseconds)
+  // treat values less than 544 as angles in degrees (valid values in microseconds are handled as microseconds)
+  if (value < MIN_PULSE_WIDTH) {
     if (value < 0) value = 0;
     if (value > 180) value = 180;
     value = map(value, 0, 180, SERVO_MIN(), SERVO_MAX());
@@ -238,7 +264,7 @@ void Servo::writeMicroseconds(int value) {
 }
 
 // return the value as degrees
-int Servo::read() { return map( this->readMicroseconds()+1, SERVO_MIN(), SERVO_MAX(), 0, 180); }
+int Servo::read() { return map(this->readMicroseconds()+1, SERVO_MIN(), SERVO_MAX(), 0, 180); }
 
 int Servo::readMicroseconds() {
   return (this->servoIndex == INVALID_SERVO) ? 0 : ticksToUs(servo_info[this->servoIndex].ticks) + TRIM_DURATION;

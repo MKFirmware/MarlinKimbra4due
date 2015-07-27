@@ -52,14 +52,24 @@
     #define REPRAP_DISCOUNT_SMART_CONTROLLER
   #endif
 
+  #ifdef SPARK_FULL_GRAPHICS
+    #define ENCODER_PULSES_PER_STEP 2
+    #define ENCODER_STEPS_PER_MENU_ITEM 1
+
+    #define DOGLCD
+    #define U8GLIB_ST7920
+    #define REPRAP_DISCOUNT_SMART_CONTROLLER
+  #endif
+
   #if defined(ULTIMAKERCONTROLLER) || defined(REPRAP_DISCOUNT_SMART_CONTROLLER) || defined(G3D_PANEL) || defined(RIGIDBOT_PANEL)
     #define ULTIPANEL
     #define NEWPANEL
   #endif
 
-  #ifdef RADDS_DISPLAY
+  #if defined(RADDS_DISPLAY)
     #define ENCODER_PULSES_PER_STEP 2
     #define ENCODER_STEPS_PER_MENU_ITEM 1
+
     #define ULTIPANEL
     #define NEWPANEL
   #endif
@@ -369,17 +379,17 @@
     #endif
   #endif
 
+  /**
+   * Servo Leveling
+   */
+  #define SERVO_LEVELING (defined(SERVO_ENDSTOPS) && defined(DEACTIVATE_SERVOS_AFTER_MOVE))
+
    /**
     * Sled Options
     */ 
   #ifdef Z_PROBE_SLED
     #define Z_SAFE_HOMING
   #endif
-  
-  /**
-   * Servo Leveling
-   */
-  #define SERVO_LEVELING (NUM_SERVOS > 0 && defined(ENABLE_AUTO_BED_LEVELING))
 
   /**
    * MAX_STEP_FREQUENCY differs for TOSHIBA OR ARDUINO DUE OR ARDUINO MEGA
@@ -658,7 +668,11 @@
     #endif
   #endif
   #if HAS_FAN
-    #define WRITE_FAN(v) WRITE(FAN_PIN, v)
+    #ifdef INVERTED_HEATER_PINS
+      #define WRITE_FAN(v) WRITE(FAN_PIN, !v)
+    #else
+      #define WRITE_FAN(v) WRITE(FAN_PIN, v)
+    #endif
   #endif
 
   /**

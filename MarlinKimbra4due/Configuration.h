@@ -530,6 +530,7 @@
 // leaving it defining as 0 will disable the servo subsystem
 #define NUM_SERVOS 0      // Servo index starts with 0 for M280 command
 
+#if NUM_SERVOS > 0
 // Servo Endstops
 // This allows for servo actuated endstops, primary usage is for the Z Axis to eliminate calibration or bed height changes.
 // Use M666 command to correct for switch height offset to actual nozzle height. Store that setting with M500.
@@ -548,6 +549,8 @@
   // If the servo can't reach the requested position, increase it.
   #define SERVO_DEACTIVATION_DELAY 300
 #endif
+
+#endif // NUM_SERVOS > 0
 //===========================================================================
 
 

@@ -248,7 +248,7 @@
 #define DEFAULT_MINSEGMENTTIME        20000
 
 // If defined the movements slow down when the look ahead buffer is only half full
-#define SLOWDOWN
+//#define SLOWDOWN
 
 // Frequency limit
 // See nophead's blog for more info
@@ -391,7 +391,7 @@ const unsigned int dropsegments = 5; // everything with less than this number of
 //#define HEATERS_PARALLEL
 
 // for smoother temperature
-#define MEDIAN_COUNT 3
+#define MEDIAN_COUNT 10
 
 //===========================================================================
 //================================= Buffers =================================

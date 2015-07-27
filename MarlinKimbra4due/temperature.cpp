@@ -79,7 +79,7 @@ unsigned char soft_pwm_bed;
     static TRState thermal_runaway_state_machine[4] = { TRReset, TRReset, TRReset, TRReset };
     static millis_t thermal_runaway_timer[4]; // = {0,0,0,0};
   #endif
-  #ifdef THERMAL_PROTECTION_BED
+  #if defined(THERMAL_PROTECTION_BED) && TEMP_SENSOR_BED != 0
     static TRState thermal_runaway_bed_state_machine = TRReset;
     static millis_t thermal_runaway_bed_timer;
   #endif
@@ -1022,6 +1022,7 @@ void tp_init() {
 
   void thermal_runaway_protection(TRState *state, millis_t *timer, float temperature, float target_temperature, int heater_id, int period_seconds, int hysteresis_degc) {
 
+
     /*
         ECHO_SM(DB, "Thermal Thermal Runaway Running. Heater ID: ");
         if (heater_id < 0) ECHO_M("bed"); else ECHO_V(heater_id);
@@ -1232,7 +1233,7 @@ HAL_TEMP_TIMER_ISR {
 
   // Initialize some variables only at start!
   if (first_start) {
-	  for (char i = 0; i < 5; i++) {
+	  for (uint8_t i = 0; i < 5; i++) {
 		  for (int j = 0; j < MEDIAN_COUNT; j++) raw_median_temp[i][j] = 3600 * OVERSAMPLENR;
 		  max_temp[i] = 0;
 		  min_temp[i] = 123000;
@@ -1525,7 +1526,6 @@ HAL_TEMP_TIMER_ISR {
 
     case StartupDelay:
       temp_state = PrepareTemp_0;
-      analogReadResolution(12); // Set ADC resolution
       break;
 
     //default:
@@ -1569,7 +1569,7 @@ HAL_TEMP_TIMER_ISR {
       SET_CURRENT_BED_RAW(4);
       
       //  Reset min/max-holder
-      for (char i = 0; i < 5; i++) {
+      for (uint8_t i = 0; i < 5; i++) {
         max_temp[i] = 0;
         min_temp[i] = 123000;
       }
@@ -1602,7 +1602,7 @@ HAL_TEMP_TIMER_ISR {
       if (minttemp_raw[0] GE0 current_temperature_raw[0]) min_temp_error(0);
     #endif
 
-    #if HAS_TEMP_1
+    #if HAS_TEMP_1 && HOTENDS > 1
       #if HEATER_1_RAW_LO_TEMP > HEATER_1_RAW_HI_TEMP
         #define GE1 <=
       #else
@@ -1610,9 +1610,9 @@ HAL_TEMP_TIMER_ISR {
       #endif
       if (current_temperature_raw[1] GE1 maxttemp_raw[1]) max_temp_error(1);
       if (minttemp_raw[1] GE1 current_temperature_raw[1]) min_temp_error(1);
-    #endif // HAS_TEMP_1
+    #endif // TEMP_SENSOR_1
 
-    #if HAS_TEMP_2
+    #if HAS_TEMP_2 && HOTENDS > 2
       #if HEATER_2_RAW_LO_TEMP > HEATER_2_RAW_HI_TEMP
         #define GE2 <=
       #else
@@ -1620,9 +1620,9 @@ HAL_TEMP_TIMER_ISR {
       #endif
       if (current_temperature_raw[2] GE2 maxttemp_raw[2]) max_temp_error(2);
       if (minttemp_raw[2] GE2 current_temperature_raw[2]) min_temp_error(2);
-    #endif // HAS_TEMP_2
+    #endif // TEMP_SENSOR_2
 
-    #if HAS_TEMP_3
+    #if HAS_TEMP_3 && HOTENDS > 3
       #if HEATER_3_RAW_LO_TEMP > HEATER_3_RAW_HI_TEMP
         #define GE3 <=
       #else
@@ -1630,7 +1630,7 @@ HAL_TEMP_TIMER_ISR {
       #endif
       if (current_temperature_raw[3] GE3 maxttemp_raw[3]) max_temp_error(3);
       if (minttemp_raw[3] GE3 current_temperature_raw[3]) min_temp_error(3);
-    #endif // HAS_TEMP_3
+    #endif // TEMP_SENSOR_3
 
     #if HAS_TEMP_BED
       #if HEATER_BED_RAW_LO_TEMP > HEATER_BED_RAW_HI_TEMP

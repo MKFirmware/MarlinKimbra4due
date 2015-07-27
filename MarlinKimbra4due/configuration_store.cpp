@@ -111,6 +111,7 @@ void _EEPROM_writeData(int &pos, uint8_t* value, uint8_t size) {
   uint8_t c;
   while(size--) {
     eeprom_write_byte((unsigned char*)pos, *value);
+    _delay_ms(2);
     c = eeprom_read_byte((unsigned char*)pos);
     if (c != *value) {
       ECHO_LM(ER, MSG_ERR_EEPROM_WRITE);
@@ -255,7 +256,7 @@ void Config_StoreSettings() {
   EEPROM_WRITE_VAR(j, ver2); // validate data
 
   // Report storage size
-  ECHO_SMV(DB, "Settings Stored (", i);
+  ECHO_SMV(DB, "Settings Stored (", (unsigned long)i);
   ECHO_EM(" bytes)");
 }
 
@@ -392,7 +393,7 @@ void Config_RetrieveSettings() {
 
     // Report settings retrieved and length
     ECHO_SV(DB, ver);
-    ECHO_MV(" stored settings retrieved (", i);
+    ECHO_MV(" stored settings retrieved (", (unsigned long)i);
     ECHO_EM(" bytes)");
   }
 
@@ -471,7 +472,7 @@ void Config_ResetDefault() {
 
   #ifdef SCARA
     for (int8_t i = 0; i < NUM_AXIS; i++) {
-      if (i < sizeof(axis_scaling) / sizeof(*axis_scaling))
+      if (i < COUNT(axis_scaling))
         axis_scaling[i] = 1;
     }
   #endif

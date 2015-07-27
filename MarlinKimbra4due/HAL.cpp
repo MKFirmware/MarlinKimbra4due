@@ -281,7 +281,8 @@ unsigned char eeprom_read_byte(unsigned char *pos) {
     Wire.write((int)(eeprom_address & 0xFF)); // LSB
     Wire.endTransmission();
     Wire.requestFrom(eeprom_device_address, (byte)1);
-    if (Wire.available()) data = Wire.read();
+    if (Wire.available())
+      data = Wire.read();
     return data;
   #endif// MB(ALLIGATOR)
 }
@@ -428,6 +429,7 @@ void noTone(uint8_t pin) {
   TC_Stop(tc, channel); 
   WRITE_VAR(pin, LOW);
 }
+
 
 // IRQ handler for tone generator
 HAL_BEEPER_TIMER_ISR {
