@@ -112,6 +112,26 @@
     #define LCD_CLICKED ((buttons&B_MI)||(buttons&B_ST))
   #endif//NEWPANEL
 
+#elif defined(NEXTION)
+
+  #define LCD_UPDATE_INTERVAL 1000
+
+  void homePopCallback(void *ptr);
+  void hotPopCallback(void *ptr);
+  void sethotPopCallback(void *ptr);
+  void settempPopCallback(void *ptr);
+  void lcd_update();
+  void lcd_init();
+  FORCE_INLINE bool lcd_hasstatus() { return false; }
+  FORCE_INLINE void lcd_setstatus(const char* message, const bool persist=false) {}
+  FORCE_INLINE void lcd_setstatuspgm(const char* message, const uint8_t level=0) {}
+  FORCE_INLINE void lcd_buttons_update() {}
+  FORCE_INLINE void lcd_reset_alert_level() {}
+  FORCE_INLINE bool lcd_detected(void) { return true; }
+
+  #define LCD_MESSAGEPGM(x) do{}while(0)
+  #define LCD_ALERTMESSAGEPGM(x) do{}while(0)
+
 #else //no LCD
   FORCE_INLINE void lcd_update() {}
   FORCE_INLINE void lcd_init() {}

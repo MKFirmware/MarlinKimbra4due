@@ -116,8 +116,6 @@
 #ifdef U8GLIB_ST7920
   //U8GLIB_ST7920_128X64_RRD u8g(0,0,0);
   U8GLIB_ST7920_128X64_RRD u8g(0);
-#elif defined(U8GLIB_SSD1306)
-  U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_DEV_0|U8G_I2C_OPT_NO_ACK|U8G_I2C_OPT_FAST);
 #elif defined(MAKRPANEL)
   // The MaKrPanel display, ST7565 controller as well
   U8GLIB_NHD_C12864 u8g(DOGLCD_CS, DOGLCD_A0);
@@ -130,6 +128,9 @@
 #elif defined U8GLIB_SSD1306
   // Generic support for SSD1306 OLED I2C LCDs
   U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE);
+#elif defined(MINIPANEL)
+  // The MINIPanel display
+  U8GLIB_MINI12864 u8g(DOGLCD_CS, DOGLCD_A0);
 #else
   // for regular DOGM128 display with HW-SPI
   U8GLIB_DOGM128 u8g(DOGLCD_CS, DOGLCD_A0);  // HW-SPI Com: CS, A0
@@ -199,7 +200,13 @@ static void lcd_implementation_init() {
     digitalWrite(LCD_PIN_BL, HIGH);
   #endif
 
-  u8g.setContrast(lcd_contrast);
+  #ifdef LCD_PIN_RESET
+    pinMode(LCD_PIN_RESET, OUTPUT);           
+    digitalWrite(LCD_PIN_RESET, HIGH);
+  #endif
+  #ifndef MINIPANEL//setContrast not working for Mini Panel
+    u8g.setContrast(lcd_contrast);	
+  #endif
   // FIXME: remove this workaround
   // Uncomment this if you have the first generation (V1.10) of STBs board
   // pinMode(17, OUTPUT); // Enable LCD backlight

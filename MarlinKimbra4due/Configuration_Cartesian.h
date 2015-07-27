@@ -145,7 +145,7 @@
   #define Z_RAISE_BEFORE_HOMING       10      // (in mm) Raise Z before homing (G28) for Probe Clearance.
                                               // Be sure you have this distance over your Z_MAX_POS in case
 
-  #define Z_RAISE_BEFORE_PROBING      10      //How much the extruder will be raised before travelling to the first probing point.
+  #define Z_RAISE_BEFORE_PROBING       5      //How much the extruder will be raised before travelling to the first probing point.
   #define Z_RAISE_BETWEEN_PROBINGS     5      //How much the extruder will be raised when travelling from between next probing points
   #define Z_RAISE_AFTER_PROBING        5      //How much the extruder will be raised after the last probing point.
 

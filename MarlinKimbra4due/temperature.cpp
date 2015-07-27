@@ -24,7 +24,6 @@
 #include "watchdog.h"
 #include "language.h"
 
-
 //===========================================================================
 //================================== macros =================================
 //===========================================================================
@@ -425,11 +424,11 @@ void checkExtruderAutoFans() {
   // update extruder auto fan states
   #if HAS_AUTO_FAN_0
     setExtruderAutoFanState(EXTRUDER_0_AUTO_FAN_PIN, (fanState & 1) != 0);
-  #endif 
+  #endif
   #if HAS_AUTO_FAN_1
     if (EXTRUDER_1_AUTO_FAN_PIN != EXTRUDER_0_AUTO_FAN_PIN)
       setExtruderAutoFanState(EXTRUDER_1_AUTO_FAN_PIN, (fanState & 2) != 0);
-  #endif 
+  #endif
   #if HAS_AUTO_FAN_2
     if (EXTRUDER_2_AUTO_FAN_PIN != EXTRUDER_0_AUTO_FAN_PIN
         && EXTRUDER_2_AUTO_FAN_PIN != EXTRUDER_1_AUTO_FAN_PIN)
@@ -484,6 +483,8 @@ float get_pid_output(int e) {
       pid_output = constrain(target_temperature[e], 0, PID_MAX);
     #else
       pid_error[e] = target_temperature[e] - current_temperature[e];
+      dTerm[e] = K2 * PID_PARAM(Kd,e) * (current_temperature[e] - temp_dState[e]) + K1 * dTerm[e];
+      temp_dState[e] = current_temperature[e];
       if (pid_error[e] > PID_FUNCTIONAL_RANGE) {
         pid_output = BANG_MAX;
         pid_reset[e] = true;
@@ -502,7 +503,6 @@ float get_pid_output(int e) {
         temp_iState[e] = constrain(temp_iState[e], temp_iState_min[e], temp_iState_max[e]);
         iTerm[e] = PID_PARAM(Ki,e) * temp_iState[e];
 
-        dTerm[e] = K2 * PID_PARAM(Kd,e) * (current_temperature[e] - temp_dState[e]) + K1 * dTerm[e];
         pid_output = pTerm[e] + iTerm[e] - dTerm[e];
         if (pid_output > PID_MAX) {
           if (pid_error[e] > 0) temp_iState[e] -= pid_error[e]; // conditional un-integration
@@ -513,7 +513,6 @@ float get_pid_output(int e) {
           pid_output = 0;
         }
       }
-      temp_dState[e] = current_temperature[e];
     #endif //PID_OPENLOOP
 
     #ifdef PID_DEBUG
@@ -958,7 +957,6 @@ void tp_init() {
   #ifdef HEATER_0_MAXTEMP
     TEMP_MAX_ROUTINE(0);
   #endif
-
   #if HOTENDS > 1
     #ifdef HEATER_1_MINTEMP
       TEMP_MIN_ROUTINE(1);

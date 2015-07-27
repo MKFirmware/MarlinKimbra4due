@@ -2,6 +2,7 @@
 #define CONFIGURATION_H
 
 #include "boards.h"
+#include "macros.h"
 
 //===========================================================================
 //============================= Getting Started =============================
@@ -109,13 +110,14 @@
  *                                                                     *
  ***********************************************************************/
 //#define NPR2
-
+#if defined(NPR2)
 #define COLOR_STEP {120,25,-65,-155} // CARTER ANGLE
 #define COLOR_SLOWRATE 170           // MICROSECOND delay for carter motor routine (Carter Motor Feedrate: upper value-slow feedrate)  
 #define COLOR_HOMERATE 4             // FEEDRATE for carter home
 #define MOTOR_ANGLE 1.8              // Nema angle for single step 
 #define DRIVER_MICROSTEP 4           // Microstep moltiplicator driver (set jumper MS1-2-3) off-on-off 1/4 microstepping.
 #define CARTER_MOLTIPLICATOR 14.22   // CARTER MOLTIPLICATOR (gear ratio 13/31-10/31)
+#endif
 //**********************************************************************
 
 
@@ -309,8 +311,8 @@
  * the firmware will halt as a safety precaution.
  */
 
-#define THERMAL_PROTECTION_HOTENDS // Enable thermal protection for all hotends
-#define THERMAL_PROTECTION_BED     // Enable thermal protection for the heated bed
+//#define THERMAL_PROTECTION_HOTENDS // Enable thermal protection for all hotends
+//#define THERMAL_PROTECTION_BED     // Enable thermal protection for the heated bed
 
 //===========================================================================
 //============================ User Interfaces ==============================
@@ -334,9 +336,10 @@
 //#define ENCODER_STEPS_PER_MENU_ITEM 5 // Set according to ENCODER_PULSES_PER_STEP or your liking
 //#define ULTIMAKERCONTROLLER //as available from the Ultimaker online store.
 //#define ULTIPANEL  //the UltiPanel as on Thingiverse
+//#define SPEAKER // The sound device is a speaker - not a buzzer. A buzzer resonates with his own frequency.
 //#define LCD_FEEDBACK_FREQUENCY_DURATION_MS 100 // the duration the buzzer plays the UI feedback sound. ie Screen Click
 //#define LCD_FEEDBACK_FREQUENCY_HZ 1000         // this is the tone frequency the buzzer plays when on UI feedback. ie Screen Click
-                                                 // 0 to disable buzzer feedback  
+                                                 // 0 to disable buzzer feedback. Test with M300 S<frequency Hz> P<duration ms>
 
 // Original RADDS Display from Willy
 // http://max3dshop.org/index.php/default/elektronik/radds-lcd-sd-display-with-reset-and-back-buttom.html
@@ -356,8 +359,7 @@
 //#define VIKI2
 //#define miniVIKI
 
-// This is a new controller currently under development.
-// https://github.com/eboston/Adafruit-ST7565-Full-Graphic-Controller/
+// This is a new controller currently under development.  https://github.com/eboston/Adafruit-ST7565-Full-Graphic-Controller/
 //
 // ==> REMEMBER TO INSTALL U8glib to your ARDUINO library folder: http://code.google.com/p/u8glib/wiki/u8glib
 //#define ELB_FULL_GRAPHIC_CONTROLLER
@@ -387,6 +389,10 @@
 // REMEMBER TO INSTALL LiquidCrystal_I2C.h in your ARDUINO library folder: https://github.com/kiyoshigawa/LiquidCrystal_I2C
 //#define RA_CONTROL_PANEL
 
+// The MakerLab Mini Panel with graphic controller and SD support
+// http://reprap.org/wiki/Mini_panel
+// #define MINIPANEL
+
 /**
  * I2C Panels
  */
@@ -394,6 +400,12 @@
 //#define LCD_I2C_SAINSMART_YWROBOT
 
 // PANELOLU2 LCD with status LEDs, separate encoder and click inputs
+//
+// This uses the LiquidTWI2 library v1.2.3 or later ( https://github.com/lincomatic/LiquidTWI2 )
+// Make sure the LiquidTWI2 directory is placed in the Arduino or Sketchbook libraries subdirectory.
+// (v1.2.3 no longer requires you to define PANELOLU in the LiquidTWI2.h library header file)
+// Note: The PANELOLU2 encoder click input can either be directly connected to a pin
+//       (if BTN_ENC defined to != -1) or read through I2C (when BTN_ENC == -1).
 //#define LCD_I2C_PANELOLU2
 
 // Panucatt VIKI LCD with status LEDs, integrated click & L/R/U/P buttons, separate encoder inputs
@@ -409,6 +421,12 @@
 // https://bitbucket.org/fmalpartida/new-liquidcrystal/wiki/schematics#!shiftregister-connection
 // LCD configuration: http://reprap.org/wiki/SAV_3D_LCD
 //#define SAV_3DLCD
+
+/**
+ * Nextion HMI panel
+ */
+// 
+//#define NEXTION
 
 // option for invert rotary switch
 //#define INVERT_ROTARY_SWITCH
@@ -449,10 +467,10 @@
 
 
 //===========================================================================
-//=============================Additional Features===========================
+//============================ Additional Features ==========================
 //===========================================================================
 
-//=================================== EEPROM ================================
+//================================= EEPROM ==================================
 // The microcontroller can store settings in the EEPROM, e.g. max velocity...
 // M500 - stores parameters in EEPROM
 // M501 - reads parameters from EEPROM (if you need reset them after you changed them temporarily).
@@ -468,15 +486,17 @@
 //========================== EXTRA SETTINGS ON SD ===========================
 // Uncomment SD SETTINGS to enable the firmware to write some configuration, that require frequent update, on the SD card.
 //#define SD_SETTINGS
+#ifdef SD_SETTINGS
 #define SD_CFG_SECONDS        300         //seconds between update
 #define CFG_SD_FILE           "INFO.CFG"  //name of the configuration file
 #define CFG_SD_MAX_KEY_LEN    3+1         //icrease this if you add key name longer than the actual value.
 #define CFG_SD_MAX_VALUE_LEN  12+1        //this should be enought for int, long and float if you need to retrive strings increase this carefully
+#endif
 //===========================================================================
 
 //==================== Bowden Filament management ===========================
 //#define EASY_LOAD
-
+#ifdef EASY_LOAD
 #define BOWDEN_LENGTH 250       // mm
 #define LCD_PURGE_LENGTH 3      // mm
 #define LCD_RETRACT_LENGTH 3    // mm
@@ -484,6 +504,7 @@
 #define LCD_RETRACT_FEEDRATE 10 // mm/s
 #define LCD_LOAD_FEEDRATE 8     // mm/s
 #define LCD_UNLOAD_FEEDRATE 8   // mm/s
+#endif //EASY_LOAD
 //===========================================================================
 
 
@@ -513,8 +534,20 @@
 // This allows for servo actuated endstops, primary usage is for the Z Axis to eliminate calibration or bed height changes.
 // Use M666 command to correct for switch height offset to actual nozzle height. Store that setting with M500.
 //
-#define SERVO_ENDSTOPS {-1,-1,0}            // Servo index for X, Y, Z. Disable with -1
+#define SERVO_ENDSTOPS {-1, -1, 0}          // Servo index for X, Y, Z. Disable with -1
 #define SERVO_ENDSTOP_ANGLES {0,0,0,0,90,0} // X,Y,Z Axis Extend and Retract angles
+
+// Servo deactivation
+//
+// With this option servos are powered only during movement, then turned off to prevent jitter.
+//#define DEACTIVATE_SERVOS_AFTER_MOVE
+
+#ifdef DEACTIVATE_SERVOS_AFTER_MOVE
+  // Delay (in microseconds) before turning the servo off. This depends on the servo speed.
+  // 300ms is a good value but you can try less delay.
+  // If the servo can't reach the requested position, increase it.
+  #define SERVO_DEACTIVATION_DELAY 300
+#endif
 //===========================================================================
 
 
@@ -534,7 +567,6 @@
 
 #define FILAMENT_SENSOR_EXTRUDER_NUM  0     //The number of the extruder that has the filament sensor (0,1,2,3)
 #define MEASUREMENT_DELAY_CM         14     //measurement delay in cm.  This is the distance from filament sensor to middle of barrel
-
 #define DEFAULT_NOMINAL_FILAMENT_DIA  1.75  //Enter the diameter (in mm) of the filament generally used (3.0 mm or 1.75 mm) - this is then used in the slicer software.  Used for sensor reading validation
 #define MEASURED_UPPER_LIMIT          2.00  //upper limit factor used for sensor reading validation in mm
 #define MEASURED_LOWER_LIMIT          1.35  //lower limit factor for sensor reading validation in mm
@@ -562,7 +594,7 @@
  **********************************************************************/
 // Uncomment below to enable
 //#define POWER_CONSUMPTION
-
+#ifdef POWER_CONSUMPTION
 #define POWER_VOLTAGE      12.00    //(V) The power supply OUT voltage
 #define POWER_ZERO          2.54459 //(V) The /\V coming out from the sensor when no current flow.
 #define POWER_SENSITIVITY   0.066   //(V/A) How much increase V for 1A of increase
@@ -572,6 +604,7 @@
 
 //When using an LCD, uncomment the line below to display the Power consumption sensor data on the last line instead of status.  Status will appear for 5 sec.
 //#define POWER_CONSUMPTION_LCD_DISPLAY
+#endif
 //===========================================================================
 
 
