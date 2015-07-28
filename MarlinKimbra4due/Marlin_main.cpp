@@ -147,7 +147,8 @@
  * M109 - Sxxx Wait for extruder current temp to reach target temp. Waits only when heating
  *        Rxxx Wait for extruder current temp to reach target temp. Waits when heating and cooling
  *        IF AUTOTEMP is enabled, S<mintemp> B<maxtemp> F<factor>. Exit autotemp by any M109 without F
- * M110 - Set current line number.
+ * M100 - Watch Free Memory (For Debugging Only)
+ * M110 - Set the current line number
  * M111 - Set debug flags with S<mask>. See flag bits defined in Marlin.h.
  * M112 - Emergency stop
  * M114 - Output current position to serial port, (V)erbose for user
@@ -229,6 +230,10 @@
  * T0-T3 - Select a tool by index (usually an extruder) [ F<mm/min> ]
  *
  */
+
+#ifdef M100_FREE_MEMORY_WATCHER
+  void gcode_M100();
+#endif
 
 #ifdef SDSUPPORT
   CardReader card;
@@ -316,9 +321,9 @@ unsigned long printer_usage_seconds;
   int old_color = 99;
 #endif
 
-#if NUM_SERVOS > 0
-  int servo_endstops[] = SERVO_ENDSTOPS;
-  int servo_endstop_angles[] = SERVO_ENDSTOP_ANGLES;
+#ifdef SERVO_ENDSTOPS
+  const int servo_endstops[] = SERVO_ENDSTOPS;
+  const int servo_endstop_angles[] = SERVO_ENDSTOP_ANGLES;
 #endif
 
 #ifdef BARICUDA
@@ -410,7 +415,7 @@ unsigned long printer_usage_seconds;
 #endif
 
 #if HAS_FILAMENT_SENSOR
-  //Variables for Filament Sensor input 
+  //Variables for Filament Sensor input
   float filament_width_nominal = DEFAULT_NOMINAL_FILAMENT_DIA;  //Set nominal filament width, can be changed with M404 
   bool filament_sensor = false;                                 //M405 turns on filament_sensor control, M406 turns it off 
   float filament_width_meas = DEFAULT_MEASURED_FILAMENT_DIA;    //Stores the measured filament diameter 
@@ -491,7 +496,7 @@ bool setTargetedHotend(int code);
   float extrude_min_temp = EXTRUDE_MINTEMP;
 #endif
 
-#ifndef __SAM3X8E__
+#ifdef __AVR__ // HAL for Due
 #ifdef SDSUPPORT
   #include "SdFatUtil.h"
   int freeMemory() { return SdFatUtil::FreeRam(); }
@@ -658,17 +663,24 @@ void servo_init() {
   #endif
 
   // Set position of Servo Endstops that are defined
-  #if (NUM_SERVOS > 0)
+  #ifdef SERVO_ENDSTOPS
     for (int i = 0; i < 3; i++)
       if (servo_endstops[i] >= 0)
         servo[servo_endstops[i]].move(servo_endstop_angles[i * 2 + 1]);
-  #endif //NUM_SERVOS
-
-  #if SERVO_LEVELING_DELAY
-    delay(PROBE_SERVO_DEACTIVATION_DELAY);
-    servo[servo_endstops[Z_AXIS]].detach();
   #endif
+
 }
+
+/**
+ * Stepper Reset (RigidBoard, et.al.)
+ */
+#if HAS_STEPPER_RESET
+  void disableStepperDrivers() {
+    pinMode(STEPPER_RESET_PIN, OUTPUT);
+    digitalWrite(STEPPER_RESET_PIN, LOW);  // drive it down to hold in reset motor driver chips
+  }
+  void enableStepperDrivers() { pinMode(STEPPER_RESET_PIN, INPUT); }  // set to input, which allows it to be pulled high by pullups
+#endif
 
 /**
  * Marlin entry-point: Set up before the program loop
@@ -697,8 +709,12 @@ void setup() {
   setup_killpin();
   setup_filrunoutpin();
   setup_powerhold();
-  SERIAL_INIT(BAUDRATE);
 
+  #if HAS_STEPPER_RESET
+    disableStepperDrivers();
+  #endif
+
+  SERIAL_INIT(BAUDRATE);
   ECHO_EM(START);
   ECHO_S(DB);
 
@@ -748,12 +764,17 @@ void setup() {
     SET_OUTPUT(CONTROLLERFAN_PIN); //Set pin used for driver cooling fan
   #endif
 
+  #if HAS_STEPPER_RESET
+    enableStepperDrivers();
+  #endif
+
   #ifdef DIGIPOT_I2C
     digipot_i2c_init();
   #endif
 
   #ifdef Z_PROBE_SLED
-    OUT_WRITE(SERVO0_PIN, LOW); // turn it off
+    pinMode(SLED_PIN, OUTPUT);
+    digitalWrite(SLED_PIN, LOW); // turn it off
   #endif // Z_PROBE_SLED
 
   setup_homepin();
@@ -1351,14 +1372,14 @@ static void clean_up_after_endstop_move() {
     }
 
     static void deploy_z_probe() {
-      #if NUM_SERVOS > 0
+      #ifdef SERVO_ENDSTOPS
         // Engage Z Servo endstop if enabled
         if (servo_endstops[Z_AXIS] >= 0) servo[servo_endstops[Z_AXIS]].move(servo_endstop_angles[Z_AXIS * 2]);
-      #endif //NUM_SERVOS > 0
+      #endif
     }
 
     static void stow_z_probe(bool doRaise = true) {
-      #if NUM_SERVOS > 0
+      #ifdef SERVO_ENDSTOPS
         // Retract Z Servo endstop if enabled
         if (servo_endstops[Z_AXIS] >= 0) {
 
@@ -1372,7 +1393,7 @@ static void clean_up_after_endstop_move() {
           // Change the Z servo angle
           servo[servo_endstops[Z_AXIS]].move(servo_endstop_angles[Z_AXIS * 2 + 1]);
         }
-      #endif //NUM_SERVOS > 0
+      #endif
     }
 
     enum ProbeAction {
@@ -1678,7 +1699,7 @@ static void clean_up_after_endstop_move() {
 
   void deploy_z_probe() {
 
-    #if NUM_SERVOS > 0
+    #ifdef SERVO_ENDSTOPS
       // Engage Z Servo endstop if enabled
       if (servo_endstops[Z_AXIS] >= 0) {
         Servo *srv = &servo[servo_endstops[Z_AXIS]];
@@ -1691,7 +1712,7 @@ static void clean_up_after_endstop_move() {
           srv->detach();
         #endif
       }
-    #endif //NUM_SERVOS > 0
+    #endif
 
     feedrate = homing_feedrate[X_AXIS];
     destination[X_AXIS] = z_probe_deploy_start_location[X_AXIS];
@@ -1737,7 +1758,7 @@ static void clean_up_after_endstop_move() {
     prepare_move_raw();
     st_synchronize();
 
-    #if NUM_SERVOS > 0
+    #ifdef SERVO_ENDSTOPS
       // Retract Z Servo endstop if enabled
       if (servo_endstops[Z_AXIS] >= 0) {
         // Change the Z servo angle
@@ -1752,7 +1773,7 @@ static void clean_up_after_endstop_move() {
         #endif
 
       }
-    #endif //NUM_SERVOS > 0
+    #endif
   }
 
   void apply_endstop_adjustment(float x_endstop, float y_endstop, float z_endstop) {
@@ -3304,8 +3325,8 @@ inline void gcode_G28() {
       bool left_out_l = left_probe_bed_position < MIN_PROBE_X,
            left_out = left_out_l || left_probe_bed_position > right_probe_bed_position - MIN_PROBE_EDGE,
            right_out_r = right_probe_bed_position > MAX_PROBE_X,
-           right_out = right_out_r || right_probe_bed_position < left_probe_bed_position + MIN_PROBE_EDGE,
-           front_out_f = front_probe_bed_position < MIN_PROBE_Y,
+           right_out = right_out_r || right_probe_bed_position < left_probe_bed_position + MIN_PROBE_EDGE;
+      bool front_out_f = front_probe_bed_position < MIN_PROBE_Y,
            front_out = front_out_f || front_probe_bed_position > back_probe_bed_position - MIN_PROBE_EDGE,
            back_out_b = back_probe_bed_position > MAX_PROBE_Y,
            back_out = back_out_b || back_probe_bed_position < front_probe_bed_position + MIN_PROBE_EDGE;
@@ -6561,6 +6582,12 @@ void process_next_command() {
 
       case 109: // M109 Wait for temperature
         gcode_M109(); break;
+
+      #ifdef M100_FREE_MEMORY_WATCHER
+        case 100:
+          gcode_M100(); break;
+      #endif
+
       case 110: break; // M110: Set line number - don't show "unknown command"
       case 111: // M111 Set debug level
         gcode_M111(); break;
@@ -7186,13 +7213,20 @@ void plan_arc(
       ) {
         lastMotor = ms; //... set time to NOW so the fan will turn on
       }
+      
+  #ifdef INVERTED_HEATER_PINS
+      uint8_t speed = (lastMotor == 0 || ms >= lastMotor + (CONTROLLERFAN_SECS * 1000UL)) ? 255 : (255 - CONTROLLERFAN_SPEED);
+  #else
       uint8_t speed = (lastMotor == 0 || ms >= lastMotor + (CONTROLLERFAN_SECS * 1000UL)) ? 0 : CONTROLLERFAN_SPEED;
+  #endif
+
       // allows digital or PWM fan output to be used (see M42 handling)
       digitalWrite(CONTROLLERFAN_PIN, speed);
       analogWrite(CONTROLLERFAN_PIN, speed);
     }
   }
-#endif
+
+#endif // HAS_CONTROLLERFAN
 
 #ifdef SCARA
 
@@ -7281,7 +7315,7 @@ void plan_arc(
     float max_temp = 0.0;
     if (millis() > next_status_led_update_ms) {
       next_status_led_update_ms += 500; // Update every 0.5s
-      for (int8_t cur_hotend = 0; cur_hotend < EXTRUDERS; ++cur_hotend)
+      for (int8_t cur_hotend = 0; cur_hotend < HOTENDS; ++cur_hotend)
          max_temp = max(max(max_temp, degHotend(cur_hotend)), degTargetHotend(cur_hotend));
       #if HAS_TEMP_BED
         max_temp = max(max(max_temp, degTargetBed()), degBed());

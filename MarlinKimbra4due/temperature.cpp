@@ -73,7 +73,6 @@ unsigned char soft_pwm_bed;
 
 #if defined(THERMAL_PROTECTION_HOTENDS) || defined(THERMAL_PROTECTION_BED)
   enum TRState { TRReset, TRInactive, TRFirstHeating, TRStable, TRRunaway };
-  static float tr_target_temperature[HOTENDS + 1] = { 0.0 };
   void thermal_runaway_protection(TRState *state, millis_t *timer, float temperature, float target_temperature, int heater_id, int period_seconds, int hysteresis_degc);
   #ifdef THERMAL_PROTECTION_HOTENDS
     static TRState thermal_runaway_state_machine[4] = { TRReset, TRReset, TRReset, TRReset };
@@ -910,20 +909,29 @@ void tp_init() {
 
   // Set analog inputs
   
-  // nothing todo for ARM
+  // Setup channels
 
-  #if HAS_AUTO_FAN_0
-    pinMode(EXTRUDER_0_AUTO_FAN_PIN, OUTPUT);
-  #endif
-  #if HAS_AUTO_FAN_1 && (EXTRUDER_1_AUTO_FAN_PIN != EXTRUDER_0_AUTO_FAN_PIN)
-    pinMode(EXTRUDER_1_AUTO_FAN_PIN, OUTPUT);
-  #endif
-  #if HAS_AUTO_FAN_2 && (EXTRUDER_2_AUTO_FAN_PIN != EXTRUDER_0_AUTO_FAN_PIN) && (EXTRUDER_2_AUTO_FAN_PIN != EXTRUDER_1_AUTO_FAN_PIN)
-    pinMode(EXTRUDER_2_AUTO_FAN_PIN, OUTPUT);
-  #endif
-  #if HAS_AUTO_FAN_3 && (EXTRUDER_3_AUTO_FAN_PIN != EXTRUDER_0_AUTO_FAN_PIN) && (EXTRUDER_3_AUTO_FAN_PIN != EXTRUDER_1_AUTO_FAN_PIN) && (EXTRUDER_3_AUTO_FAN_PIN != EXTRUDER_2_AUTO_FAN_PIN)
-    pinMode(EXTRUDER_3_AUTO_FAN_PIN, OUTPUT);
-  #endif
+    ADC->ADC_MR |= ADC_MR_FREERUN_ON |
+    		  	  	 ADC_MR_LOWRES_BITS_12;
+
+    #define START_TEMP(temp_id) startAdcConversion(pinToAdcChannel(TEMP_## temp_id ##_PIN))
+    #define START_BED_TEMP() startAdcConversion(pinToAdcChannel(TEMP_BED_PIN))
+
+    #if HAS_TEMP_0
+      START_TEMP(0);
+    #endif
+    #if HAS_TEMP_BED
+      START_BED_TEMP();
+    #endif
+    #if HAS_TEMP_1
+      START_TEMP(1)
+    #endif
+    #if HAS_TEMP_2
+      START_TEMP(2)
+    #endif
+    #if HAS_TEMP_3
+      START_TEMP(3)
+    #endif
 
   // Use timer0 for temperature measurement
   // Interleave temperature interrupt with millies interrupt
@@ -1011,7 +1019,7 @@ void tp_init() {
   void start_watching_heater(int e) {
     if (degHotend(e) < degTargetHotend(e) - (WATCH_TEMP_INCREASE + TEMP_HYSTERESIS + 1)) {
       watch_target_temp[e] = degHotend(e) + WATCH_TEMP_INCREASE;
-      watch_heater_next_ms[e] = millis() + WATCH_TEMP_PERIOD * 1000;
+      watch_heater_next_ms[e] = millis() + WATCH_TEMP_PERIOD * 1000UL;
     }
     else
       watch_heater_next_ms[e] = 0;
@@ -1022,7 +1030,7 @@ void tp_init() {
 
   void thermal_runaway_protection(TRState *state, millis_t *timer, float temperature, float target_temperature, int heater_id, int period_seconds, int hysteresis_degc) {
 
-
+    static float tr_target_temperature[HOTENDS + 1] = { 0.0 };
     /*
         ECHO_SM(DB, "Thermal Thermal Runaway Running. Heater ID: ");
         if (heater_id < 0) ECHO_M("bed"); else ECHO_V(heater_id);
@@ -1042,7 +1050,6 @@ void tp_init() {
       case TRReset:
         *timer = 0;
         *state = TRInactive;
-        break;
       // Inactive state waits for a target temperature to be set
       case TRInactive:
         if (target_temperature > 0) {
@@ -1081,7 +1088,9 @@ void disable_all_heaters() {
   }
 
   #if HAS_TEMP_0
-    DISABLE_HEATER(0);
+    target_temperature[0] = 0;
+    soft_pwm[0] = 0;
+    WRITE_HEATER_0P(LOW); // Should HEATERS_PARALLEL apply here? Then change to DISABLE_HEATER(0)
   #endif
 
   #if HOTENDS > 1 && HAS_TEMP_1
@@ -1405,16 +1414,13 @@ HAL_TEMP_TIMER_ISR {
     } // (pwm_count % 64) == 0
   
   #endif // SLOW_PWM_HEATERS
-
-  #define START_TEMP(temp_id) startAdcConversion(pinToAdcChannel(TEMP_## temp_id ##_PIN))
-  #define START_BED_TEMP() startAdcConversion(pinToAdcChannel(TEMP_BED_PIN))
   
-  #define READ_TEMP(temp_id) temp_read = getAdcReading(pinToAdcChannel(TEMP_## temp_id ##_PIN)); \
+  #define READ_TEMP(temp_id) temp_read = getAdcFreerun(pinToAdcChannel(TEMP_## temp_id ##_PIN)); \
     raw_temp_value[temp_id] += temp_read; \
     max_temp[temp_id] = max(max_temp[temp_id], temp_read); \
     min_temp[temp_id] = min(min_temp[temp_id], temp_read)
     
-  #define READ_BED_TEMP(temp_id) temp_read = getAdcReading(pinToAdcChannel(TEMP_BED_PIN)); \
+  #define READ_BED_TEMP(temp_id) temp_read = getAdcFreerun(pinToAdcChannel(TEMP_BED_PIN)); \
     raw_temp_bed_value += temp_read; \
     max_temp[temp_id] = max(max_temp[temp_id], temp_read); \
     min_temp[temp_id] = min(min_temp[temp_id], temp_read)
@@ -1423,7 +1429,7 @@ HAL_TEMP_TIMER_ISR {
   switch(temp_state) {
     case PrepareTemp_0:
       #if HAS_TEMP_0
-        START_TEMP(0);
+        //START_TEMP(0);
       #endif
       lcd_buttons_update();
       temp_state = MeasureTemp_0;
@@ -1437,7 +1443,7 @@ HAL_TEMP_TIMER_ISR {
 
     case PrepareTemp_BED:
       #if HAS_TEMP_BED
-        START_BED_TEMP();
+        //START_BED_TEMP();
       #endif
       lcd_buttons_update();
       temp_state = MeasureTemp_BED;
