@@ -750,7 +750,9 @@ void setup() {
   Config_RetrieveSettings();
 
   lcd_init();
-  _delay_ms(SPLASH_SCREEN_DURATION);  // wait to display the splash screen
+  #ifndef NEXTION
+    _delay_ms(SPLASH_SCREEN_DURATION);  // wait to display the splash screen
+  #endif
 
   tp_init();    // Initialize temperature loop
   plan_init();  // Initialize planner;
@@ -1708,7 +1710,7 @@ static void clean_up_after_endstop_move() {
         #endif
         srv->write(servo_endstop_angles[Z_AXIS * 2]);
         #if SERVO_LEVELING_DELAY
-          delay(PROBE_SERVO_DEACTIVATION_DELAY);
+          delay(SERVO_DEACTIVATION_DELAY);
           srv->detach();
         #endif
       }
@@ -1768,7 +1770,7 @@ static void clean_up_after_endstop_move() {
         #endif
         srv->write(servo_endstop_angles[Z_AXIS * 2 + 1]);
         #if SERVO_LEVELING
-          delay(PROBE_SERVO_DEACTIVATION_DELAY);
+          delay(SERVO_DEACTIVATION_DELAY);
           srv->detach();
         #endif
 
@@ -3454,47 +3456,54 @@ inline void gcode_G28() {
       // solve lsq problem
       double *plane_equation_coefficients = qr_solve(abl2, 3, eqnAMatrix, eqnBVector);
 
-      mean /= abl2;
-
       if (verbose_level) {
         ECHO_SMV(DB, "Eqn coefficients: a: ", plane_equation_coefficients[0], 8);
         ECHO_MV(" b: ", plane_equation_coefficients[1], 8);
         ECHO_EMV(" d: ", plane_equation_coefficients[2], 8);
-        if (verbose_level > 2) {
-          ECHO_LMV(DB, "Mean of sampled points: ", mean, 8);
-        }
       }
 
       if (!dryrun) set_bed_level_equation_lsq(plane_equation_coefficients);
       free(plane_equation_coefficients);
+      matrix_3x3 inverse_bed_level_matrix = matrix_3x3::transpose(plan_bed_level_matrix); // inverse bed level matrix
+
+      // search minimum and maximum point on bed in rotated coordinates
+      float rot_diff = 0,
+            rot_min_diff = Z_MAX_POS,
+            rot_max_diff = -Z_MAX_POS;
+      for (int ProbeCount = 0; ProbeCount < abl2; ProbeCount++) {
+        vector_3 probe_point = vector_3(eqnAMatrix[ProbeCount + 0 * abl2], eqnAMatrix[ProbeCount + 1 * abl2], eqnBVector[ProbeCount]);
+        probe_point.apply_rotation(inverse_bed_level_matrix);
+        float rot_diff =  probe_point.z ;
+        if (rot_diff < rot_min_diff ) rot_min_diff = rot_diff;
+        if (rot_diff > rot_max_diff ) rot_max_diff = rot_diff;
+      }
+      //ECHO_LMV(DB, "rot_min_diff=", rot_min_diff, 5);
+      //ECHO_LMV(DB, "rot_max_diff=", rot_max_diff, 5);
+      //ECHO_LMV(DB, "difference=", rot_max_diff - rot_min_diff, 5);
 
       // Show the Topography map if enabled
       if (do_topography_map) {
+        // search minimum measured Z
+        float diff = 0,
+              min_diff = Z_MAX_POS;
+        for (int ProbeCount = 0; ProbeCount < abl2; ProbeCount++) {
+          diff = eqnBVector[ProbeCount];
+          if (diff < min_diff ) min_diff = diff;
+        }
+        //ECHO_LMV(DB, "min_diff=", min_diff, 5);
 
-        ECHO_LM(DB, "Bed Height Topography:");
-        ECHO_LM(DB, "+-----------+");
-        ECHO_LM(DB, "|...Back....|");
-        ECHO_LM(DB, "|Left..Right|");
-        ECHO_LM(DB, "|...Front...|");
-        ECHO_LM(DB, "+-----------+");
-
-        float min_diff = 999;
+        ECHO_LM(DB, "+-----------+\n");
+        ECHO_LM(DB, "|...Back....|\n");
+        ECHO_LM(DB, "|Left..Right|\n");
+        ECHO_LM(DB, "|...Front...|\n");
+        ECHO_LM(DB, "+-----------+\n");
+        ECHO_LM(DB, "Bed Height Topography: \n");
 
         for (int yy = auto_bed_leveling_grid_points - 1; yy >= 0; yy--) {
           ECHO_S(DB);
           for (int xx = 0; xx < auto_bed_leveling_grid_points; xx++) {
             int ind = yy * auto_bed_leveling_grid_points + xx;
-            float diff = eqnBVector[ind] - mean;
-            
-            float x_tmp = eqnAMatrix[ind + 0 * abl2],
-              y_tmp = eqnAMatrix[ind + 1 * abl2],
-              z_tmp = 0;
-
-            apply_rotation_xyz(plan_bed_level_matrix,x_tmp,y_tmp,z_tmp);
-
-            if (eqnBVector[ind] - z_tmp < min_diff)
-              min_diff = eqnBVector[ind] - z_tmp;
-
+            float diff = eqnBVector[ind];
             if (diff >= 0.0)
               ECHO_M(" +");   // Include + for column alignment
             else
@@ -3504,31 +3513,62 @@ inline void gcode_G28() {
           ECHO_E;
         } // yy
         ECHO_E;
-        if (verbose_level > 3) {
-          ECHO_LM(DB, "Corrected Bed Height vs. Bed Topology:");
-          for (int yy = auto_bed_leveling_grid_points - 1; yy >= 0; yy--) {
-            ECHO_S(DB);
-            for (int xx = 0; xx < auto_bed_leveling_grid_points; xx++) {
-              int ind = yy * auto_bed_leveling_grid_points + xx;
-              float x_tmp = eqnAMatrix[ind + 0 * abl2],
-                y_tmp = eqnAMatrix[ind + 1 * abl2],
-                z_tmp = 0;
 
-              apply_rotation_xyz(plan_bed_level_matrix, x_tmp, y_tmp, z_tmp);
-
-              float diff = eqnBVector[ind] - z_tmp - min_diff;
-              if (diff >= 0.0)
-                ECHO_M(" +");
-              // Include + for column alignment
-              else
-                ECHO_M(" ");
-              ECHO_V(diff, 5);
-            } // xx
-            ECHO_E;
-          } // yy
+        ECHO_LM(DB, " Corrected Bed Topography: \n");
+        for (int yy = auto_bed_leveling_grid_points - 1; yy >= 0; yy--) {
+          ECHO_S(DB);
+          for (int xx = 0; xx < auto_bed_leveling_grid_points; xx++) {
+            int ind = yy * auto_bed_leveling_grid_points + xx;
+            float diff = eqnBVector[ind] - min_diff;
+            if (diff >= 0.0)
+              ECHO_M(" +");   // Include + for column alignment
+            else
+              ECHO_M(" ");
+            ECHO_V(diff, 5);
+          } // xx
           ECHO_E;
-        }
-      } //do_topography_map
+        } // yy
+        ECHO_E;
+
+        ECHO_SM(DB, " Corrected Bed Topography in new coordinates:\n");
+        for (int yy = auto_bed_leveling_grid_points - 1; yy >= 0; yy--) {
+          ECHO_S(DB);
+          for (int xx = 0; xx < auto_bed_leveling_grid_points; xx++) {
+            int ind = yy * auto_bed_leveling_grid_points + xx;
+            vector_3 probe_point = vector_3(eqnAMatrix[ind + 0 * abl2], eqnAMatrix[ind + 1 * abl2], eqnBVector[ind]);
+            probe_point.apply_rotation(inverse_bed_level_matrix);
+            float diff = probe_point.z - rot_min_diff;
+            if (diff >= 0.0)
+              ECHO_M(" +");
+            // Include + for column alignment
+            else
+              ECHO_M(" ");
+            ECHO_V(diff, 5);
+          } // xx
+          ECHO_E;
+        } // yy
+        ECHO_E;
+
+        ECHO_LM(DB, " Height from Bed to Nozzle : \n");
+        ECHO_LM(DB, " (+) is airprinting, (-) is touch under bed surface \n");
+        for (int yy = auto_bed_leveling_grid_points - 1; yy >= 0; yy--) {
+          ECHO_S(DB);
+          for (int xx = 0; xx < auto_bed_leveling_grid_points; xx++) {
+            int ind = yy * auto_bed_leveling_grid_points + xx;
+            vector_3 probe_point = vector_3(eqnAMatrix[ind + 0 * abl2], eqnAMatrix[ind + 1 * abl2], eqnBVector[ind]);
+            probe_point.apply_rotation(inverse_bed_level_matrix);
+            float diff = -(probe_point.z - rot_max_diff);
+            if (diff >= 0.0)
+              ECHO_M(" +");
+            // Include + for column alignment
+            else
+              ECHO_M(" ");
+            ECHO_V(diff, 5);
+          } // xx
+          ECHO_E;
+        } // yy
+        ECHO_E;
+      }
 
     #else // !AUTO_BED_LEVELING_GRID
 
@@ -3552,36 +3592,13 @@ inline void gcode_G28() {
       plan_bed_level_matrix.debug("Bed Level Correction Matrix:");
 
     if (!dryrun) {
-      // Correct the Z height difference from z-probe position and hotend tip position.
-      // The Z height on homing is measured by Z-Probe, but the probe is quite far from the hotend.
-      // When the bed is uneven, this height must be corrected.
-      float x_tmp = current_position[X_AXIS] + X_PROBE_OFFSET_FROM_EXTRUDER,
-            y_tmp = current_position[Y_AXIS] + Y_PROBE_OFFSET_FROM_EXTRUDER,
-            z_tmp = current_position[Z_AXIS],
-            real_z = st_get_position_mm(Z_AXIS);  //get the real Z (since the auto bed leveling is already correcting the plane)
-
-      apply_rotation_xyz(plan_bed_level_matrix, x_tmp, y_tmp, z_tmp); //Apply the correction sending the probe offset
-
-      // Get the current Z position and send it to the planner.
-      //
-      // >> (z_tmp - real_z) : The rotated current Z minus the uncorrected Z (most recent plan_set_position/sync_plan_position)
-      //
-      // >> zprobe_zoffset : Z distance from nozzle to probe (set by default, M851, EEPROM, or Menu)
-      //
-      // >> Z_RAISE_AFTER_PROBING : The distance the probe will have lifted after the last probe
-      //
-      // >> Should home_offset[Z_AXIS] be included?
-      //
-      //      Discussion: home_offset[Z_AXIS] was applied in G28 to set the starting Z.
-      //      If Z is not tweaked in G29 -and- the Z probe in G29 is not actually "homing" Z...
-      //      then perhaps it should not be included here. The purpose of home_offset[] is to
-      //      adjust for inaccurate endstops, not for reasonably accurate probes. If it were
-      //      added here, it could be seen as a compensating factor for the Z probe.
-      //
-      current_position[Z_AXIS] = -zprobe_zoffset + (z_tmp - real_z) + Z_RAISE_AFTER_PROBING;
-      // current_position[Z_AXIS] += home_offset[Z_AXIS]; // The probe determines Z=0, not "Z home"
-      sync_plan_position();
-    }
+        int ind = abl2-1; // last point probe = current point
+        vector_3 probe_point = vector_3(eqnAMatrix[ind + 0 * abl2], eqnAMatrix[ind + 1 * abl2], eqnBVector[ind]);
+        probe_point.apply_rotation(inverse_bed_level_matrix);
+        current_position[Z_AXIS] = probe_point.z - rot_max_diff - zprobe_zoffset;
+        sync_plan_position();
+        //ECHO_LMV(DB, "current_position[Z_AXIS]=", current_position[Z_AXIS], 5);
+      }
 
     #ifdef Z_PROBE_SLED
       dock_sled(true, -SLED_DOCKING_OFFSET); // dock the probe, correcting for over-travel
@@ -4466,7 +4483,7 @@ inline void gcode_M42() {
       OUT_WRITE(SUICIDE_PIN, HIGH);
     #endif
 
-    #ifdef ULTIPANEL
+    #if defined(ULTIPANEL) || defined(NEXTION)
       powersupply = true;
       LCD_MESSAGEPGM(WELCOME_MSG);
       lcd_update();
@@ -4763,7 +4780,7 @@ inline void gcode_M115() {
   ECHO_M(MSG_M115_REPORT);
 }
 
-#ifdef ULTIPANEL
+#if defined(ULTIPANEL) || defined(NEXTION)
 
   /**
    * M117: Set LCD Status Message
@@ -5169,7 +5186,7 @@ inline void gcode_M206() {
     #endif
 
     ECHO_SM(DB, MSG_HOTEND_OFFSET);
-    for (int e = 0; e < EXTRUDERS; e++) {
+    for (int e = 0; e < HOTENDS; e++) {
       ECHO_MV(" ", hotend_offset[X_AXIS][e]);
       ECHO_MV(",", hotend_offset[Y_AXIS][e]);
       #ifdef DUAL_X_CARRIAGE
@@ -5178,7 +5195,7 @@ inline void gcode_M206() {
     }
     ECHO_E;
   }
-#endif //HOTENDS > 1
+#endif // HOTENDS > 1
 
 /**
  * M220: Set speed percentage factor, aka "Feed Rate" (M220 S95)
@@ -5306,7 +5323,7 @@ inline void gcode_M226() {
         #endif
         srv->write(servo_position);
         #if SERVO_LEVELING
-          delay(PROBE_SERVO_DEACTIVATION_DELAY);
+          delay(SERVO_DEACTIVATION_DELAY);
           srv->detach();
         #endif
       }
@@ -6598,7 +6615,7 @@ void process_next_command() {
       case 115: // M115 Report capabilities
         gcode_M115(); break;
 
-      #ifdef ULTIPANEL
+      #if defined(ULTIPANEL) || defined (NEXTION)
         case 117: // M117 display message
           gcode_M117(); break;
       #endif

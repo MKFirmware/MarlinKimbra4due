@@ -24,8 +24,7 @@
 static void ST7920_SWSPI_SND_8BIT(uint8_t val)
 {
   uint8_t i;
-  for( i = 0; i < 8; i++ )
-  {
+  for( i = 0; i < 8; i++ ) {
     WRITE_VAR(ST7920_CLK_PIN,0);
     WRITE_VAR(ST7920_DAT_PIN,val&0x80); 
     val<<=1;

@@ -16,6 +16,10 @@
 #ifndef __NexSerialConfig_H__
 #define __NexSerialConfig_H__
 
+// Nextion Baudrate - default 9600
+// 2400 - 4800 - 9600 - 19200 - 38400 - 57600 - 115200
+#define NEXTION_BAUDRATE 9600
+
 /*enable debug serial*/
 //#define DEBUG_SERIAL_ENABLE
 

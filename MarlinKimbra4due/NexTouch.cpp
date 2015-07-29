@@ -360,7 +360,7 @@ bool NexTouch::getBrightness(uint32_t *brightness)
  */
 bool nexInit(void)
 {
-    nexSerial.begin(9600);
+    nexSerial.begin(NEXTION_BAUDRATE);
     NexTouch::sendCommand("");
     NexTouch::sendCommand("page 0");
     delay(100);
@@ -635,6 +635,14 @@ bool sleepMode(uint8_t mode)
     return ret; 
 }
 
+/**
+ * Set current baudrate. 
+ *
+ * @param  baudrate - current baudrate,it supports 2400,4800,9600,19200,38400,57600,115200.
+ * 
+ * @retval true - success. 
+ * @retval false - failed.
+ */
 bool setCurrentBaudrate(uint32_t baudrate)
 {
     bool ret = false;
@@ -662,7 +670,7 @@ bool setCurrentBaudrate(uint32_t baudrate)
 /**
  * Set default baudrate. 
  *
- * @param  defaultBaudrate - default baudrate,it surrpots 2400,4800,9600,19200,38400,57600,38400.
+ * @param  defaultBaudrate - default baudrate,it supports 2400,4800,9600,19200,38400,57600,115200.
  * 
  * @retval true - success. 
  * @retval false - failed.

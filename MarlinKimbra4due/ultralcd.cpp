@@ -1004,21 +1004,15 @@ static void lcd_control_temperature_menu() {
   #if TEMP_SENSOR_0 != 0
     MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 0", &target_temperature[0], 0, HEATER_0_MAXTEMP + LCD_MAX_TEMP_OFFSET);
   #endif
-  #if HOTENDS > 1
-    #if TEMP_SENSOR_1 != 0
-      MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 1", &target_temperature[1], 0, HEATER_1_MAXTEMP + LCD_MAX_TEMP_OFFSET);
-    #endif
-    #if HOTENDS > 2
-      #if TEMP_SENSOR_2 != 0
-        MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 2", &target_temperature[2], 0, HEATER_2_MAXTEMP + LCD_MAX_TEMP_OFFSET);
-      #endif
-      #if HOTENDS > 3
-        #if TEMP_SENSOR_3 != 0
-          MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 3", &target_temperature[3], 0, HEATER_3_MAXTEMP + LCD_MAX_TEMP_OFFSET);
-        #endif
-      #endif //HOTENDS > 3
-    #endif //HOTENDS > 2
-  #endif //HOTENDS > 1
+  #if HOTENDS > 1 && TEMP_SENSOR_1 != 0
+    MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 1", &target_temperature[1], 0, HEATER_1_MAXTEMP + LCD_MAX_TEMP_OFFSET);
+    #if HOTENDS > 2 && TEMP_SENSOR_2 != 0
+      MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 2", &target_temperature[2], 0, HEATER_2_MAXTEMP + LCD_MAX_TEMP_OFFSET);
+      #if HOTENDS > 3 && TEMP_SENSOR_3 != 0
+        MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_NOZZLE " 3", &target_temperature[3], 0, HEATER_3_MAXTEMP + LCD_MAX_TEMP_OFFSET);
+      #endif // HOTENDS > 3
+    #endif // HOTENDS > 2
+  #endif // HOTENDS > 1
 
   //
   // Bed
@@ -1080,10 +1074,10 @@ static void lcd_control_temperature_menu() {
           // i is typically a small value so allows values below 1
           MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_I MSG_H3, &raw_Ki, 0.01, 9990, copy_and_scalePID_i_H3);
           MENU_ITEM_EDIT_CALLBACK(float52, MSG_PID_D MSG_H3, &raw_Kd, 1, 9990, copy_and_scalePID_d_H3);
-        #endif //HOTENDS > 3
-      #endif //HOTENDS > 2
-    #endif //HOTENDS > 1
-  #endif //PIDTEMP
+        #endif // HOTENDS > 3
+      #endif // HOTENDS > 2
+    #endif // HOTENDS > 1
+  #endif // PIDTEMP
 
   //
   // Preheat PLA conf
@@ -1584,6 +1578,7 @@ void lcd_init() {
   #ifdef ULTIPANEL
     encoderDiff = 0;
   #endif
+
 }
 
 int lcd_strlen(char *s) {
@@ -1832,7 +1827,7 @@ void lcd_reset_alert_level() { lcd_status_message_level = 0; }
     #define encrot1 2
     #define encrot2 3
     #define encrot3 1
-  #endif 
+  #endif
 
   /**
    * Read encoder buttons from the hardware registers
@@ -2274,6 +2269,8 @@ char *ftostr52(const float &x) {
 #include "NexProgressBar.h"
 
 char buffer[100]    = {0};
+char lcd_status_message[30] = WELCOME_MSG; // worst case is kana with up to 3*LCD_WIDTH+1
+uint8_t lcd_status_message_level = 0;
 
 // Text
 NexText Hotend0     = NexText(1, 3,   "t0");
@@ -2281,6 +2278,8 @@ NexText Hotend1     = NexText(1, 7,   "t1");
 NexText Hotend2     = NexText(1, 9,   "t2");
 NexText Hotend3     = NexText(1, 12,  "t3");
 NexText Bed         = NexText(1, 16,  "t4");
+NexText LedStatus   = NexText(1, 26,  "t5");
+NexText LedCoord    = NexText(1, 27,  "t6");
 NexText set0        = NexText(2, 2,   "set0");
 NexText set1        = NexText(2, 15,  "set1");
 
@@ -2391,12 +2390,16 @@ void sethotPopCallback(void *ptr) {
   set1.getText(buffer, sizeof(buffer));
   enqueuecommands_P(buffer);
   NexTouch::sendCommand("page menu");
+  lcd_setstatus(lcd_status_message);
 }
 
 millis_t next_lcd_update_ms;
 
 void lcd_init() {
   nexInit();
+  delay(SPLASH_SCREEN_DURATION);  // wait to display the splash screen
+  NexTouch::sendCommand("page menu");
+  lcd_setstatus(WELCOME_MSG);
 }
 
 static void temptoLCD(int h, int T1, int T2) {
@@ -2458,6 +2461,45 @@ static void temptoLCD(int h, int T1, int T2) {
   }
 }
 
+static void coordtoLCD() {
+  char *valuetemp;
+
+  memset(buffer, 0, sizeof(buffer));
+  strcat(buffer, "X");
+  if (axis_known_position[X_AXIS]) {
+    #ifdef DELTA
+      valuetemp = ftostr30(current_position[X_AXIS]);
+    #else
+      valuetemp = ftostr3(current_position[X_AXIS]);
+    #endif
+    strcat(buffer, valuetemp);
+  }
+  else
+    strcat(buffer, "---");
+
+  strcat(buffer, " Y");
+  if (axis_known_position[Y_AXIS]) {
+    #ifdef DELTA
+      valuetemp = ftostr30(current_position[Y_AXIS]);
+    #else
+      valuetemp = ftostr3(current_position[Y_AXIS]);
+    #endif
+    strcat(buffer, valuetemp);
+  }
+  else
+    strcat(buffer, "---");
+  
+  strcat(buffer, " Z");
+  if (axis_known_position[Z_AXIS]) {
+    valuetemp = ftostr32sp(current_position[Z_AXIS] + 0.00001);
+    strcat(buffer, valuetemp);
+  }
+  else
+    strcat(buffer, "---");
+  
+  LedCoord.setText(buffer);
+}
+
 void lcd_update() {
   millis_t ms = millis();
 
@@ -2471,10 +2513,31 @@ void lcd_update() {
       temptoLCD(4, degBed(), degTargetBed());
     #endif
 
-    next_lcd_update_ms = ms + LCD_UPDATE_INTERVAL;
+    coordtoLCD();
 
+    next_lcd_update_ms = ms + LCD_UPDATE_INTERVAL;
   }
 }
+
+void lcd_setstatus(const char* message, bool persist) {
+  if (lcd_status_message_level > 0) return;
+  strncpy(lcd_status_message, message, 30);
+  LedStatus.setText(lcd_status_message);
+}
+
+void lcd_setstatuspgm(const char* message, uint8_t level) {
+  if (level >= lcd_status_message_level) {
+    strncpy_P(lcd_status_message, message, 30);
+    lcd_status_message_level = level;
+    LedStatus.setText(lcd_status_message);
+  }
+}
+
+void lcd_setalertstatuspgm(const char* message) {
+  lcd_setstatuspgm(message, 1);
+}
+
+void lcd_reset_alert_level() { lcd_status_message_level = 0; }
 
 /*********************************/
 /** Number to string conversion **/
