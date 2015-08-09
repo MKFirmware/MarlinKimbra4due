@@ -29,12 +29,12 @@
 
 #include "Marlin.h"
 
-#if ENABLED(ENABLE_AUTO_BED_LEVELING)
+#if ENABLED(AUTO_BED_LEVELING_FEATURE)
   #include "vector_3.h"
   #if ENABLED(AUTO_BED_LEVELING_GRID)
     #include "qr_solve.h"
   #endif
-#endif // ENABLE_AUTO_BED_LEVELING
+#endif // AUTO_BED_LEVELING_FEATURE
 
 
 #include "ultralcd.h"
@@ -1097,7 +1097,7 @@ XYZ_CONSTS_FROM_CONFIG(float, base_min_pos,    MIN_POS);
 XYZ_CONSTS_FROM_CONFIG(float, home_bump_mm,    HOME_BUMP_MM);
 XYZ_CONSTS_FROM_CONFIG(signed char, home_dir,  HOME_DIR);
 
-#ifdef DUAL_X_CARRIAGE
+#if ENABLED(DUAL_X_CARRIAGE)
 
   #define DXC_FULL_CONTROL_MODE 0
   #define DXC_AUTO_PARK_MODE    1
@@ -1130,9 +1130,20 @@ XYZ_CONSTS_FROM_CONFIG(signed char, home_dir,  HOME_DIR);
 
 #endif //DUAL_X_CARRIAGE
 
-static void axis_is_at_home(AxisEnum axis) {
+void print_xyz(const char *prefix, const float x, const float y, const float z) {
+  ECHO_V(prefix);
+  ECHO_MV(": (", x);
+  ECHO_MV(", ", y);
+  ECHO_MV(", ", z);
+  ECHO_EM(")");
+}
+void print_xyz(const char *prefix, const float xyz[]) {
+  print_xyz(prefix, xyz[X_AXIS], xyz[Y_AXIS], xyz[Z_AXIS]);
+}
 
-  #ifdef DUAL_X_CARRIAGE
+static void set_axis_is_at_home(AxisEnum axis) {
+
+  #if ENABLED(DUAL_X_CARRIAGE)
     if (axis == X_AXIS) {
       if (active_extruder != 0) {
         current_position[X_AXIS] = x_home_pos(active_extruder);
@@ -1150,7 +1161,7 @@ static void axis_is_at_home(AxisEnum axis) {
     }
   #endif
 
-  #ifdef SCARA
+  #if ENABLED(SCARA)
 
     if (axis == X_AXIS || axis == Y_AXIS) {
 
@@ -1190,7 +1201,7 @@ static void axis_is_at_home(AxisEnum axis) {
                min_pos[axis] = base_min_pos(axis)  + home_offset[axis];
                max_pos[axis] = base_max_pos(axis)  + home_offset[axis];
     }
-  #elif defined(DELTA)
+  #elif ENABLED(DELTA)
     current_position[axis] = base_home_pos[axis] + home_offset[axis];
              min_pos[axis] = base_min_pos(axis)  + home_offset[axis];
              max_pos[axis] = base_max_pos[axis]  + home_offset[axis];
@@ -1200,9 +1211,15 @@ static void axis_is_at_home(AxisEnum axis) {
              max_pos[axis] = base_max_pos(axis)  + home_offset[axis];
   #endif
   
-  #if defined(ENABLE_AUTO_BED_LEVELING) && Z_HOME_DIR < 0
+  #if ENABLED(AUTO_BED_LEVELING_FEATURE) && Z_HOME_DIR < 0
     if (axis == Z_AXIS) current_position[Z_AXIS] -= zprobe_zoffset;
   #endif
+  
+  if (debugLevel & DEBUG_INFO) {
+    ECHO_SMV(DB, "set_axis_is_at_home ", (unsigned long)axis);
+    ECHO_MV(" > (home_offset[axis]==", home_offset[axis]);
+    print_xyz(") > current_position", current_position);
+  }
 }
 
 /**
@@ -1251,11 +1268,13 @@ static void setup_for_endstop_move() {
   saved_feedrate_multiplier = feedrate_multiplier;
   feedrate_multiplier = 100;
   refresh_cmd_timeout();
+  if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "setup_for_endstop_move > enable_endstops(true)");
   enable_endstops(true);
 }
 
 static void clean_up_after_endstop_move() {
-  #ifdef ENDSTOPS_ONLY_FOR_HOMING
+  #if ENABLED(ENDSTOPS_ONLY_FOR_HOMING)
+    if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "clean_up_after_endstop_move > ENDSTOPS_ONLY_FOR_HOMING > enable_endstops(false)");
     enable_endstops(false);
   #endif
   feedrate = saved_feedrate;
@@ -1264,7 +1283,7 @@ static void clean_up_after_endstop_move() {
   refresh_cmd_timeout();
 }
 
-#if defined(CARTESIAN) || defined(COREXY) || defined(COREXZ) || defined(SCARA)
+#if ENABLED(CARTESIAN) || ENABLED(COREXY) || ENABLED(COREXZ) || ENABLED(SCARA)
 
   /**
    *  Plan a move to (X, Y, Z) and set the current_position
@@ -1273,6 +1292,11 @@ static void clean_up_after_endstop_move() {
   static void do_blocking_move_to(float x, float y, float z) {
     float oldFeedRate = feedrate;
     feedrate = homing_feedrate[Z_AXIS];
+
+    if (debugLevel & DEBUG_INFO) {
+      ECHO_S(DB);
+      print_xyz("do_blocking_move_to", x, y, z);
+    }
 
     current_position[Z_AXIS] = z;
     line_to_current_position();
@@ -1292,9 +1316,9 @@ static void clean_up_after_endstop_move() {
   inline void do_blocking_move_to_x(float x) { do_blocking_move_to(x, current_position[Y_AXIS], current_position[Z_AXIS]); }
   inline void do_blocking_move_to_z(float z) { do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS], z); }
 
-  #ifdef ENABLE_AUTO_BED_LEVELING
+  #if ENABLED(AUTO_BED_LEVELING_FEATURE)
 
-    #ifdef AUTO_BED_LEVELING_GRID
+    #if ENABLED(AUTO_BED_LEVELING_GRID)
       static void set_bed_level_equation_lsq(double *plane_equation_coefficients) {
         vector_3 planeNormal = vector_3(-plane_equation_coefficients[0], -plane_equation_coefficients[1], 1);
         planeNormal.debug("planeNormal");
@@ -1310,6 +1334,11 @@ static void clean_up_after_endstop_move() {
         current_position[X_AXIS] = corrected_position.x;
         current_position[Y_AXIS] = corrected_position.y;
         current_position[Z_AXIS] = corrected_position.z;
+
+        if (debugLevel & DEBUG_INFO) {
+          ECHO_S(DB);
+          print_xyz("set_bed_level_equation_lsq > current_position", current_position);
+        }
 
         sync_plan_position();
       }
@@ -1335,6 +1364,11 @@ static void clean_up_after_endstop_move() {
         current_position[X_AXIS] = corrected_position.x;
         current_position[Y_AXIS] = corrected_position.y;
         current_position[Z_AXIS] = corrected_position.z;
+
+        if (debugLevel & DEBUG_INFO) {
+          ECHO_S(DB);
+          print_xyz("set_bed_level_equation_3pts > current_position", current_position);
+        }
 
         sync_plan_position();
       }
@@ -1372,9 +1406,18 @@ static void clean_up_after_endstop_move() {
       // Get the current stepper position after bumping an endstop
       current_position[Z_AXIS] = st_get_position_mm(Z_AXIS);
       sync_plan_position();
+
+      if (debugLevel & DEBUG_INFO) {
+        ECHO_S(DB);
+        print_xyz("run_z_probe > current_position", current_position);
+      }
     }
 
     static void deploy_z_probe() {
+      if (debugLevel & DEBUG_INFO) {
+        ECHO_S(DB);
+        print_xyz("deploy_z_probe > current_position", current_position);
+      }
       #if HAS_SERVO_ENDSTOPS
         // Engage Z Servo endstop if enabled
         if (servo_endstop_id[Z_AXIS] >= 0) servo[servo_endstop_id[Z_AXIS]].move(servo_endstop_angle[Z_AXIS][0]);
@@ -1382,12 +1425,20 @@ static void clean_up_after_endstop_move() {
     }
 
     static void stow_z_probe(bool doRaise = true) {
+      if (debugLevel & DEBUG_INFO) {
+        ECHO_S(DB);
+        print_xyz("stow_z_probe > current_position", current_position);
+      }
       #if HAS_SERVO_ENDSTOPS
         // Retract Z Servo endstop if enabled
         if (servo_endstop_id[Z_AXIS] >= 0) {
 
           #if Z_RAISE_AFTER_PROBING > 0
             if (doRaise) {
+              if (debugLevel & DEBUG_INFO) {
+                ECHO_LMV(DB, "Raise Z (after) by ", (float)Z_RAISE_AFTER_PROBING);
+                ECHO_LMV(DB, "> SERVO_ENDSTOPS > do_blocking_move_to_z ", current_position[Z_AXIS] + Z_RAISE_AFTER_PROBING);
+              }
               do_blocking_move_to_z(current_position[Z_AXIS] + Z_RAISE_AFTER_PROBING); // this also updates current_position
               st_synchronize();
             }
@@ -1408,19 +1459,39 @@ static void clean_up_after_endstop_move() {
 
     // Probe bed height at position (x,y), returns the measured z value
     static float probe_pt(float x, float y, float z_before, ProbeAction probe_action = ProbeDeployAndStow, int verbose_level = 1) {
-      // move to right place
+      if (debugLevel & DEBUG_INFO) {
+        ECHO_LM(DB, "probe_pt >>>");
+        ECHO_LMV(DB, "> ProbeAction:", (unsigned long)probe_action);
+        print_xyz("> current_position", current_position);
+        ECHO_LMV(DB, "Z Raise to z_before ", z_before);
+        ECHO_LMV(DB, "> do_blocking_move_to_z ", z_before);
+      }
+
+      // Move Z up to the z_before height, then move the probe to the given XY
       do_blocking_move_to_z(z_before); // this also updates current_position
+
+      if (debugLevel & DEBUG_INFO) {
+        ECHO_SMV("> do_blocking_move_to_xy ", x - X_PROBE_OFFSET_FROM_EXTRUDER);
+        ECHO_EMV(", ", y - Y_PROBE_OFFSET_FROM_EXTRUDER);
+      }
+
       do_blocking_move_to_xy(x - X_PROBE_OFFSET_FROM_EXTRUDER, y - Y_PROBE_OFFSET_FROM_EXTRUDER); // this also updates current_position
 
-      #ifndef Z_PROBE_SLED
-        if (probe_action & ProbeDeploy) deploy_z_probe();
-      #endif // Z_PROBE_SLED
+      #if DISABLED(Z_PROBE_SLED)
+        if (probe_action & ProbeDeploy) {
+          if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "> ProbeDeploy");
+          deploy_z_probe();
+        }
+      #endif
 
       run_z_probe();
       float measured_z = current_position[Z_AXIS];
 
-      #ifndef Z_PROBE_SLED
-        if (probe_action & ProbeStow) stow_z_probe();
+      #if DISABLED(Z_PROBE_SLED)
+        if (probe_action & ProbeStow) {
+          if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "> ProbeStow (stow_z_probe will do Z Raise)");
+          stow_z_probe();
+        }
       #endif
 
       if (verbose_level > 2) {
@@ -1429,18 +1500,26 @@ static void clean_up_after_endstop_move() {
         ECHO_MV(MSG_BED_LEVELLING_Y, y, 3);
         ECHO_EMV(MSG_BED_LEVELLING_Z, measured_z, 3);
       }
+
+      if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "<<< probe_pt");
+
       return measured_z;
     }
-  #endif //ENABLE_AUTO_BED_LEVELING
+  #endif //AUTO_BED_LEVELING_FEATURE
 
   static void homeaxis(AxisEnum axis) {
   #define HOMEAXIS_DO(LETTER) \
     ((LETTER##_MIN_PIN > -1 && LETTER##_HOME_DIR==-1) || (LETTER##_MAX_PIN > -1 && LETTER##_HOME_DIR==1))
 
+    if (debugLevel & DEBUG_INFO) {
+      ECHO_SMV(DB, ">>> homeaxis(", (unsigned long)axis);
+      ECHO_EM(")");
+    }
+
     if (axis == X_AXIS ? HOMEAXIS_DO(X) : axis == Y_AXIS ? HOMEAXIS_DO(Y) : axis == Z_AXIS ? HOMEAXIS_DO(Z) : 0) {
 
       int axis_home_dir =
-      #ifdef DUAL_X_CARRIAGE
+      #if ENABLED(DUAL_X_CARRIAGE)
         (axis == X_AXIS) ? x_home_dir(active_extruder) :
       #endif
       home_dir(axis);
@@ -1449,7 +1528,7 @@ static void clean_up_after_endstop_move() {
       current_position[axis] = 0;
       sync_plan_position();
 
-      #ifdef Z_PROBE_SLED
+      #if ENABLED(Z_PROBE_SLED)
         // Get Probe
         if (axis == Z_AXIS) {
           if (axis_home_dir < 0) dock_sled(false);
@@ -1470,7 +1549,7 @@ static void clean_up_after_endstop_move() {
       #endif
 
       // Set a flag for Z motor locking
-      #ifdef Z_DUAL_ENDSTOPS
+      #if ENABLED(Z_DUAL_ENDSTOPS)
         if (axis == Z_AXIS) In_Homing_Process(true);
       #endif
 
@@ -1484,12 +1563,16 @@ static void clean_up_after_endstop_move() {
       current_position[axis] = 0;
       sync_plan_position();
 
+      if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "> enable_endstops(false)");
+
       enable_endstops(false); // Disable endstops while moving away
 
       // Move away from the endstop by the axis HOME_BUMP_MM
       destination[axis] = -home_bump_mm(axis) * axis_home_dir;
       line_to_destination();
       st_synchronize();
+
+      if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "> enable_endstops(true)");
 
       enable_endstops(true); // Enable endstops for next homing move
 
@@ -1500,6 +1583,11 @@ static void clean_up_after_endstop_move() {
       destination[axis] = 2 * home_bump_mm(axis) * axis_home_dir;
       line_to_destination();
       st_synchronize();
+
+      if (debugLevel & DEBUG_INFO) {
+        ECHO_S(DB);
+        print_xyz("> TRIGGER ENDSTOP > current_position", current_position);
+      }
 
       #ifdef Z_DUAL_ENDSTOPS
         if (axis == Z_AXIS) {
@@ -1527,8 +1615,13 @@ static void clean_up_after_endstop_move() {
       #endif
 
       // Set the axis position to its home position (plus home offsets)
-      axis_is_at_home(axis);
+      set_axis_is_at_home(axis);
       sync_plan_position();
+
+      if (debugLevel & DEBUG_INFO) {
+        ECHO_S(DB);
+        print_xyz("> AFTER set_axis_is_at_home > current_position", current_position);
+      }
 
       destination[axis] = current_position[axis];
       feedrate = 0.0;
@@ -1545,23 +1638,32 @@ static void clean_up_after_endstop_move() {
       #if SERVO_LEVELING && DISABLED(Z_PROBE_SLED)
         // Deploy a probe if there is one, and homing towards the bed
         if (axis == Z_AXIS) {
-          if (axis_home_dir < 0) stow_z_probe();
+          if (axis_home_dir < 0) {
+            if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "> SERVO_LEVELING > stow_z_probe");
+            stow_z_probe();
+          }
         }
         else
       #endif
       {
         #if HAS_SERVO_ENDSTOPS
           // Retract Servo endstop if enabled
-          if (servo_endstop_id[axis] >= 0)
-          servo[servo_endstop_id[axis]].move(servo_endstop_angle[axis][1]);
+          if (servo_endstop_id[axis] >= 0) {
+            if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "> SERVO_ENDSTOPS > Stow with servo.move()");
+            servo[servo_endstop_id[axis]].move(servo_endstop_angle[axis][1]);
+          }
         #endif
       }
+    }
+    if (debugLevel & DEBUG_INFO) {
+      ECHO_SMV(DB, "<<< homeaxis(", (unsigned long)axis);
+      ECHO_EM(")");
     }
   }
   #define HOMEAXIS(LETTER) homeaxis(LETTER##_AXIS)
 #endif // CARTESIAN || COREXY || COREXZ || SCARA
 
-#ifdef DELTA
+#if ENABLED(DELTA)
 
   static void homeaxis(AxisEnum axis) {
     #define HOMEAXIS_DO(LETTER) \
@@ -1583,12 +1685,16 @@ static void clean_up_after_endstop_move() {
       current_position[axis] = 0;
       sync_plan_position();
 
+      if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "> enable_endstops(false)");
+
       enable_endstops(false); // Disable endstops while moving away
 
       // Move away from the endstop by the axis HOME_BUMP_MM
       destination[axis] = -home_bump_mm(axis) * axis_home_dir;
       line_to_destination();
       st_synchronize();
+
+      if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "> enable_endstops(true)");
 
       enable_endstops(true); // Enable endstops for next homing move
 
@@ -1602,17 +1708,30 @@ static void clean_up_after_endstop_move() {
 
       // retrace by the amount specified in endstop_adj
       if (endstop_adj[axis] * axis_home_dir < 0) {
+        if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "> enable_endstops(false)");
         enable_endstops(false); // Disable endstops while moving away
         sync_plan_position();
         destination[axis] = endstop_adj[axis];
+        if (debugLevel & DEBUG_INFO) {
+          ECHO_SMV(DB, "> endstop_adj = ", endstop_adj[axis]);
+          print_xyz(" > destination", destination);
+        }
         line_to_destination();
         st_synchronize();
+        if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "> enable_endstops(true)");
         enable_endstops(true); // Enable endstops for next homing move
       }
 
+      if (debugLevel & DEBUG_INFO) ECHO_LMV(DB, "> endstop_adj * axis_home_dir = ", endstop_adj[axis] * axis_home_dir);
+
       // Set the axis position to its home position (plus home offsets)
-      axis_is_at_home(axis);
+      set_axis_is_at_home(axis);
       sync_plan_position();
+
+      if (debugLevel & DEBUG_INFO) {
+        ECHO_S(DB);
+        print_xyz("> AFTER set_axis_is_at_home > current_position", current_position);
+      }
 
       destination[axis] = current_position[axis];
       feedrate = 0.0;
@@ -1691,6 +1810,7 @@ static void clean_up_after_endstop_move() {
 
   // Reset calibration results to zero.
   void reset_bed_level() {
+    if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "reset_bed_level");
     for (int y = 0; y < AUTO_BED_LEVELING_GRID_POINTS; y++) {
       for (int x = 0; x < AUTO_BED_LEVELING_GRID_POINTS; x++) {
         bed_level[x][y] = 0.0;
@@ -2475,6 +2595,10 @@ static void clean_up_after_endstop_move() {
   }
 
   void prepare_move_raw() {
+    if (debugLevel & DEBUG_INFO) {
+      ECHO_S(DB);
+      print_xyz("prepare_move_raw > destination", destination);
+    }
     refresh_cmd_timeout();
     calculate_delta(destination);
     plan_buffer_line(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], destination[E_AXIS], feedrate*feedrate_multiplier/60/100.0, active_extruder, active_driver);
@@ -2613,7 +2737,7 @@ static void clean_up_after_endstop_move() {
   } // retract()
 #endif //FWRETRACT
 
-#ifdef Z_PROBE_SLED
+#if ENABLED(Z_PROBE_SLED)
 
   #ifndef SLED_DOCKING_OFFSET
     #define SLED_DOCKING_OFFSET 0
@@ -2626,6 +2750,8 @@ static void clean_up_after_endstop_move() {
    * offset[in]   The additional distance to move to adjust docking location
    */
   static void dock_sled(bool dock, int offset=0) {
+    if (debugLevel & DEBUG_INFO) ECHO_LMV(DB, "dock_sled", dock);
+
     if (!axis_known_position[X_AXIS] || !axis_known_position[Y_AXIS]) {
       LCD_MESSAGEPGM(MSG_POSITION_UNKNOWN);
       ECHO_LM(DB, MSG_POSITION_UNKNOWN);
@@ -2873,11 +2999,13 @@ inline void gcode_G4() {
  */
 inline void gcode_G28() {
 
+  if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "gcode_G28 >>>");
+
   // Wait for planner moves to finish!
   st_synchronize();
 
   // For auto bed leveling, clear the level matrix
-  #ifdef ENABLE_AUTO_BED_LEVELING
+  #if ENABLED(AUTO_BED_LEVELING_FEATURE)
     plan_bed_level_matrix.set_to_identity();
   #elif defined(DELTA)
     reset_bed_level();
@@ -2906,7 +3034,7 @@ inline void gcode_G28() {
     }
   #endif
 
-  #ifdef DELTA
+  #if ENABLED(DELTA)
     // A delta can only safely home all axis at the same time
     // all axis have to home at the same time
 
@@ -2931,6 +3059,11 @@ inline void gcode_G28() {
 
     sync_plan_position_delta();
 
+    if (debugLevel & DEBUG_INFO) {
+      ECHO_S(DB);
+      print_xyz("(DELTA) > current_position", current_position);
+    }
+
   #else // NOT DELTA
 
     if (home_all_axis || homeZ) {
@@ -2938,12 +3071,19 @@ inline void gcode_G28() {
       #if Z_HOME_DIR > 0  // If homing away from BED do Z first
 
         HOMEAXIS(Z);
+        if (debugLevel & DEBUG_INFO) {
+          ECHO_S(DB);
+          print_xyz("> HOMEAXIS(Z) > current_position", current_position);
+        }
 
-      #elif !defined(Z_SAFE_HOMING) && defined(Z_RAISE_BEFORE_HOMING) && Z_RAISE_BEFORE_HOMING > 0
+        #elif DISABLED(Z_SAFE_HOMING) && defined(Z_RAISE_BEFORE_HOMING) && Z_RAISE_BEFORE_HOMING > 0
 
         // Raise Z before homing any other axes
-
         destination[Z_AXIS] = -Z_RAISE_BEFORE_HOMING * home_dir(Z_AXIS); // Set destination away from bed
+        if (debugLevel & DEBUG_INFO) {
+          ECHO_SMV(DB, "Raise Z (before homing) by ", (float)Z_RAISE_BEFORE_HOMING);
+          print_xyz(" > (home_all_axis || homeZ) > destination", destination);
+        }
         feedrate = max_feedrate[Z_AXIS] * 60;
         line_to_destination();
         st_synchronize();
@@ -2976,9 +3116,14 @@ inline void gcode_G28() {
         line_to_destination();
         st_synchronize();
 
-        axis_is_at_home(X_AXIS);
-        axis_is_at_home(Y_AXIS);
+        set_axis_is_at_home(X_AXIS);
+        set_axis_is_at_home(Y_AXIS);
         sync_plan_position();
+
+        if (debugLevel & DEBUG_INFO) {
+          ECHO_S(DB);
+          print_xyz("> QUICK_HOME > current_position 1", current_position);
+        }
 
         destination[X_AXIS] = current_position[X_AXIS];
         destination[Y_AXIS] = current_position[Y_AXIS];
@@ -2989,11 +3134,15 @@ inline void gcode_G28() {
 
         current_position[X_AXIS] = destination[X_AXIS];
         current_position[Y_AXIS] = destination[Y_AXIS];
-        #ifndef SCARA
+        #if DISABLED(SCARA)
           current_position[Z_AXIS] = destination[Z_AXIS];
         #endif
-      }
 
+        if (debugLevel & DEBUG_INFO) {
+          ECHO_S(DB);
+          print_xyz("> QUICK_HOME > current_position 2", current_position);
+        }
+      }
     #endif // QUICK_HOME
 
     #ifdef HOME_Y_BEFORE_X
@@ -3018,16 +3167,26 @@ inline void gcode_G28() {
       #else
         HOMEAXIS(X);
       #endif
+      if (debugLevel & DEBUG_INFO) {
+        ECHO_S(DB);
+        print_xyz("> homeX", current_position);
+      }
     }
 
-    #ifndef HOME_Y_BEFORE_X
+    #if DISABLED(HOME_Y_BEFORE_X)
       // Home Y
-      if (home_all_axis || homeY) HOMEAXIS(Y);
+      if (home_all_axis || homeY) {
+        HOMEAXIS(Y);
+        if (debugLevel & DEBUG_INFO) {
+          ECHO_S(DB);
+          print_xyz("> homeY", current_position);
+        }
+      }
     #endif
 
     // Home Z last if homing towards the bed
     #if Z_HOME_DIR < 0
-      #ifndef Z_SAFE_HOMING
+      #if DISABLED(Z_SAFE_HOMING)
         if (code_seen('M') && !(homeX || homeY)) {
           // Manual G28 bed level
           #ifdef ULTIPANEL
@@ -3118,8 +3277,17 @@ inline void gcode_G28() {
             enqueuecommands_P(PSTR("G28"));
           #endif // ULTIPANEL
         }
-        else if (home_all_axis || homeZ) HOMEAXIS(Z);
-      #elif defined(Z_SAFE_HOMING) && defined(ENABLE_AUTO_BED_LEVELING)// Z Safe mode activated.
+        else if (home_all_axis || homeZ) {
+          HOMEAXIS(Z);
+          if (debugLevel & DEBUG_INFO) {
+            ECHO_S(DB);
+            print_xyz("> (home_all_axis || homeZ) > final", current_position);
+          }
+        }
+      #elif ENABLED(Z_SAFE_HOMING) && ENABLED(AUTO_BED_LEVELING_FEATURE)// Z Safe mode activated.
+
+        if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "> Z_SAFE_HOMING >>>");
+
         if (home_all_axis) {
 
           current_position[Z_AXIS] = 0;
@@ -3134,6 +3302,13 @@ inline void gcode_G28() {
           destination[Y_AXIS] = round(Z_SAFE_HOMING_Y_POINT - Y_PROBE_OFFSET_FROM_EXTRUDER);
           destination[Z_AXIS] = -Z_RAISE_BEFORE_HOMING * home_dir(Z_AXIS);
           feedrate = xy_travel_speed;
+
+          if (debugLevel & DEBUG_INFO) {
+            ECHO_SMV(DB, "Raise Z (before homing) by ", (float)Z_RAISE_BEFORE_HOMING);
+            print_xyz("> home_all_axis > current_position", current_position);
+            print_xyz("> home_all_axis > destination", destination);
+          }
+
           // This could potentially move X, Y, Z all together
           line_to_destination();
           st_synchronize();
@@ -3163,6 +3338,13 @@ inline void gcode_G28() {
               // Set Z destination away from bed and raise the axis
               destination[Z_AXIS] = -Z_RAISE_BEFORE_HOMING * home_dir(Z_AXIS);    // Set destination away from bed
               feedrate = max_feedrate[Z_AXIS] * 60;
+              
+              if (debugLevel & DEBUG_INFO) {
+                ECHO_SMV(DB, "Raise Z (before homing) by ", (float)Z_RAISE_BEFORE_HOMING);
+                print_xyz("> homeZ > current_position", current_position);
+                print_xyz("> homeZ > destination", destination);
+              }
+
               line_to_destination();
               st_synchronize();
 
@@ -3179,7 +3361,8 @@ inline void gcode_G28() {
             ECHO_LM(ER, MSG_POSITION_UNKNOWN);
           }
         }
-      #elif defined(Z_SAFE_HOMING)
+        if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "<<< Z_SAFE_HOMING");
+      #elif ENABLED(Z_SAFE_HOMING)
         if (home_all_axis || homeZ) {
 
           // Let's see if X and Y are homed
@@ -3191,6 +3374,13 @@ inline void gcode_G28() {
             destination[Y_AXIS] = round(Z_SAFE_HOMING_Y_POINT);
             destination[Z_AXIS] = current_position[Z_AXIS] = 0;
             feedrate = xy_travel_speed;
+
+            if (debugLevel & DEBUG_INFO) {
+              ECHO_SMV(DB, "Raise Z (before homing) by ", (float)Z_RAISE_BEFORE_HOMING);
+              print_xyz("> home_all_axis > current_position", current_position);
+              print_xyz("> home_all_axis > destination", destination);
+            }
+
             // This could potentially move X, Y, Z all together
             line_to_destination();
             st_synchronize();
@@ -3205,6 +3395,7 @@ inline void gcode_G28() {
             ECHO_LM(ER, MSG_POSITION_UNKNOWN);
           }
         }
+        if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "<<< Z_SAFE_HOMING");
       #endif //Z_SAFE_HOMING
     #endif //Z_HOME_DIR < 0
 
@@ -3212,14 +3403,14 @@ inline void gcode_G28() {
 
   #endif // !DELTA
 
-  #ifdef SCARA
+  #if ENABLED(SCARA)
     sync_plan_position_delta();
   #endif
 
   clean_up_after_endstop_move();
 }
 
-#ifdef ENABLE_AUTO_BED_LEVELING
+#if  ENABLED(AUTO_BED_LEVELING_FEATURE)
 
   void out_of_range_error(const char *p_edge) {
     ECHO_M("?Probe ");
@@ -3264,6 +3455,8 @@ inline void gcode_G28() {
    *
    */
   inline void gcode_G29() {
+
+    if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "gcode_G29 >>>");
 
     // Don't allow auto-leveling without homing first
     if (!axis_known_position[X_AXIS] || !axis_known_position[Y_AXIS]) {
@@ -3403,6 +3596,13 @@ inline void gcode_G28() {
           float measured_z,
                 z_before = probePointCounter ? Z_RAISE_BETWEEN_PROBINGS + current_position[Z_AXIS] : Z_RAISE_BEFORE_PROBING;
 
+          if (probePointCounter) {
+            if (debugLevel & DEBUG_INFO) ECHO_LMV(DB, "z_before = (between) ", (float)(Z_RAISE_BETWEEN_PROBINGS + current_position[Z_AXIS]));
+          }
+          else {
+            if (debugLevel & DEBUG_INFO) ECHO_LMV(DB, "z_before = (before) ", (float)Z_RAISE_BEFORE_PROBING);
+          }
+
           // Enhanced G29 - Do not retract servo between probes
           ProbeAction act;
           if (deploy_probe_for_each_reading) // G29 E - Stow between probes
@@ -3429,6 +3629,11 @@ inline void gcode_G28() {
 
         } //xProbe
       } //yProbe
+
+      if (debugLevel & DEBUG_INFO) {
+        ECHO_S(DB);
+        print_xyz("> probing complete > current_position", current_position);
+      }
 
       clean_up_after_endstop_move();
 
@@ -3512,6 +3717,8 @@ inline void gcode_G28() {
       } //do_topography_map
     #else // !AUTO_BED_LEVELING_GRID
 
+      if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "> 3-point Leveling");
+
       // Actions for each probe
       ProbeAction p1, p2, p3;
       if (deploy_probe_for_each_reading)
@@ -3540,6 +3747,11 @@ inline void gcode_G28() {
             z_tmp = current_position[Z_AXIS],
             real_z = st_get_position_mm(Z_AXIS);  //get the real Z (since plan_get_position is now correcting the plane)
 
+      if (debugLevel & DEBUG_INFO) {
+        ECHO_LMV(DB, "> BEFORE apply_rotation_xyz > z_tmp  = ", z_tmp);
+        ECHO_LMV(DB, "> BEFORE apply_rotation_xyz > real_z = ", real_z);
+      }
+
       apply_rotation_xyz(plan_bed_level_matrix, x_tmp, y_tmp, z_tmp); // Apply the correction sending the probe offset
 
       // Get the current Z position and send it to the planner.
@@ -3558,6 +3770,9 @@ inline void gcode_G28() {
       //      adjust for inaccurate endstops, not for reasonably accurate probes. If it were
       //      added here, it could be seen as a compensating factor for the Z probe.
       //
+
+      if (debugLevel & DEBUG_INFO) ECHO_LMV(DB, "> AFTER apply_rotation_xyz > z_tmp  = ", z_tmp);
+
       current_position[Z_AXIS] = -zprobe_zoffset + (z_tmp - real_z)
         #if HAS_SERVO_ENDSTOPS || ENABLED(Z_PROBE_SLED)
            + Z_RAISE_AFTER_PROBING
@@ -3565,12 +3780,17 @@ inline void gcode_G28() {
         ;
       // current_position[Z_AXIS] += home_offset[Z_AXIS]; // The probe determines Z=0, not "Z home"
       sync_plan_position();
+      if (debugLevel & DEBUG_INFO) {
+        ECHO_S(DB);
+        print_xyz("> corrected Z in G29", current_position);
+      }
     }
 
-    #ifdef Z_PROBE_SLED
+    #if ENABLED(Z_PROBE_SLED)
       dock_sled(true); // dock the probe
     #endif
 
+    if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "<<< gcode_G29");
   }
 
   #if DISABLED(Z_PROBE_SLED)
@@ -3592,14 +3812,16 @@ inline void gcode_G28() {
       stow_z_probe(); // Retract Z Servo endstop if available
     }
   #endif // !Z_PROBE_SLED
-#endif // ENABLE_AUTO_BED_LEVELING
+#endif // AUTO_BED_LEVELING_FEATURE
 
-#if defined(DELTA) && defined(Z_PROBE_ENDSTOP)
+#if ENABLED(DELTA) && ENABLED(Z_PROBE_ENDSTOP)
 
   /**
    * G29: Delta Z-Probe, probes the bed at more points.
    */
   inline void gcode_G29() {
+    if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "gcode_G29 >>>");
+
     if (code_seen('D')) {
       print_bed_level();
       return;
@@ -3613,6 +3835,8 @@ inline void gcode_G28() {
     deploy_z_probe();
     calibrate_print_surface(z_probe_offset[Z_AXIS] + (code_seen(axis_codes[Z_AXIS]) ? code_value() : 0.0));
     retract_z_probe();
+
+    if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "<<< gcode_G29");
 
     clean_up_after_endstop_move();
   }
@@ -3648,14 +3872,16 @@ inline void gcode_G28() {
 
       deploy_z_probe();
       probe_value = probe_bed(x, y);
-      ECHO_SMV(DB, "Bed Z-Height at X:", x);
-      ECHO_MV(" Y:", y);
-      ECHO_EMV(" = ", probe_value, 4);
+      if (debugLevel & DEBUG_INFO) {
+        ECHO_SMV(DB, "Bed Z-Height at X:", x);
+        ECHO_MV(" Y:", y);
+        ECHO_EMV(" = ", probe_value, 4);
 
-      ECHO_SMV(DB, "Carriage Positions: [", saved_position[X_AXIS]);
-      ECHO_MV(", ", saved_position[Y_AXIS]);
-      ECHO_MV(", ", saved_position[Z_AXIS]);
-      ECHO_EM("]");
+        ECHO_SMV(DB, "Carriage Positions: [", saved_position[X_AXIS]);
+        ECHO_MV(", ", saved_position[Y_AXIS]);
+        ECHO_MV(", ", saved_position[Z_AXIS]);
+        ECHO_EM("]");
+      }
       retract_z_probe();
       return;
     }
@@ -4210,7 +4436,7 @@ inline void gcode_M42() {
   } // code_seen('S')
 }
 
-#if defined(ENABLE_AUTO_BED_LEVELING) && defined(Z_PROBE_REPEATABILITY_TEST)
+#if ENABLED(AUTO_BED_LEVELING_FEATURE) && ENABLED(Z_PROBE_REPEATABILITY_TEST)
   /**
    * M48: Z-Probe repeatability measurement function.
    *
@@ -4433,7 +4659,7 @@ inline void gcode_M42() {
 
   }
 
-#endif // ENABLE_AUTO_BED_LEVELING && Z_PROBE_REPEATABILITY_TEST
+#endif // AUTO_BED_LEVELING_FEATURE && Z_PROBE_REPEATABILITY_TEST
 
 #if HAS_POWER_SWITCH
 
@@ -4676,12 +4902,17 @@ inline void gcode_M111() {
   debugLevel = code_seen('S') ? code_value_short() : DEBUG_INFO|DEBUG_COMMUNICATION;
 
   if (debugLevel & DEBUG_ECHO) ECHO_LM(DB, MSG_DEBUG_ECHO);
-  //if (debugLevel & DEBUG_INFO) ECHO_LM(DB, MSG_DEBUG_INFO);
+  if (debugLevel & DEBUG_INFO) ECHO_LM(DB, MSG_DEBUG_INFO);
   //if (debugLevel & DEBUG_ERRORS) ECHO_LM(DB, MSG_DEBUG_ERRORS);
   if (debugLevel & DEBUG_DRYRUN) {
     ECHO_LM(DB, MSG_DEBUG_DRYRUN);
     disable_all_heaters();
   }
+  #if ENABLED(DEBUG_LEVELING_FEATURE)
+    if (debugLevel & DEBUG_LEVELING) {
+      ECHO_LM(DB, MSG_DEBUG_LEVELING);
+    }
+  #endif
 }
 
 /**
@@ -5541,7 +5772,7 @@ inline void gcode_M226() {
  */
 inline void gcode_M400() { st_synchronize(); }
 
-#if defined(ENABLE_AUTO_BED_LEVELING) && !defined(Z_PROBE_SLED) && SERVO_LEVELING
+#if defined(AUTO_BED_LEVELING_FEATURE) && !defined(Z_PROBE_SLED) && SERVO_LEVELING
 
   #if SERVO_LEVELING
     void raise_z_for_servo() {
@@ -5928,7 +6159,7 @@ inline void gcode_M503() {
   }
 #endif // DUAL_X_CARRIAGE
 
-#ifdef ENABLE_AUTO_BED_LEVELING
+#if ENABLED(AUTO_BED_LEVELING_FEATURE)
   //M666: Set Z probe offset
   inline void gcode_M666() {
     if (code_seen('P')) {
@@ -5941,7 +6172,7 @@ inline void gcode_M503() {
   }
 #endif
 
-#ifdef DELTA
+#if ENABLED(DELTA)
   //M666: Set delta endstop and geometry adjustment
   inline void gcode_M666() {
     if (code_seen('A')) {
@@ -6179,7 +6410,7 @@ inline void gcode_T(uint8_t tmp_extruder) {
           active_extruder = target_extruder;
 
           // This function resets the max/min values - the current position may be overwritten below.
-          axis_is_at_home(X_AXIS);
+          set_axis_is_at_home(X_AXIS);
 
           if (dual_x_carriage_mode == DXC_FULL_CONTROL_MODE) {
             current_position[X_AXIS] = inactive_extruder_x_pos;
@@ -6431,7 +6662,7 @@ void process_next_command() {
       case 28: //G28: Home all axes, one at a time
         gcode_G28(); gcode_M114(); break;
 
-      #ifdef ENABLE_AUTO_BED_LEVELING
+      #if ENABLED(AUTO_BED_LEVELING_FEATURE)
         case 29: // G29 Detailed Z-Probe, probes the bed at 3 or more points.
           gcode_G29(); gcode_M114(); break;
         #ifndef Z_PROBE_SLED
@@ -6442,7 +6673,7 @@ void process_next_command() {
           case 32: // G32: undock the sled
             dock_sled(codenum == 31); break;
         #endif // Z_PROBE_SLED
-      #endif // ENABLE_AUTO_BED_LEVELING
+      #endif // AUTO_BED_LEVELING_FEATURE
 
       #if defined(DELTA) && defined(Z_PROBE_ENDSTOP)
         case 29: // G29 Detailed Z-Probe, probes the bed at more points.
@@ -6529,7 +6760,7 @@ void process_next_command() {
       case 42: // M42 -Change pin status via gcode
         gcode_M42(); break;
 
-      #if defined(ENABLE_AUTO_BED_LEVELING) && defined(Z_PROBE_REPEATABILITY_TEST)
+      #if ENABLED(AUTO_BED_LEVELING_FEATURE) && ENABLED(Z_PROBE_REPEATABILITY_TEST)
         case 48: // M48 Z-Probe repeatability
           gcode_M48(); break;
       #endif
@@ -6777,7 +7008,7 @@ void process_next_command() {
           gcode_M605(); break;
       #endif
 
-      #if defined(ENABLE_AUTO_BED_LEVELING) || defined(DELTA)
+      #if ENABLED(AUTO_BED_LEVELING_FEATURE) || ENABLED(DELTA)
         case 666: // M666 Set Z probe offset or set delta endstop and geometry adjustment
           gcode_M666(); break;
       #endif
@@ -6847,7 +7078,7 @@ void clamp_to_software_endstops(float target[3]) {
     NOLESS(target[Y_AXIS], min_pos[Y_AXIS]);
     
     float negative_z_offset = 0;
-    #ifdef ENABLE_AUTO_BED_LEVELING
+    #if ENABLED(AUTO_BED_LEVELING_FEATURE)
       if (zprobe_zoffset < 0) negative_z_offset += zprobe_zoffset;
       if (home_offset[Z_AXIS] < 0) negative_z_offset += home_offset[Z_AXIS];
     #endif

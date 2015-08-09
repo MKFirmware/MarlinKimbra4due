@@ -118,10 +118,10 @@
   #define Z_SAFE_HOMING_Y_POINT ((Y_MIN_POS + Y_MAX_POS) / 2)    // Y point for Z homing when homing all axis (G28)
 #endif
 
-//#define ENABLE_AUTO_BED_LEVELING    // Delete the comment to enable (ABL)
-//#define Z_PROBE_REPEATABILITY_TEST  // Delete the comment to enable
+//#define AUTO_BED_LEVELING_FEATURE   // Delete the comment to enable (remove // at the start of the line)
+//#define Z_PROBE_REPEATABILITY_TEST  // If not commented out, Z-Probe Repeatability test will be included if Auto Bed Leveling is Enabled.
 
-#ifdef ENABLE_AUTO_BED_LEVELING
+#if ENABLED(AUTO_BED_LEVELING_FEATURE)
 
   // There are 2 different ways to specify probing locations
   //
@@ -138,7 +138,7 @@
   // Note: this feature generates 10KB extra code size
   #define AUTO_BED_LEVELING_GRID
 
-  #ifdef AUTO_BED_LEVELING_GRID
+  #if ENABLED(AUTO_BED_LEVELING_GRID)
 
     #define MIN_PROBE_EDGE 10 // The probe square sides can be no smaller than this
 
@@ -223,15 +223,3 @@
 #define DEFAULT_XYJERK 5                // (mm/sec)
 #define DEFAULT_ZJERK  0.4              // (mm/sec)
 #define DEFAULT_EJERK {3.0,3.0,3.0,3.0} // (mm/sec)
-
-//===========================================================================
-//=============================Additional Features===========================
-//===========================================================================
-
-// Custom M code points
-//#define CUSTOM_M_CODES
-#ifdef CUSTOM_M_CODES
-  #define CUSTOM_M_CODE_SET_Z_PROBE_OFFSET 851
-  #define Z_PROBE_OFFSET_RANGE_MIN -20
-  #define Z_PROBE_OFFSET_RANGE_MAX 20
-#endif
