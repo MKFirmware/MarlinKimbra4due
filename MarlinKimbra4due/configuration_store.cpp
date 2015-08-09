@@ -103,7 +103,7 @@
 #include "ultralcd.h"
 #include "configuration_store.h"
 
-#ifdef SDSUPPORT
+#if ENABLED(SDSUPPORT)
   #include "cardreader.h"
 #endif
 
@@ -138,7 +138,7 @@ void _EEPROM_readData(int &pos, uint8_t* value, uint8_t size) {
 
 #define EEPROM_OFFSET 100
 
-#ifdef EEPROM_SETTINGS
+#if ENABLED(EEPROM_SETTINGS)
 
 void Config_StoreSettings() {
   float dummy = 0.0f;
@@ -159,7 +159,7 @@ void Config_StoreSettings() {
   EEPROM_WRITE_VAR(i, max_e_jerk);
   EEPROM_WRITE_VAR(i, home_offset);
 
-  #ifndef DELTA
+  #if DISABLED(DELTA)
     EEPROM_WRITE_VAR(i, zprobe_zoffset);
   #endif
 
@@ -167,7 +167,7 @@ void Config_StoreSettings() {
     EEPROM_WRITE_VAR(i, hotend_offset);
   #endif
 
-  #ifdef DELTA
+  #if ENABLED(DELTA)
     EEPROM_WRITE_VAR(i, endstop_adj);
     EEPROM_WRITE_VAR(i, delta_radius);
     EEPROM_WRITE_VAR(i, delta_diagonal_rod);
@@ -175,11 +175,11 @@ void Config_StoreSettings() {
     EEPROM_WRITE_VAR(i, tower_adj);
     EEPROM_WRITE_VAR(i, diagrod_adj);
     EEPROM_WRITE_VAR(i, z_probe_offset);
-  #elif defined(Z_DUAL_ENDSTOPS)
+  #elif ENABLED(Z_DUAL_ENDSTOPS)
     EEPROM_WRITE_VAR(i, z_endstop_adj);            // 1 floats
   #endif
 
-  #ifndef ULTIPANEL
+  #if DISABLED(ULTIPANEL)
     int plaPreheatHotendTemp = PLA_PREHEAT_HOTEND_TEMP, plaPreheatHPBTemp = PLA_PREHEAT_HPB_TEMP, plaPreheatFanSpeed = PLA_PREHEAT_FAN_SPEED,
         absPreheatHotendTemp = ABS_PREHEAT_HOTEND_TEMP, absPreheatHPBTemp = ABS_PREHEAT_HPB_TEMP, absPreheatFanSpeed = ABS_PREHEAT_FAN_SPEED,
         gumPreheatHotendTemp = GUM_PREHEAT_HOTEND_TEMP, gumPreheatHPBTemp = GUM_PREHEAT_HPB_TEMP, gumPreheatFanSpeed = GUM_PREHEAT_FAN_SPEED;
@@ -195,7 +195,7 @@ void Config_StoreSettings() {
   EEPROM_WRITE_VAR(i, gumPreheatHPBTemp);
   EEPROM_WRITE_VAR(i, gumPreheatFanSpeed);
 
-  #ifdef PIDTEMP
+  #if ENABLED(PIDTEMP)
     for (int e = 0; e < HOTENDS; e++) {
       EEPROM_WRITE_VAR(i, PID_PARAM(Kp, e));
       EEPROM_WRITE_VAR(i, PID_PARAM(Ki, e));
@@ -203,22 +203,22 @@ void Config_StoreSettings() {
     }
   #endif
 
-  #ifdef PIDTEMPBED
+  #if ENABLED(PIDTEMPBED)
     EEPROM_WRITE_VAR(i, bedKp);
     EEPROM_WRITE_VAR(i, bedKi);
     EEPROM_WRITE_VAR(i, bedKd);
   #endif
 
-  #ifndef HAS_LCD_CONTRAST
+  #if DISABLED(HAS_LCD_CONTRAST)
     const int lcd_contrast = 32;
   #endif
   EEPROM_WRITE_VAR(i, lcd_contrast);
 
-  #ifdef SCARA
+  #if ENABLED(SCARA)
     EEPROM_WRITE_VAR(i, axis_scaling); // 3 floats
   #endif
 
-  #ifdef FWRETRACT
+  #if ENABLED(FWRETRACT)
     EEPROM_WRITE_VAR(i, autoretract_enabled);
     EEPROM_WRITE_VAR(i, retract_length);
     #if EXTRUDERS > 1
@@ -247,7 +247,7 @@ void Config_StoreSettings() {
     EEPROM_WRITE_VAR(i, dummy);
   }
   
-  #ifdef IDLE_OOZING_PREVENT
+  #if ENABLED(IDLE_OOZING_PREVENT)
     EEPROM_WRITE_VAR(i, idleoozing_enabled);
   #endif
 
@@ -296,7 +296,7 @@ void Config_RetrieveSettings() {
     EEPROM_READ_VAR(i, max_e_jerk);
     EEPROM_READ_VAR(i, home_offset);
 
-    #ifndef DELTA
+    #if DISABLED(DELTA)
       EEPROM_READ_VAR(i, zprobe_zoffset);
     #endif
 
@@ -304,7 +304,7 @@ void Config_RetrieveSettings() {
       EEPROM_READ_VAR(i, hotend_offset);
     #endif
 
-    #ifdef DELTA
+    #if ENABLED(DELTA)
       EEPROM_READ_VAR(i, endstop_adj);
       EEPROM_READ_VAR(i, delta_radius);
       EEPROM_READ_VAR(i, delta_diagonal_rod);
@@ -316,7 +316,7 @@ void Config_RetrieveSettings() {
       set_delta_constants();
     #endif //DELTA
 
-    #ifndef ULTIPANEL
+    #if DISABLED(ULTIPANEL)
       int plaPreheatHotendTemp, plaPreheatHPBTemp, plaPreheatFanSpeed,
           absPreheatHotendTemp, absPreheatHPBTemp, absPreheatFanSpeed,
           gumPreheatHotendTemp, gumPreheatHPBTemp, gumPreheatFanSpeed;
@@ -332,7 +332,7 @@ void Config_RetrieveSettings() {
     EEPROM_READ_VAR(i, gumPreheatHPBTemp);
     EEPROM_READ_VAR(i, gumPreheatFanSpeed);
 
-    #ifdef PIDTEMP
+    #if ENABLED(PIDTEMP)
       for (int8_t e = 0; e < HOTENDS; e++) {
         EEPROM_READ_VAR(i, PID_PARAM(Kp, e));
         EEPROM_READ_VAR(i, PID_PARAM(Ki, e));
@@ -340,23 +340,23 @@ void Config_RetrieveSettings() {
       }
     #endif // PIDTEMP
 
-    #ifdef PIDTEMPBED
+    #if ENABLED(PIDTEMPBED)
       EEPROM_READ_VAR(i, bedKp);
       EEPROM_READ_VAR(i, bedKi);
       EEPROM_READ_VAR(i, bedKd);
     #endif
 
-    #ifndef HAS_LCD_CONTRAST
+    #if DISABLED(HAS_LCD_CONTRAST)
       int lcd_contrast;
     #endif
 
     EEPROM_READ_VAR(i, lcd_contrast);
 
-    #ifdef SCARA
+    #if ENABLED(SCARA)
       EEPROM_READ_VAR(i, axis_scaling);  // 3 floats
     #endif
 
-    #ifdef FWRETRACT
+    #if ENABLED(FWRETRACT)
       EEPROM_READ_VAR(i, autoretract_enabled);
       EEPROM_READ_VAR(i, retract_length);
       #if EXTRUDERS > 1
@@ -384,7 +384,7 @@ void Config_RetrieveSettings() {
 
     calculate_volumetric_multipliers();
 
-    #ifdef IDLE_OOZING_PREVENT
+    #if ENABLED(IDLE_OOZING_PREVENT)
       EEPROM_READ_VAR(i, idleoozing_enabled);
     #endif
 
@@ -397,7 +397,7 @@ void Config_RetrieveSettings() {
     ECHO_EM(" bytes)");
   }
 
-  #ifdef EEPROM_CHITCHAT
+  #if ENABLED(EEPROM_CHITCHAT)
     Config_PrintSettings();
   #endif
 }
@@ -413,7 +413,7 @@ void Config_ResetDefault() {
   long  tmp3[] = DEFAULT_MAX_ACCELERATION;
   long  tmp4[] = DEFAULT_RETRACT_ACCELERATION;
   long  tmp5[] = DEFAULT_EJERK;
-  #ifdef PIDTEMP
+  #if ENABLED(PIDTEMP)
     float tmp6[] = DEFAULT_Kp;
     float tmp7[] = DEFAULT_Ki;
     float tmp8[] = DEFAULT_Kd;
@@ -470,7 +470,7 @@ void Config_ResetDefault() {
     }
   }
 
-  #ifdef SCARA
+  #if ENABLED(SCARA)
     for (int8_t i = 0; i < NUM_AXIS; i++) {
       if (i < COUNT(axis_scaling))
         axis_scaling[i] = 1;
@@ -489,13 +489,13 @@ void Config_ResetDefault() {
   max_z_jerk = DEFAULT_ZJERK;
   home_offset[X_AXIS] = home_offset[Y_AXIS] = home_offset[Z_AXIS] = 0;
 
-  #ifdef ENABLE_AUTO_BED_LEVELING
+  #if ENABLED(ENABLE_AUTO_BED_LEVELING)
     zprobe_zoffset = Z_PROBE_OFFSET_FROM_EXTRUDER;
   #elif !defined(DELTA)
     zprobe_zoffset = 0;
   #endif
 
-  #ifdef DELTA
+  #if ENABLED(DELTA)
     delta_radius = DEFAULT_DELTA_RADIUS;
     delta_diagonal_rod = DEFAULT_DELTA_DIAGONAL_ROD;
     endstop_adj[0] = TOWER_A_ENDSTOP_ADJ;
@@ -515,7 +515,7 @@ void Config_ResetDefault() {
     set_delta_constants();
   #endif
 
-  #ifdef ULTIPANEL
+  #if ENABLED(ULTIPANEL)
     plaPreheatHotendTemp = PLA_PREHEAT_HOTEND_TEMP;
     plaPreheatHPBTemp = PLA_PREHEAT_HPB_TEMP;
     plaPreheatFanSpeed = PLA_PREHEAT_FAN_SPEED;
@@ -527,11 +527,11 @@ void Config_ResetDefault() {
     gumPreheatFanSpeed = GUM_PREHEAT_FAN_SPEED;
   #endif
 
-  #ifdef HAS_LCD_CONTRAST
+  #if ENABLED(HAS_LCD_CONTRAST)
     lcd_contrast = DEFAULT_LCD_CONTRAST;
-  #endif //DOGLCD
+  #endif
 
-  #ifdef PIDTEMP
+  #if ENABLED(PIDTEMP)
     for (int8_t e = 0; e < HOTENDS; e++) {
       Kp[e] = tmp6[e];
       Ki[e] = scalePID_i(tmp7[e]);
@@ -541,13 +541,13 @@ void Config_ResetDefault() {
     updatePID();
   #endif // PIDTEMP
 
-  #ifdef PIDTEMPBED
+  #if ENABLED(PIDTEMPBED)
     bedKp = DEFAULT_bedKp;
     bedKi = scalePID_i(DEFAULT_bedKi);
     bedKd = scalePID_d(DEFAULT_bedKd);
   #endif
 
-  #ifdef FWRETRACT
+  #if ENABLED(FWRETRACT)
     autoretract_enabled = false;
     retract_length = RETRACT_LENGTH;
     #if EXTRUDERS > 1
@@ -599,7 +599,7 @@ void Config_ResetDefault() {
       }
     #endif //EXTRUDERS > 1
 
-    #ifdef SCARA
+    #if ENABLED(SCARA)
       if (!forReplay) {
         ECHO_LM(DB, "Scaling factors:");
       }
@@ -683,7 +683,7 @@ void Config_ResetDefault() {
       }
     #endif //HOTENDS > 1
     
-    #ifdef DELTA
+    #if ENABLED(DELTA)
       if (!forReplay) {
         ECHO_LM(DB, "Delta Geometry adjustment:");
       }
@@ -714,19 +714,19 @@ void Config_ResetDefault() {
       ECHO_MV(" Y", z_probe_offset[1]);
       ECHO_EMV(" Z", z_probe_offset[2]);
 
-    #elif defined(Z_DUAL_ENDSTOPS)
+    #elif ENABLED(Z_DUAL_ENDSTOPS)
       if (!forReplay) {
         ECHO_LM(DB, "Z2 Endstop adjustement (mm):");
       }
       ECHO_LMV(DB, "  M666 Z", z_endstop_adj );
-    #elif defined(ENABLE_AUTO_BED_LEVELING)
+    #elif ENABLED(ENABLE_AUTO_BED_LEVELING)
       if (!forReplay) {
         ECHO_LM(DB, "Z Probe offset (mm)");
       }
       ECHO_LMV(DB, "  M666 P", zprobe_zoffset);
     #endif
 
-    #ifdef ULTIPANEL
+    #if ENABLED(ULTIPANEL)
       if (!forReplay) {
         ECHO_LM(DB, "Material heatup parameters:");
       }
@@ -744,7 +744,7 @@ void Config_ResetDefault() {
       ECHO_EM(" (Material GUM)");
     #endif // ULTIPANEL
 
-    #if defined(PIDTEMP) || defined(PIDTEMPBED)
+    #if ENABLED(PIDTEMP) || ENABLED(PIDTEMPBED)
       if (!forReplay) {
         ECHO_LM(DB, "PID settings:");
       }
@@ -763,7 +763,7 @@ void Config_ResetDefault() {
       #endif
     #endif
 
-    #ifdef FWRETRACT
+    #if ENABLED(FWRETRACT)
       if (!forReplay) {
         ECHO_LM(DB,"Retract: S=Length (mm) F:Speed (mm/m) Z: ZLift (mm)");
       }
@@ -851,7 +851,7 @@ void ConfigSD_ResetDefault() {
   ECHO_LM(OK, "Hardcoded SD Default Settings Loaded");
 }
 
-#if defined(SDSUPPORT) && defined(SD_SETTINGS)
+#if ENABLED(SDSUPPORT) && ENABLED(SD_SETTINGS)
 
   void ConfigSD_StoreSettings() {
     if(!IS_SD_INSERTED || card.isFileOpen() || card.sdprinting) return;

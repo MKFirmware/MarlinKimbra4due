@@ -19,7 +19,7 @@
  */
 #include "Marlin.h"
 
-#ifdef SDSUPPORT
+#if ENABLED(SDSUPPORT)
 #include "Sd2Card.h"
 //------------------------------------------------------------------------------
 
@@ -339,7 +339,7 @@ bool Sd2Card::readData(uint8_t *dst) {
   return readData(dst, 512);
 }
 
-#ifdef SD_CHECK_AND_RETRY
+#if ENABLED(SD_CHECK_AND_RETRY)
 static const uint16_t crctab[] PROGMEM = {
   0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50A5, 0x60C6, 0x70E7,
   0x8108, 0x9129, 0xA14A, 0xB16B, 0xC18C, 0xD1AD, 0xE1CE, 0xF1EF,
@@ -400,7 +400,7 @@ bool Sd2Card::readData(uint8_t* dst, uint16_t count) {
   // transfer data
   spiRead(dst, count);
 
-#ifdef SD_CHECK_AND_RETRY
+#if ENABLED(SD_CHECK_AND_RETRY)
   {
     uint16_t calcCrc = CRC_CCITT(dst, count);
     uint16_t recvCrc = spiRec() << 8;

@@ -44,7 +44,7 @@
  */
 #include "Configuration.h"
 
-#ifdef NUM_SERVOS
+#if HAS_SERVOS
 
 #include <Arduino.h>
 #include "servo.h"

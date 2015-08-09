@@ -3,7 +3,7 @@
 // Please note that using the high-res version takes 402Bytes of PROGMEM. 
 #define START_BMPHIGH
 
-#if defined(START_BMPHIGH)
+#if ENABLED(START_BMPHIGH)
   #define START_BMPWIDTH      128
   #define START_BMPHEIGHT      64
   #define START_BMPBYTEWIDTH   16

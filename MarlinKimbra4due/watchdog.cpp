@@ -1,6 +1,6 @@
 #include "Marlin.h"
 
-#ifdef USE_WATCHDOG
+#if ENABLED(USE_WATCHDOG)
 
 #include "watchdog.h"
 #include "ultralcd.h"
