@@ -208,7 +208,14 @@ void checkHitEndstops() {
   }
 }
 
-void enable_endstops(bool check) { check_endstops = check; }
+void enable_endstops(bool check) {
+  if (debugLevel & DEBUG_INFO) {
+    ECHO_SM(DB, "setup_for_endstop_move > enable_endstops");
+    if (check) ECHO_EM("(true)");
+    else ECHO_EM("(false)");
+  }
+  check_endstops = check;
+}
 
 // Check endstops
 inline void update_endstops() {
@@ -354,7 +361,7 @@ inline void update_endstops() {
               #if HAS_Z2_MAX
                 SET_ENDSTOP_BIT(Z2, MAX);
               #else
-                COPY_BIT(current_endstop_bits, Z_MAX, Z2_MAX)
+                COPY_BIT(current_endstop_bits, Z_MAX, Z2_MAX);
               #endif
 
             byte z_test = TEST_ENDSTOP(Z_MAX) << 0 + TEST_ENDSTOP(Z2_MAX) << 1; // bit 0 for Z, bit 1 for Z2
@@ -547,7 +554,7 @@ HAL_STEP_TIMER_ISR {
         }
       #endif
 
-      // #ifdef ADVANCE
+      // #if ENABLED(ADVANCE)
       //   e_steps[current_block->active_driver] = 0;
       // #endif
     }
@@ -672,7 +679,7 @@ HAL_STEP_TIMER_ISR {
       // ensure we're running at the correct step rate, even if we just came off an acceleration
       step_loops = step_loops_nominal;
     }
-    #if !defined(ENABLE_HIGH_SPEED_STEPPING)
+    #if DISABLED(ENABLE_HIGH_SPEED_STEPPING)
       STEP_END(x, X);
       STEP_END(y, Y);
       STEP_END(z, Z);

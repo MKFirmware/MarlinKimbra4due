@@ -41,7 +41,7 @@
  attached()  - Returns true if there is a servo attached.
  detach()    - Stops an attached servos from pulsing its i/o pin.
 
- */
+*/
 #include "Configuration.h"
 
 #if HAS_SERVOS
@@ -264,7 +264,7 @@ void Servo::writeMicroseconds(int value) {
 }
 
 // return the value as degrees
-int Servo::read() { return map(this->readMicroseconds()+1, SERVO_MIN(), SERVO_MAX(), 0, 180); }
+int Servo::read() { return map( this->readMicroseconds()+1, SERVO_MIN(), SERVO_MAX(), 0, 180); }
 
 int Servo::readMicroseconds() {
   return (this->servoIndex == INVALID_SERVO) ? 0 : ticksToUs(servo_info[this->servoIndex].ticks) + TRIM_DURATION;

@@ -1,6 +1,6 @@
 <img align="right" src="Documentation/Logo/MarlinKimbra%20Logo%20GitHub.png" />
 # MarlinKimbra4due 3D Printer Firmware
-## Version 4.1.3 dev
+## Version 4.1.4 dev
 
 ### Special thanks
 * Wurstnase
@@ -10,7 +10,7 @@
 
 ### New features are:
 * Stepping-algorithm optmized now for DRV8825 and A4988 (no need for double or quadstepping; no delays)
-* High speed stepping of approx. 295,000 steps/s, if needed (maybe more with less DOUBLE_STEP_FREQUENCY?)
+* High speed stepping of approx. 295.000 steps/s, if needed (maybe more with less DOUBLE_STEP_FREQUENCY?)
  
 ### known issues:
   * LCD only Reprap full graphics display tested
@@ -27,6 +27,8 @@
     * [Filament Sensor](/Documentation/FilamentSensor.md)
     * [Ramps Servo Power](/Documentation/RampsServoPower.md)
     * [LCD Language - Font - System](Documentation/LCDLanguageFont.md)
+  * Version
+    * [Change Log](/Documentation/changelog.md)
 
 
 

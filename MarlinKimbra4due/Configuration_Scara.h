@@ -19,8 +19,8 @@
 #define SCARA_offset_y -56 //mm
 #define SCARA_RAD2DEG 57.2957795  // to convert RAD to degrees
 
-#define THETA_HOMING_OFFSET 0	//calculatated from Calibration Guide and command M360 / M114 see picture in http://reprap.harleystudio.co.za/?page_id=1073
-#define PSI_HOMING_OFFSET 0  // calculatated from Calibration Guide and command M364 / M114 see picture in http://reprap.harleystudio.co.za/?page_id=1073
+#define THETA_HOMING_OFFSET 0 //calculatated from Calibration Guide and command M360 / M114 see picture in http://reprap.harleystudio.co.za/?page_id=1073
+#define PSI_HOMING_OFFSET 0   // calculatated from Calibration Guide and command M364 / M114 see picture in http://reprap.harleystudio.co.za/?page_id=1073
 
 //some helper variables to make kinematics faster
 #define L1_2 sq(Linkage_1) // do not change
@@ -185,7 +185,7 @@
 
   //#define Z_PROBE_ENDSTOP
   
-#endif // ENABLE_AUTO_BED_LEVELING
+#endif // AUTO_BED_LEVELING_FEATURE
 
 
 // The position of the homing switches

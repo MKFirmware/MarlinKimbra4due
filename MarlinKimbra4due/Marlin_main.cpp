@@ -440,16 +440,12 @@ unsigned long printer_usage_seconds;
 #endif
 
 #if ENABLED(FILAMENTCHANGEENABLE)
-	bool filament_changing = false;
-#endif
-
-#if ENABLED(IDLE_OOZING_PREVENT) || ENABLED(EXTRUDER_RUNOUT_PREVENT)
-  unsigned long axis_last_activity = 0;
-  bool axis_is_moving = false;
+  bool filament_changing = false;
 #endif
 
 #if ENABLED(IDLE_OOZING_PREVENT)
-  bool idleoozing_enabled = true;
+  unsigned long axis_last_activity = 0;
+  bool IDLE_OOZING_enabled = true;
   bool IDLE_OOZING_retracted[EXTRUDERS] = ARRAY_BY_EXTRUDERS(false);
 #endif
 
@@ -740,7 +736,7 @@ void setup() {
   ECHO_SMV(DB, MSG_FREE_MEMORY, freeMemory());
   ECHO_EMV(MSG_PLANNER_BUFFER_BYTES, (int)sizeof(block_t)*BLOCK_BUFFER_SIZE);
 
-  #ifdef SDSUPPORT
+  #if ENABLED(SDSUPPORT)
     for (int8_t i = 0; i < BUFSIZE; i++) fromsd[i] = false;
   #endif
 
@@ -751,7 +747,7 @@ void setup() {
   Config_RetrieveSettings();
 
   lcd_init();
-  #ifndef NEXTION
+  #if DISABLED(NEXTION)
     delay(SPLASH_SCREEN_DURATION);  // wait to display the splash screen
   #endif
 
@@ -775,7 +771,7 @@ void setup() {
     digipot_i2c_init();
   #endif
 
-  #ifdef Z_PROBE_SLED
+  #if ENABLED(Z_PROBE_SLED)
     pinMode(SLED_PIN, OUTPUT);
     digitalWrite(SLED_PIN, LOW); // turn it off
   #endif // Z_PROBE_SLED
@@ -792,7 +788,7 @@ void setup() {
     digitalWrite(STAT_LED_BLUE, LOW); // turn it off
   #endif
 
-  #ifdef FIRMWARE_TEST
+  #if ENABLED(FIRMWARE_TEST)
     FirmwareTest();
   #endif // FIRMWARE_TEST
 }
@@ -810,13 +806,13 @@ void setup() {
 void loop() {
   if (commands_in_queue < BUFSIZE - 1) get_command();
 
-  #ifdef SDSUPPORT
+  #if ENABLED(SDSUPPORT)
     card.checkautostart(false);
   #endif
 
   if (commands_in_queue) {
 
-    #ifdef SDSUPPORT
+    #if ENABLED(SDSUPPORT)
 
       if (card.saving) {
         char *command = command_queue[cmd_queue_index_r];
@@ -904,7 +900,7 @@ void get_command() {
       command[serial_count] = 0; // terminate string
 
       // this item in the queue is not from sd
-      #ifdef SDSUPPORT
+      #if ENABLED(SDSUPPORT)
         fromsd[cmd_queue_index_w] = false;
       #endif
 
@@ -990,7 +986,7 @@ void get_command() {
     }
   }
 
-  #ifdef SDSUPPORT
+  #if ENABLED(SDSUPPORT)
 
     if (!card.sdprinting || serial_count) return;
 
@@ -1130,15 +1126,16 @@ XYZ_CONSTS_FROM_CONFIG(signed char, home_dir,  HOME_DIR);
 
 #endif //DUAL_X_CARRIAGE
 
-void print_xyz(const char *prefix, const float x, const float y, const float z) {
+void print_xyz(const char *prefix, const float x, const float y, const float z, bool eol = true) {
   ECHO_V(prefix);
   ECHO_MV(": (", x);
   ECHO_MV(", ", y);
   ECHO_MV(", ", z);
-  ECHO_EM(")");
+  ECHO_M(")");
+  if (eol) ECHO_E;
 }
-void print_xyz(const char *prefix, const float xyz[]) {
-  print_xyz(prefix, xyz[X_AXIS], xyz[Y_AXIS], xyz[Z_AXIS]);
+void print_xyz(const char *prefix, const float xyz[], bool eol = true) {
+  print_xyz(prefix, xyz[X_AXIS], xyz[Y_AXIS], xyz[Z_AXIS], eol);
 }
 
 static void set_axis_is_at_home(AxisEnum axis) {
@@ -1268,13 +1265,11 @@ static void setup_for_endstop_move() {
   saved_feedrate_multiplier = feedrate_multiplier;
   feedrate_multiplier = 100;
   refresh_cmd_timeout();
-  if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "setup_for_endstop_move > enable_endstops(true)");
   enable_endstops(true);
 }
 
 static void clean_up_after_endstop_move() {
   #if ENABLED(ENDSTOPS_ONLY_FOR_HOMING)
-    if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "clean_up_after_endstop_move > ENDSTOPS_ONLY_FOR_HOMING > enable_endstops(false)");
     enable_endstops(false);
   #endif
   feedrate = saved_feedrate;
@@ -1461,17 +1456,17 @@ static void clean_up_after_endstop_move() {
     static float probe_pt(float x, float y, float z_before, ProbeAction probe_action = ProbeDeployAndStow, int verbose_level = 1) {
       if (debugLevel & DEBUG_INFO) {
         ECHO_LM(DB, "probe_pt >>>");
-        ECHO_LMV(DB, "> ProbeAction:", (unsigned long)probe_action);
-        print_xyz("> current_position", current_position);
-        ECHO_LMV(DB, "Z Raise to z_before ", z_before);
-        ECHO_LMV(DB, "> do_blocking_move_to_z ", z_before);
+        ECHO_SMV(DB, "> ProbeAction:", (unsigned long)probe_action);
+        print_xyz(" > current_position", current_position);
+        ECHO_SMV(DB, "Z Raise to z_before ", z_before);
+        ECHO_EMV(" > do_blocking_move_to_z ", z_before);
       }
 
       // Move Z up to the z_before height, then move the probe to the given XY
       do_blocking_move_to_z(z_before); // this also updates current_position
 
       if (debugLevel & DEBUG_INFO) {
-        ECHO_SMV("> do_blocking_move_to_xy ", x - X_PROBE_OFFSET_FROM_EXTRUDER);
+        ECHO_SMV(DB, "> do_blocking_move_to_xy ", x - X_PROBE_OFFSET_FROM_EXTRUDER);
         ECHO_EMV(", ", y - Y_PROBE_OFFSET_FROM_EXTRUDER);
       }
 
@@ -1563,16 +1558,12 @@ static void clean_up_after_endstop_move() {
       current_position[axis] = 0;
       sync_plan_position();
 
-      if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "> enable_endstops(false)");
-
       enable_endstops(false); // Disable endstops while moving away
 
       // Move away from the endstop by the axis HOME_BUMP_MM
       destination[axis] = -home_bump_mm(axis) * axis_home_dir;
       line_to_destination();
       st_synchronize();
-
-      if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "> enable_endstops(true)");
 
       enable_endstops(true); // Enable endstops for next homing move
 
@@ -1685,16 +1676,12 @@ static void clean_up_after_endstop_move() {
       current_position[axis] = 0;
       sync_plan_position();
 
-      if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "> enable_endstops(false)");
-
       enable_endstops(false); // Disable endstops while moving away
 
       // Move away from the endstop by the axis HOME_BUMP_MM
       destination[axis] = -home_bump_mm(axis) * axis_home_dir;
       line_to_destination();
       st_synchronize();
-
-      if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "> enable_endstops(true)");
 
       enable_endstops(true); // Enable endstops for next homing move
 
@@ -1708,7 +1695,6 @@ static void clean_up_after_endstop_move() {
 
       // retrace by the amount specified in endstop_adj
       if (endstop_adj[axis] * axis_home_dir < 0) {
-        if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "> enable_endstops(false)");
         enable_endstops(false); // Disable endstops while moving away
         sync_plan_position();
         destination[axis] = endstop_adj[axis];
@@ -1718,7 +1704,6 @@ static void clean_up_after_endstop_move() {
         }
         line_to_destination();
         st_synchronize();
-        if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "> enable_endstops(true)");
         enable_endstops(true); // Enable endstops for next homing move
       }
 
@@ -2046,11 +2031,11 @@ static void clean_up_after_endstop_move() {
     if ((t1_err == false) and (t2_err == false) and (t3_err == true)) err_tower = 3;
 
     ECHO_SM(DB, "t1:");
-    if (t1_err == true) ECHO_M("Err"); else ECHO_M("OK");  
+    if (t1_err == true) ECHO_M("Err"); else ECHO_M("OK");
     ECHO_M(" t2:");
     if (t2_err == true) ECHO_M("Err"); else ECHO_M("OK");
     ECHO_M(" t3:");
-    if (t3_err == true) ECHO_M("Err"); else ECHO_M("OK");  
+    if (t3_err == true) ECHO_M("Err"); else ECHO_M("OK");
     ECHO_E;
 
     if (err_tower == 0) {
@@ -2661,27 +2646,29 @@ static void clean_up_after_endstop_move() {
 
 #endif //DELTA
 
-#ifdef IDLE_OOZING_PREVENT
+#if ENABLED(IDLE_OOZING_PREVENT)
   void IDLE_OOZING_retract(bool retracting) {  
     if (retracting && !IDLE_OOZING_retracted[active_extruder]) {
-  	  set_destination_to_current();
-  	  current_position[E_AXIS]+=IDLE_OOZING_LENGTH/volumetric_multiplier[active_extruder];
-  	  plan_set_e_position(current_position[E_AXIS]);
-  	  float oldFeedrate = feedrate;
-  	  feedrate=IDLE_OOZING_FEEDRATE*60;
-  	  IDLE_OOZING_retracted[active_extruder]=true;
-  	  prepare_move();
-  	  feedrate = oldFeedrate;
+      float oldFeedrate = feedrate;
+      set_destination_to_current();
+      current_position[E_AXIS] += IDLE_OOZING_LENGTH / volumetric_multiplier[active_extruder];
+      feedrate = IDLE_OOZING_FEEDRATE * 60;
+      plan_set_e_position(current_position[E_AXIS]);
+      prepare_move();
+      feedrate = oldFeedrate;
+      IDLE_OOZING_retracted[active_extruder] = true;
+      //ECHO_EM("-");
     }
     else if (!retracting && IDLE_OOZING_retracted[active_extruder]) {
-  	  set_destination_to_current();
-  	  current_position[E_AXIS]-=(IDLE_OOZING_LENGTH+IDLE_OOZING_RECOVER_LENGTH)/volumetric_multiplier[active_extruder];
-  	  plan_set_e_position(current_position[E_AXIS]);
-  	  float oldFeedrate = feedrate;
-  	  feedrate=IDLE_OOZING_RECOVER_FEEDRATE * 60;
-  	  IDLE_OOZING_retracted[active_extruder] = false;
-  	  prepare_move();
+      float oldFeedrate = feedrate;
+      set_destination_to_current();
+      current_position[E_AXIS] -= (IDLE_OOZING_LENGTH+IDLE_OOZING_RECOVER_LENGTH) / volumetric_multiplier[active_extruder];
+      feedrate = IDLE_OOZING_RECOVER_FEEDRATE * 60;
+      plan_set_e_position(current_position[E_AXIS]);
+      prepare_move();
       feedrate = oldFeedrate;
+      IDLE_OOZING_retracted[active_extruder] = false;
+      //ECHO_EM("+");
     }
   }
 #endif
@@ -2866,11 +2853,16 @@ inline void wait_bed() {
  *  - Set the feedrate, if included
  */
 void gcode_get_destination() {
+  #if ENABLED(IDLE_OOZING_PREVENT)
+    if(code_seen(axis_codes[E_AXIS])) IDLE_OOZING_retract(false);
+  #endif 
   for (int i = 0; i < NUM_AXIS; i++) {
-    if (code_seen(axis_codes[i]))
+    if (code_seen(axis_codes[i])) {
       destination[i] = code_value() + (axis_relative_modes[i] || relative_mode ? current_position[i] : 0);
-    else
+    }
+    else {
       destination[i] = current_position[i];
+    }
   }
   if (code_seen('F')) {
     float next_feedrate = code_value();
@@ -2888,11 +2880,6 @@ void unknown_command_error() {
  */
 inline void gcode_G0_G1() {
   if (IsRunning()) {
-
-    #ifdef IDLE_OOZING_PREVENT
-      IDLE_OOZING_retract(false);
-    #endif
-
     gcode_get_destination(); // For X Y Z E F
 
     #ifdef FWRETRACT
@@ -3076,7 +3063,7 @@ inline void gcode_G28() {
           print_xyz("> HOMEAXIS(Z) > current_position", current_position);
         }
 
-        #elif DISABLED(Z_SAFE_HOMING) && defined(Z_RAISE_BEFORE_HOMING) && Z_RAISE_BEFORE_HOMING > 0
+      #elif DISABLED(Z_SAFE_HOMING) && defined(Z_RAISE_BEFORE_HOMING) && Z_RAISE_BEFORE_HOMING > 0
 
         // Raise Z before homing any other axes
         destination[Z_AXIS] = -Z_RAISE_BEFORE_HOMING * home_dir(Z_AXIS); // Set destination away from bed
@@ -3305,8 +3292,8 @@ inline void gcode_G28() {
 
           if (debugLevel & DEBUG_INFO) {
             ECHO_SMV(DB, "Raise Z (before homing) by ", (float)Z_RAISE_BEFORE_HOMING);
-            print_xyz("> home_all_axis > current_position", current_position);
-            print_xyz("> home_all_axis > destination", destination);
+            print_xyz(" > home_all_axis > current_position", current_position, false);
+            print_xyz(" > home_all_axis > destination", destination);
           }
 
           // This could potentially move X, Y, Z all together
@@ -3338,11 +3325,11 @@ inline void gcode_G28() {
               // Set Z destination away from bed and raise the axis
               destination[Z_AXIS] = -Z_RAISE_BEFORE_HOMING * home_dir(Z_AXIS);    // Set destination away from bed
               feedrate = max_feedrate[Z_AXIS] * 60;
-              
+
               if (debugLevel & DEBUG_INFO) {
                 ECHO_SMV(DB, "Raise Z (before homing) by ", (float)Z_RAISE_BEFORE_HOMING);
-                print_xyz("> homeZ > current_position", current_position);
-                print_xyz("> homeZ > destination", destination);
+                print_xyz(" > homeZ > current_position", current_position, false);
+                print_xyz(" > homeZ > destination", destination);
               }
 
               line_to_destination();
@@ -3377,8 +3364,8 @@ inline void gcode_G28() {
 
             if (debugLevel & DEBUG_INFO) {
               ECHO_SMV(DB, "Raise Z (before homing) by ", (float)Z_RAISE_BEFORE_HOMING);
-              print_xyz("> home_all_axis > current_position", current_position);
-              print_xyz("> home_all_axis > destination", destination);
+              print_xyz(" > home_all_axis > current_position", current_position, false);
+              print_xyz(" > home_all_axis > destination", destination);
             }
 
             // This could potentially move X, Y, Z all together
@@ -3410,7 +3397,7 @@ inline void gcode_G28() {
   clean_up_after_endstop_move();
 }
 
-#if  ENABLED(AUTO_BED_LEVELING_FEATURE)
+#if ENABLED(AUTO_BED_LEVELING_FEATURE)
 
   void out_of_range_error(const char *p_edge) {
     ECHO_M("?Probe ");
@@ -3465,16 +3452,16 @@ inline void gcode_G28() {
       return;
     }
 
-    int verbose_level = code_seen('V') || code_seen('v') ? code_value_short() : 1;
+    int verbose_level = code_seen('V') ? code_value_short() : 1;
     if (verbose_level < 0 || verbose_level > 4) {
       ECHO_LM(ER,"?(V)erbose Level is implausible (0-4).");
       return;
     }
 
-    bool dryrun = code_seen('D') || code_seen('d'),
+    bool dryrun = code_seen('D'),
          deploy_probe_for_each_reading = code_seen('E');
 
-    #ifdef AUTO_BED_LEVELING_GRID
+    #if ENABLED(AUTO_BED_LEVELING_GRID)
 
       bool do_topography_map = verbose_level > 2 || code_seen('T');
 
@@ -3527,7 +3514,7 @@ inline void gcode_G28() {
 
     #endif // AUTO_BED_LEVELING_GRID
 
-    #ifdef Z_PROBE_SLED
+    #if ENABLED(Z_PROBE_SLED)
       dock_sled(false); // engage (un-dock) the probe
     #endif
 
@@ -3550,7 +3537,7 @@ inline void gcode_G28() {
     setup_for_endstop_move();
     feedrate = homing_feedrate[Z_AXIS];
 
-    #ifdef AUTO_BED_LEVELING_GRID
+    #if ENABLED(AUTO_BED_LEVELING_GRID)
 
       // probe at the points of a lattice grid
       const int xGridSpacing = (right_probe_bed_position - left_probe_bed_position) / (auto_bed_leveling_grid_points - 1),
@@ -3565,8 +3552,7 @@ inline void gcode_G28() {
       int abl2 = auto_bed_leveling_grid_points * auto_bed_leveling_grid_points;
 
       double eqnAMatrix[abl2 * 3], // "A" matrix of the linear system of equations
-             eqnBVector[abl2],     // "B" vector of Z points
-             mean = 0.0;
+             eqnBVector[abl2];     // "B" vector of Z points
 
       int probePointCounter = 0;
       bool zig = true;
@@ -3616,8 +3602,6 @@ inline void gcode_G28() {
 
           measured_z = probe_pt(xProbe, yProbe, z_before, act, verbose_level);
 
-          mean += measured_z;
-
           eqnBVector[probePointCounter] = measured_z;
           eqnAMatrix[probePointCounter + 0 * abl2] = xProbe;
           eqnAMatrix[probePointCounter + 1 * abl2] = yProbe;
@@ -3638,49 +3622,48 @@ inline void gcode_G28() {
       clean_up_after_endstop_move();
 
       // solve lsq problem
-      double plane_equation_coefficients[3];
-      qr_solve(plane_equation_coefficients, abl2, 3, eqnAMatrix, eqnBVector);
-
-      mean /= abl2;
+      double *plane_equation_coefficients = qr_solve(abl2, 3, eqnAMatrix, eqnBVector);
 
       if (verbose_level) {
         ECHO_SMV(DB, "Eqn coefficients: a: ", plane_equation_coefficients[0], 8);
         ECHO_MV(" b: ", plane_equation_coefficients[1], 8);
         ECHO_EMV(" d: ", plane_equation_coefficients[2], 8);
-        if (verbose_level > 2) {
-          ECHO_LMV(DB, "Mean of sampled points: ", mean, 8);
-        }
       }
 
       if (!dryrun) set_bed_level_equation_lsq(plane_equation_coefficients);
       free(plane_equation_coefficients);
+      matrix_3x3 inverse_bed_level_matrix = matrix_3x3::transpose(plan_bed_level_matrix); // inverse bed level matrix
+      // In the special case of an rotation matrix "the inverse" = "the transposed" matrix.
+
+      // search minimum and maximum point on bed in rotated coordinates
+      float rot_min_diff = Z_MAX_POS,
+            rot_max_diff = -Z_MAX_POS,
+            min_diff = Z_MAX_POS;
+      for (int8_t i = 0; i < abl2; i++) {
+          vector_3 probe_point = vector_3(eqnAMatrix[i + 0 * abl2], eqnAMatrix[i + 1 * abl2], eqnBVector[i]);
+          probe_point.apply_rotation(inverse_bed_level_matrix);
+          rot_min_diff = min(rot_min_diff, probe_point.z);
+          rot_max_diff = max(rot_max_diff, probe_point.z);
+          min_diff = min(min_diff, eqnBVector[i]);
+      }
 
       // Show the Topography map if enabled
       if (do_topography_map) {
+        // search minimum measured Z
 
-        ECHO_LM(DB, "Bed Height Topography: \n");
-        ECHO_LM(DB, "+-----------+\n");
-        ECHO_LM(DB, "|...Back....|\n");
-        ECHO_LM(DB, "|Left..Right|\n");
-        ECHO_LM(DB, "|...Front...|\n");
-        ECHO_LM(DB, "+-----------+\n");
+        ECHO_LM(DB, "+-----------+");
+        ECHO_LM(DB, "|...Back....|");
+        ECHO_LM(DB, "|Left..Right|");
+        ECHO_LM(DB, "|...Front...|");
+        ECHO_LM(DB, "+-----------+");
+        ECHO_LM(DB, "Measured Bed Topography:");
 
-        float min_diff = 999;
-
-        for (int yy = auto_bed_leveling_grid_points - 1; yy >= 0; yy--) {
+        for (int8_t yy = auto_bed_leveling_grid_points - 1; yy >= 0; yy--) {
           ECHO_S(DB);
-          for (int xx = 0; xx < auto_bed_leveling_grid_points; xx++) {
-            int ind = yy * auto_bed_leveling_grid_points + xx;
-            float diff = eqnBVector[ind] - mean;
+          for (int8_t xx = 0; xx < auto_bed_leveling_grid_points; xx++) {
+            int8_t ind = yy * auto_bed_leveling_grid_points + xx;
 
-            float x_tmp = eqnAMatrix[ind + 0 * abl2],
-              y_tmp = eqnAMatrix[ind + 1 * abl2],
-              z_tmp = 0;
-
-            apply_rotation_xyz(plan_bed_level_matrix,x_tmp,y_tmp,z_tmp);
-
-            if (eqnBVector[ind] - z_tmp < min_diff)
-              min_diff = eqnBVector[ind] - z_tmp;
+            float diff = eqnBVector[ind];
 
             if (diff >= 0.0)
               ECHO_M(" +");   // Include + for column alignment
@@ -3691,30 +3674,67 @@ inline void gcode_G28() {
           ECHO_E;
         } // yy
         ECHO_E;
-        if (verbose_level > 3) {
-          ECHO_LM(DB, " Corrected Bed Height vs. Bed Topology: \n");
-          for (int yy = auto_bed_leveling_grid_points - 1; yy >= 0; yy--) {
-            ECHO_S(DB);
-            for (int xx = 0; xx < auto_bed_leveling_grid_points; xx++) {
-              int ind = yy * auto_bed_leveling_grid_points + xx;
-              float x_tmp = eqnAMatrix[ind + 0 * abl2],
-                y_tmp = eqnAMatrix[ind + 1 * abl2],
-                z_tmp = 0;
 
-              apply_rotation_xyz(plan_bed_level_matrix,x_tmp,y_tmp,z_tmp);
+        ECHO_LM(DB, "Corrected Bed Topography:");
+        for (int8_t yy = auto_bed_leveling_grid_points - 1; yy >= 0; yy--) {
+          ECHO_S(DB);
+          for (int8_t xx = 0; xx < auto_bed_leveling_grid_points; xx++) {
+            int8_t ind = yy * auto_bed_leveling_grid_points + xx;
 
-              float diff = eqnBVector[ind] - z_tmp - min_diff;
-              if (diff >= 0.0)
-                ECHO_M(" +");   // Include + for column alignment
-              else
-                ECHO_M(" ");
-              ECHO_V(diff, 5);
-            } // xx
-            ECHO_E;
-          } // yy
+            float diff = eqnBVector[ind] - min_diff;
+
+            if (diff >= 0.0)
+              ECHO_M(" +");   // Include + for column alignment
+            else
+              ECHO_M(" ");
+            ECHO_V(diff, 5);
+          } // xx
           ECHO_E;
-        }
+        } // yy
+        ECHO_E;
+
+        ECHO_LM(DB, "Corrected Bed Topography in new coordinates:");
+        for (int8_t yy = auto_bed_leveling_grid_points - 1; yy >= 0; yy--) {
+          ECHO_S(DB);
+          for (int8_t xx = 0; xx < auto_bed_leveling_grid_points; xx++) {
+            int8_t ind = yy * auto_bed_leveling_grid_points + xx;
+
+            vector_3 probe_point = vector_3(eqnAMatrix[ind + 0 * abl2], eqnAMatrix[ind + 1 * abl2], eqnBVector[ind]);
+            probe_point.apply_rotation(inverse_bed_level_matrix);
+            float diff = probe_point.z - rot_min_diff;
+
+            if (diff >= 0.0)
+              ECHO_M(" +");   // Include + for column alignment
+            else
+              ECHO_M(" ");
+            ECHO_V(diff, 5);
+          } // xx
+          ECHO_E;
+        } // yy
+        ECHO_E;
+
+        ECHO_LM(DB, "Height from Bed to Nozzle");
+        ECHO_LM(DB, "(+) above, or (-) below surface :");
+        for (int8_t yy = auto_bed_leveling_grid_points - 1; yy >= 0; yy--) {
+          ECHO_S(DB);
+          for (int8_t xx = 0; xx < auto_bed_leveling_grid_points; xx++) {
+            int8_t ind = yy * auto_bed_leveling_grid_points + xx;
+
+            vector_3 probe_point = vector_3(eqnAMatrix[ind + 0 * abl2], eqnAMatrix[ind + 1 * abl2], eqnBVector[ind]);
+            probe_point.apply_rotation(inverse_bed_level_matrix);
+            float diff = -(probe_point.z - rot_max_diff);
+
+            if (diff >= 0.0)
+              ECHO_M(" +");   // Include + for column alignment
+            else
+              ECHO_M(" ");
+            ECHO_V(diff, 5);
+          } // xx
+          ECHO_E;
+        } // yy
+        ECHO_E;
       } //do_topography_map
+
     #else // !AUTO_BED_LEVELING_GRID
 
       if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "> 3-point Leveling");
@@ -3736,54 +3756,20 @@ inline void gcode_G28() {
     #endif // !AUTO_BED_LEVELING_GRID
 
     if (verbose_level > 0)
-      plan_bed_level_matrix.debug("Bed Level Correction Matrix:");
+      plan_bed_level_matrix.debug(" Bed Level Correction Matrix:");
 
     if (!dryrun) {
-      // Correct the Z height difference from z-probe position and hotend tip position.
-      // The Z height on homing is measured by Z-Probe, but the probe is quite far from the hotend.
-      // When the bed is uneven, this height must be corrected.
-      float x_tmp = current_position[X_AXIS] + X_PROBE_OFFSET_FROM_EXTRUDER,
-            y_tmp = current_position[Y_AXIS] + Y_PROBE_OFFSET_FROM_EXTRUDER,
-            z_tmp = current_position[Z_AXIS],
-            real_z = st_get_position_mm(Z_AXIS);  //get the real Z (since plan_get_position is now correcting the plane)
-
-      if (debugLevel & DEBUG_INFO) {
-        ECHO_LMV(DB, "> BEFORE apply_rotation_xyz > z_tmp  = ", z_tmp);
-        ECHO_LMV(DB, "> BEFORE apply_rotation_xyz > real_z = ", real_z);
-      }
-
-      apply_rotation_xyz(plan_bed_level_matrix, x_tmp, y_tmp, z_tmp); // Apply the correction sending the probe offset
-
-      // Get the current Z position and send it to the planner.
-      //
-      // >> (z_tmp - real_z) : The rotated current Z minus the uncorrected Z (most recent plan_set_position/sync_plan_position)
-      //
-      // >> zprobe_zoffset : Z distance from nozzle to probe (set by default, M851, EEPROM, or Menu)
-      //
-      // >> Z_RAISE_AFTER_PROBING : The distance the probe will have lifted after the last probe
-      //
-      // >> Should home_offset[Z_AXIS] be included?
-      //
-      //      Discussion: home_offset[Z_AXIS] was applied in G28 to set the starting Z.
-      //      If Z is not tweaked in G29 -and- the Z probe in G29 is not actually "homing" Z...
-      //      then perhaps it should not be included here. The purpose of home_offset[] is to
-      //      adjust for inaccurate endstops, not for reasonably accurate probes. If it were
-      //      added here, it could be seen as a compensating factor for the Z probe.
-      //
-
-      if (debugLevel & DEBUG_INFO) ECHO_LMV(DB, "> AFTER apply_rotation_xyz > z_tmp  = ", z_tmp);
-
-      current_position[Z_AXIS] = -zprobe_zoffset + (z_tmp - real_z)
-        #if HAS_SERVO_ENDSTOPS || ENABLED(Z_PROBE_SLED)
-           + Z_RAISE_AFTER_PROBING
-        #endif
-        ;
-      // current_position[Z_AXIS] += home_offset[Z_AXIS]; // The probe determines Z=0, not "Z home"
+      uint8_t ind = abl2-1; // last point probe = current point
+      vector_3 probe_point = vector_3(eqnAMatrix[ind + 0 * abl2], eqnAMatrix[ind + 1 * abl2], eqnBVector[ind]);
+      probe_point.apply_rotation(inverse_bed_level_matrix);
+      current_position[Z_AXIS] = -zprobe_zoffset + (probe_point.z - rot_max_diff)
+      #if HAS_SERVO_ENDSTOPS || ENABLED(Z_PROBE_SLED)
+        + Z_RAISE_AFTER_PROBING
+      #endif
+      ;
       sync_plan_position();
-      if (debugLevel & DEBUG_INFO) {
-        ECHO_S(DB);
-        print_xyz("> corrected Z in G29", current_position);
-      }
+
+      if (debugLevel & DEBUG_INFO) ECHO_LMV(DB, "> AFTER apply_rotation_xyz > current_position[Z_AXIS]= ", current_position[Z_AXIS], 5);
     }
 
     #if ENABLED(Z_PROBE_SLED)
@@ -3954,7 +3940,7 @@ inline void gcode_G28() {
     }
 
     if (code_seen('D')) {
-      ECHO_LM(DB, "Adjusting Diagonal Rod Length");  
+      ECHO_LM(DB, "Adjusting Diagonal Rod Length");
       adj_diagrod_length();
       ECHO_LM(DB, "Diagonal Rod Length adjustment complete");
     }
@@ -4244,7 +4230,7 @@ inline void gcode_M17() {
   enable_all_steppers();
 }
 
-#ifdef SDSUPPORT
+#if ENABLED(SDSUPPORT)
 
   /**
    * M20: List SD card to serial output
@@ -4349,7 +4335,7 @@ inline void gcode_M31() {
   autotempShutdown();
 }
 
-#ifdef SDSUPPORT
+#if ENABLED(SDSUPPORT)
 
   /**
    * M32: Select file and start SD Print
@@ -5772,7 +5758,7 @@ inline void gcode_M226() {
  */
 inline void gcode_M400() { st_synchronize(); }
 
-#if defined(AUTO_BED_LEVELING_FEATURE) && !defined(Z_PROBE_SLED) && SERVO_LEVELING
+#if ENABLED(AUTO_BED_LEVELING_FEATURE) && DISABLED(Z_PROBE_SLED) && SERVO_LEVELING
 
   #if SERVO_LEVELING
     void raise_z_for_servo() {
@@ -5851,7 +5837,7 @@ inline void gcode_M400() { st_synchronize(); }
    * M407: Get measured filament diameter on serial output
    */
   inline void gcode_M407() {
-    ECHO_LMV(DB, "Filament dia (measured mm):", filament_width_meas);   
+    ECHO_LMV(DB, "Filament dia (measured mm):", filament_width_meas);
   }
 
 #endif // FILAMENT_SENSOR
@@ -6202,12 +6188,12 @@ inline void gcode_M503() {
     if (code_seen('U')) {
       diagrod_adj[0] = code_value();
       set_delta_constants();
-	  }
-	  if (code_seen('V')) {
+    }
+    if (code_seen('V')) {
       diagrod_adj[1] = code_value();
       set_delta_constants();
-	  }
-	  if (code_seen('W')) {
+    }
+    if (code_seen('W')) {
       diagrod_adj[2] = code_value();
       set_delta_constants();
     }
@@ -6327,29 +6313,6 @@ inline void gcode_M999() {
   FlushSerialRequestResend();
 }
 
-#ifdef CUSTOM_M_CODE_SET_Z_PROBE_OFFSET
-
-  inline void gcode_SET_Z_PROBE_OFFSET() {
-    float value;
-    if (code_seen('Z')) {
-      value = code_value();
-      if (Z_PROBE_OFFSET_RANGE_MIN <= value && value <= Z_PROBE_OFFSET_RANGE_MAX) {
-        zprobe_zoffset = value;
-        ECHO_LM(DB, MSG_ZPROBE_ZOFFSET " " OK);
-      }
-      else {
-        ECHO_SM(DB, MSG_ZPROBE_ZOFFSET);
-        ECHO_MV(MSG_Z_MIN, Z_PROBE_OFFSET_RANGE_MIN);
-        ECHO_EMV(MSG_Z_MAX, Z_PROBE_OFFSET_RANGE_MAX);
-      }
-    }
-    else {
-      ECHO_LMV(DB, MSG_ZPROBE_ZOFFSET " : ", zprobe_zoffset);
-    }
-  }
-
-#endif // CUSTOM_M_CODE_SET_Z_PROBE_OFFSET
-
 /**
  * T0-T3: Switch tool, usually switching extruders
  *
@@ -6457,7 +6420,7 @@ inline void gcode_T(uint8_t tmp_extruder) {
                 WRITE(E1E3_CHOICE_PIN,LOW);
                 active_driver = 1;
                 delay(500); // 500 microseconds delay for relay
-                enable_e1();             
+                enable_e1();
                 break;
               case 2:
                 WRITE(E0E2_CHOICE_PIN,HIGH);
@@ -6665,7 +6628,7 @@ void process_next_command() {
       #if ENABLED(AUTO_BED_LEVELING_FEATURE)
         case 29: // G29 Detailed Z-Probe, probes the bed at 3 or more points.
           gcode_G29(); gcode_M114(); break;
-        #ifndef Z_PROBE_SLED
+        #if DISABLED(Z_PROBE_SLED)
           case 30: // G30 Single Z Probe
             gcode_G30(); break;
         #else // Z_PROBE_SLED
@@ -6720,7 +6683,7 @@ void process_next_command() {
       case 17: //M17 - Enable/Power all stepper motors
         gcode_M17(); break;
 
-      #ifdef SDSUPPORT
+      #if ENABLED(SDSUPPORT)
         case 20: // M20 - list SD card
           gcode_M20(); break;
         case 21: // M21 - init SD card
@@ -6786,7 +6749,7 @@ void process_next_command() {
       case 104: // M104
         gcode_M104(); break;
       case 105: // M105 Read current temperature
-        gcode_M105(); return; break; // "ok" already printed
+        gcode_M105(); return; // "ok" already printed
 
       #if HAS_FAN
         case 106: //M106 Fan On
@@ -7026,13 +6989,8 @@ void process_next_command() {
           gcode_M997(); break;
       #endif // NPR2
 
-       case 999: // M999: Restart after being Stopped
+      case 999: // M999: Restart after being Stopped
         gcode_M999(); break;
-
-        #ifdef CUSTOM_M_CODE_SET_Z_PROBE_OFFSET
-        case CUSTOM_M_CODE_SET_Z_PROBE_OFFSET:
-          gcode_SET_Z_PROBE_OFFSET(); break;
-      #endif // CUSTOM_M_CODE_SET_Z_PROBE_OFFSET
     }
     break;
 
@@ -7060,7 +7018,7 @@ void FlushSerialRequestResend() {
 
 void ok_to_send() {
   refresh_cmd_timeout();
-  #ifdef SDSUPPORT
+  #if ENABLED(SDSUPPORT)
     if (fromsd[cmd_queue_index_r]) return;
   #endif
   ECHO_S(OK);
@@ -7732,8 +7690,9 @@ void manage_inactivity(bool ignore_stepper_queue/*=false*/) {
     }
   #endif
 
-  #ifdef IDLE_OOZING_PREVENT
-    if (degHotend(active_extruder) > IDLE_OOZING_MINTEMP && !(debugLevel & DEBUG_DRYRUN) && !axis_is_moving && idleoozing_enabled) {
+  #if ENABLED(IDLE_OOZING_PREVENT)
+    if (blocks_queued()) axis_last_activity = millis();
+    if (degHotend(active_extruder) > IDLE_OOZING_MINTEMP && !(debugLevel & DEBUG_DRYRUN) && IDLE_OOZING_enabled) {
       #ifdef FILAMENTCHANGEENABLE
         if (!filament_changing)
       #endif

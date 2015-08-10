@@ -162,7 +162,7 @@
 
   //#define Z_PROBE_ENDSTOP
   
-#endif // ENABLE_AUTO_BED_LEVELING
+#endif // AUTO_BED_LEVELING_FEATURE
 
 
 // The position of the homing switches
