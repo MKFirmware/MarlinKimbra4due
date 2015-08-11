@@ -1164,7 +1164,7 @@ void digipot_init() {
   #if MB(ALLIGATOR)
     const float motor_current[] = MOTOR_CURRENT;
     unsigned int digipot_motor = 0;
-    for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t i = 0; i < EXTRUDERS+3 ; i++) {
       digipot_motor = 255 * (motor_current[i] / 2.5);
       ExternalDac::setValue(i, digipot_motor);
     }
