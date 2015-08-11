@@ -98,12 +98,12 @@ void spiBegin() {
     #if MB(ALLIGATOR)
       // Init Motor Fault
       pinMode(MOTOR_FAULT_PIN, INPUT);
-      pinMode(DAC_SYNC, OUTPUT);
+      pinMode(DAC0_SYNC, OUTPUT);
       pinMode(SPI_EEPROM1_CS, OUTPUT);
       pinMode(SPI_EEPROM2_CS, OUTPUT);
       pinMode(SPI_FLASH_CS, OUTPUT);
       //pinMode( SPI_PIN, OUTPUT);
-      digitalWrite(DAC_SYNC , HIGH);
+      digitalWrite(DAC0_SYNC , HIGH);
       digitalWrite(SPI_EEPROM1_CS, HIGH);
       digitalWrite(SPI_EEPROM2_CS, HIGH);
       digitalWrite(SPI_FLASH_CS, HIGH);

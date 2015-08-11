@@ -1,12 +1,10 @@
 #ifndef _EXTERNAL_DAC_H
 #define _EXTERNAL_DAC_H
 
-class ExternalDac
-{
-public:
+class ExternalDac {
+  public:
     ExternalDac();
     static void begin(void);
-    static void setValueAll(uint8_t value);
     static void setValue(uint8_t channel, uint8_t value);
 };
 

@@ -48,7 +48,7 @@ block_t *current_block;  // A pointer to the block currently being traced
 static unsigned char out_bits = 0;        // The next stepping-bits to be output
 static unsigned int cleaning_buffer_counter;
 
-#ifdef Z_DUAL_ENDSTOPS
+#if ENABLED(Z_DUAL_ENDSTOPS)
   static bool performing_homing = false, 
               locked_z_motor = false, 
               locked_z2_motor = false;
@@ -1164,7 +1164,7 @@ void digipot_init() {
   #if MB(ALLIGATOR)
     const float motor_current[] = MOTOR_CURRENT;
     unsigned int digipot_motor = 0;
-    for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t i = 0; i < 3 + DRIVER_EXTRUDERS; i++) {
       digipot_motor = 255 * (motor_current[i] / 2.5);
       ExternalDac::setValue(i, digipot_motor);
     }
