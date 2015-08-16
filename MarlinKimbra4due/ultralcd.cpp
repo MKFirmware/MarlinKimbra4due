@@ -2257,10 +2257,9 @@ char *ftostr52(const float &x) {
 #include "temperature.h"
 #include "stepper.h"
 #include "configuration_store.h"
-#include "NexText.h"
-#include "NexHotspot.h"
-#include "NexProgressBar.h"
+#include "Nextion.h"
 
+bool NextionON = false;
 char buffer[100]    = {0};
 char lcd_status_message[30] = WELCOME_MSG; // worst case is kana with up to 3*LCD_WIDTH+1
 uint8_t lcd_status_message_level = 0;
@@ -2284,18 +2283,18 @@ NexProgressBar jp3  = NexProgressBar(1, 11, "jp3");
 NexProgressBar jp4  = NexProgressBar(1, 14, "jp4");
 
 // Touch area
-NexHotspot homex    = NexHotspot(1, 17, "homex",  homePopCallback,    &homex);
-NexHotspot homey    = NexHotspot(1, 18, "homey",  homePopCallback,    &homey);
-NexHotspot homez    = NexHotspot(1, 19, "homez",  homePopCallback,    &homez);
-NexHotspot home0    = NexHotspot(1, 20, "home0",  homePopCallback,    &home0);
-NexHotspot hot0     = NexHotspot(1, 21, "hot0",   hotPopCallback,     &hot0);
-NexHotspot hot1     = NexHotspot(1, 22, "hot1",   hotPopCallback,     &hot1);
-NexHotspot hot2     = NexHotspot(1, 23, "hot2",   hotPopCallback,     &hot2);
-NexHotspot hot3     = NexHotspot(1, 24, "hot3",   hotPopCallback,     &hot3);
-NexHotspot hot4     = NexHotspot(1, 25, "hot4",   hotPopCallback,     &hot4);
-NexHotspot m11      = NexHotspot(2, 14, "m11",    sethotPopCallback,  &m11);
-NexHotspot tup      = NexHotspot(2, 16, "tup",    settempPopCallback, &tup);
-NexHotspot tdown    = NexHotspot(2, 17, "tdown",  settempPopCallback, &tdown);
+NexHotspot homex    = NexHotspot(1, 17, "homex");
+NexHotspot homey    = NexHotspot(1, 18, "homey");
+NexHotspot homez    = NexHotspot(1, 19, "homez");
+NexHotspot home0    = NexHotspot(1, 20, "home0");
+NexHotspot hot0     = NexHotspot(1, 21, "hot0");
+NexHotspot hot1     = NexHotspot(1, 22, "hot1");
+NexHotspot hot2     = NexHotspot(1, 23, "hot2");
+NexHotspot hot3     = NexHotspot(1, 24, "hot3");
+NexHotspot hot4     = NexHotspot(1, 25, "hot4");
+NexHotspot m11      = NexHotspot(2, 14, "m11");
+NexHotspot tup      = NexHotspot(2, 16, "tup");
+NexHotspot tdown    = NexHotspot(2, 17, "tdown");
 
 NexTouch *nexListenList[] = 
 {
@@ -2326,7 +2325,7 @@ void homePopCallback(void *ptr) {
 }
 
 void hotPopCallback(void *ptr) {
-  NexTouch::sendCommand("page 2");
+  sendCommand("page 2");
   memset(buffer, 0, sizeof(buffer));
   if (ptr == &hot0) {
     if (degTargetHotend(0) != 0) {
@@ -2382,17 +2381,35 @@ void sethotPopCallback(void *ptr) {
   memset(buffer, 0, sizeof(buffer));
   set1.getText(buffer, sizeof(buffer));
   enqueuecommands_P(buffer);
-  NexTouch::sendCommand("page menu");
+  sendCommand("page menu");
   lcd_setstatus(lcd_status_message);
 }
 
 millis_t next_lcd_update_ms;
 
 void lcd_init() {
-  nexInit();
-  delay(SPLASH_SCREEN_DURATION);  // wait to display the splash screen
-  NexTouch::sendCommand("page menu");
-  lcd_setstatus(WELCOME_MSG);
+  NextionON = nexInit();
+  if (!NextionON) {
+    ECHO_LM(ER, "Nextion LCD not connected!");
+  }
+  else {
+    ECHO_LM(DB, "Nextion LCD connected!");
+    homex.attachPop(homePopCallback,    &homex);
+    homey.attachPop(homePopCallback,    &homey);
+    homez.attachPop(homePopCallback,    &homez);
+    home0.attachPop(homePopCallback,    &home0);
+    hot0.attachPop(hotPopCallback,      &hot0);
+    hot1.attachPop(hotPopCallback,      &hot1);
+    hot2.attachPop(hotPopCallback,      &hot2);
+    hot3.attachPop(hotPopCallback,      &hot3);
+    hot4.attachPop(hotPopCallback,      &hot4);
+    m11.attachPop(sethotPopCallback,    &m11);
+    tup.attachPop(settempPopCallback,   &tup);
+    tdown.attachPop(settempPopCallback, &tdown);
+    delay(SPLASH_SCREEN_DURATION);  // wait to display the splash screen
+    sendCommand("page menu");
+    lcd_setstatus(WELCOME_MSG);
+  }
 }
 
 static void temptoLCD(int h, int T1, int T2) {
@@ -2494,6 +2511,9 @@ static void coordtoLCD() {
 }
 
 void lcd_update() {
+
+  if (!NextionON) return;
+
   millis_t ms = millis();
 
   if (ms > next_lcd_update_ms) {
@@ -2513,13 +2533,13 @@ void lcd_update() {
 }
 
 void lcd_setstatus(const char* message, bool persist) {
-  if (lcd_status_message_level > 0) return;
+  if (lcd_status_message_level > 0 || !NextionON) return;
   strncpy(lcd_status_message, message, 30);
   LedStatus.setText(lcd_status_message);
 }
 
 void lcd_setstatuspgm(const char* message, uint8_t level) {
-  if (level >= lcd_status_message_level) {
+  if (level >= lcd_status_message_level && NextionON) {
     strncpy_P(lcd_status_message, message, 30);
     lcd_status_message_level = level;
     LedStatus.setText(lcd_status_message);
