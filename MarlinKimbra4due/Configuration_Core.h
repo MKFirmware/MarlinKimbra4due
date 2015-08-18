@@ -6,6 +6,21 @@
 //=============================Mechanical Settings===========================
 //===========================================================================
 
+/***********************************************************************
+ ************************ CORE X (YZ) MOLTIPLICATOR ********************
+ ***********************************************************************
+ * This define the moltiplicator axis from X to Y or Z in COREXY or 
+ * COREXZ.
+ * Example:
+ * COREXY set COREX_XZ_FACTOR 1
+ * The result is:
+ * X = dX + COREX_YZ_FACTOR * dY = dX + 1 * dY = dX + dY
+ * Y = dX - COREX_YZ_FACTOR * dY = dX - 1 * dY = dX - dY
+ * Z = dZ
+ */
+#define COREX_YZ_FACTOR 1
+
+
 // coarse Endstop Settings
 //#define ENDSTOPPULLUPS // Comment this out (using // at the start of the line) to disable the endstop pullup resistors
 
@@ -14,9 +29,11 @@
   //#define ENDSTOPPULLUP_XMIN
   //#define ENDSTOPPULLUP_YMIN
   //#define ENDSTOPPULLUP_ZMIN
+  //#define ENDSTOPPULLUP_Z2MIN
   //#define ENDSTOPPULLUP_XMAX
   //#define ENDSTOPPULLUP_YMAX
   //#define ENDSTOPPULLUP_ZMAX
+  //#define ENDSTOPPULLUP_Z2MAX
   //#define ENDSTOPPULLUP_ZPROBE
   //#define ENDSTOPPULLUP_EMIN
 #endif
@@ -26,12 +43,12 @@
 #define Y_MIN_ENDSTOP_LOGIC   false   // set to true to invert the logic of the endstop.
 #define Z_MIN_ENDSTOP_LOGIC   false   // set to true to invert the logic of the endstop.
 #define Z2_MIN_ENDSTOP_LOGIC  false   // set to true to invert the logic of the endstop.
-#define E_MIN_ENDSTOP_LOGIC   false   // set to true to invert the logic of the endstop.
 #define X_MAX_ENDSTOP_LOGIC   false   // set to true to invert the logic of the endstop.
 #define Y_MAX_ENDSTOP_LOGIC   false   // set to true to invert the logic of the endstop.
 #define Z_MAX_ENDSTOP_LOGIC   false   // set to true to invert the logic of the endstop.
 #define Z2_MAX_ENDSTOP_LOGIC  false   // set to true to invert the logic of the endstop.
 #define Z_PROBE_ENDSTOP_LOGIC false   // set to true to invert the logic of the endstop.
+#define E_MIN_ENDSTOP_LOGIC   false   // set to true to invert the logic of the endstop.
 
 // ENDSTOP SETTINGS:
 // Sets direction of endstop when homing; 1=MAX, -1=MIN
