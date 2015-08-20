@@ -58,7 +58,13 @@ float current_temperature_bed = 0.0;
 #endif //PIDTEMPBED
   
 #if ENABLED(FAN_SOFT_PWM)
-  unsigned char fanSpeedSoftPwm;
+  unsigned char fanSpeedSoftPwm = 0;
+  #if HAS_AUTO_FAN
+    unsigned char fanSpeedSoftPwm_auto = EXTRUDER_AUTO_FAN_MIN_SPEED;
+  #endif
+  #if HAS_CONTROLLERFAN
+    unsigned char fanSpeedSoftPwm_controller = CONTROLLERFAN_MIN_SPEED;
+  #endif
 #endif
 
 unsigned char soft_pwm_bed;
@@ -126,6 +132,12 @@ static unsigned char soft_pwm[HOTENDS];
 
 #if ENABLED(FAN_SOFT_PWM)
   static unsigned char soft_pwm_fan;
+  #if HAS_AUTO_FAN
+    static unsigned char soft_pwm_fan_auto;
+  #endif
+  #if HAS_CONTROLLERFAN
+    static unsigned char soft_pwm_fan_controller = 0;
+  #endif
 #endif
 #if HAS_AUTO_FAN
   static millis_t next_auto_fan_check_ms;
@@ -139,7 +151,7 @@ static unsigned char soft_pwm[HOTENDS];
 static int minttemp_raw[HOTENDS] = ARRAY_BY_HOTENDS( HEATER_0_RAW_LO_TEMP , HEATER_1_RAW_LO_TEMP , HEATER_2_RAW_LO_TEMP, HEATER_3_RAW_LO_TEMP);
 static int maxttemp_raw[HOTENDS] = ARRAY_BY_HOTENDS( HEATER_0_RAW_HI_TEMP , HEATER_1_RAW_HI_TEMP , HEATER_2_RAW_HI_TEMP, HEATER_3_RAW_HI_TEMP);
 static int minttemp[HOTENDS] = { 0 };
-static int maxttemp[HOTENDS] = ARRAY_BY_HOTENDS( 16383, 16383, 16383, 16383 );
+static int maxttemp[HOTENDS] = ARRAY_BY_HOTENDS1( 16383 );
 #ifdef BED_MINTEMP
   static int bed_minttemp_raw = HEATER_BED_RAW_LO_TEMP;
 #endif
@@ -372,10 +384,14 @@ int getHeaterPower(int heater) {
 #if HAS_AUTO_FAN
 
 void setExtruderAutoFanState(int pin, bool state) {
-  unsigned char newFanSpeed = (state != 0) ? EXTRUDER_AUTO_FAN_SPEED : 0;
+  unsigned char newFanSpeed = (state != 0) ? EXTRUDER_AUTO_FAN_SPEED : EXTRUDER_AUTO_FAN_MIN_SPEED;
   // this idiom allows both digital and PWM fan outputs (see M42 handling).
-  digitalWrite(pin, newFanSpeed);
-  analogWrite(pin, newFanSpeed);
+  #if ENABLED(FAN_SOFT_PWM)
+    fanSpeedSoftPwm_auto = newFanSpeed;
+  #else
+    digitalWrite(pin, newFanSpeed);
+    analogWrite(pin, newFanSpeed);
+  #endif
 }
 
 void checkExtruderAutoFans() {
@@ -1211,7 +1227,7 @@ HAL_TEMP_TIMER_ISR {
   static unsigned long raw_median_temp[5][MEDIAN_COUNT] = { { 3950 * OVERSAMPLENR } };
   static bool first_start = true;
   // Static members for each heater
-  #ifdef SLOW_PWM_HEATERS
+  #if ENABLED(SLOW_PWM_HEATERS)
     static unsigned char slow_pwm_count = 0;
     #define ISR_STATICS(n) \
       static unsigned char soft_pwm_ ## n; \
@@ -1219,7 +1235,7 @@ HAL_TEMP_TIMER_ISR {
       static unsigned char state_timer_heater_ ## n = 0
   #else
     #define ISR_STATICS(n) static unsigned char soft_pwm_ ## n
-  #endif 
+  #endif
 
   // Statics per heater
   ISR_STATICS(0);
@@ -1282,7 +1298,26 @@ HAL_TEMP_TIMER_ISR {
       #endif
       #if ENABLED(FAN_SOFT_PWM)
         soft_pwm_fan = fanSpeedSoftPwm / 2;
+        #if HAS_CONTROLLERFAN
+          soft_pwm_fan_controller = fanSpeedSoftPwm_controller / 2;
+          WRITE(CONTROLLERFAN_PIN, soft_pwm_fan_controller > 0 ? 1 : 0);
+        #endif
         WRITE_FAN(soft_pwm_fan > 0 ? 1 : 0);
+        #if HAS_AUTO_FAN
+          soft_pwm_fan_auto = fanSpeedSoftPwm_auto / 2;
+        #endif
+        #if HAS_AUTO_FAN_0
+          WRITE(EXTRUDER_0_AUTO_FAN_PIN, soft_pwm_fan_auto > 0 ? 1 : 0);
+        #endif
+        #if HAS_AUTO_FAN_1
+          WRITE(EXTRUDER_1_AUTO_FAN_PIN, soft_pwm_fan_auto > 0 ? 1 : 0);
+        #endif
+        #if HAS_AUTO_FAN_2
+          WRITE(EXTRUDER_2_AUTO_FAN_PIN, soft_pwm_fan_auto > 0 ? 1 : 0);
+        #endif
+        #if HAS_AUTO_FAN_3
+          WRITE(EXTRUDER_3_AUTO_FAN_PIN, soft_pwm_fan_auto > 0 ? 1 : 0);
+        #endif
       #endif
     }
 
@@ -1303,11 +1338,30 @@ HAL_TEMP_TIMER_ISR {
 
     #if ENABLED(FAN_SOFT_PWM)
       if (soft_pwm_fan < pwm_count) WRITE_FAN(0);
+      #if HAS_CONTROLLERFAN
+        if (soft_pwm_fan_controller < pwm_count) WRITE(CONTROLLERFAN_PIN, 0);
+      #endif
+      #if HAS_AUTO_FAN
+        if (soft_pwm_fan_auto < pwm_count) {
+          #if HAS_AUTO_FAN_0
+            WRITE(EXTRUDER_0_AUTO_FAN_PIN, 0);
+          #endif
+          #if HAS_AUTO_FAN_1
+            WRITE(EXTRUDER_1_AUTO_FAN_PIN, 0);
+          #endif
+          #if HAS_AUTO_FAN_2
+            WRITE(EXTRUDER_2_AUTO_FAN_PIN, 0);
+          #endif
+          #if HAS_AUTO_FAN_3
+            WRITE(EXTRUDER_3_AUTO_FAN_PIN, 0);
+          #endif
+        }
+      #endif
     #endif
-    
+
     pwm_count += BIT(SOFT_PWM_SCALE);
     pwm_count &= 0x7f;
-  
+
   #else // SLOW_PWM_HEATERS
     /*
      * SLOW PWM HEATERS
@@ -1382,8 +1436,46 @@ HAL_TEMP_TIMER_ISR {
       if (pwm_count == 0) {
         soft_pwm_fan = fanSpeedSoftPwm / 2;
         WRITE_FAN(soft_pwm_fan > 0 ? 1 : 0);
+        #if HAS_CONTROLLERFAN
+          soft_pwm_fan_controller = fanSpeedSoftPwm_controller / 2;
+          WRITE(CONTROLLERFAN_PIN, soft_pwm_fan_controller > 0 ? 1 : 0);
+        #endif
+        #if HAS_AUTO_FAN
+          soft_pwm_fan_auto = fanSpeedSoftPwm_auto / 2;
+        #endif
+        #if HAS_AUTO_FAN_0
+          WRITE(EXTRUDER_0_AUTO_FAN_PIN, soft_pwm_fan_auto > 0 ? 1 : 0);
+        #endif
+        #if HAS_AUTO_FAN_1
+          WRITE(EXTRUDER_1_AUTO_FAN_PIN, soft_pwm_fan_auto > 0 ? 1 : 0);
+        #endif
+        #if HAS_AUTO_FAN_2
+          WRITE(EXTRUDER_2_AUTO_FAN_PIN, soft_pwm_fan_auto > 0 ? 1 : 0);
+        #endif
+        #if HAS_AUTO_FAN_3
+          WRITE(EXTRUDER_3_AUTO_FAN_PIN, soft_pwm_fan_auto > 0 ? 1 : 0);
+        #endif
       }
       if (soft_pwm_fan < pwm_count) WRITE_FAN(0);
+      #if HAS_CONTROLLERFAN
+        if (soft_pwm_fan_controller < pwm_count) WRITE(CONTROLLERFAN_PIN, 0);
+      #endif
+      #if HAS_AUTO_FAN
+        if (soft_pwm_fan_auto < pwm_count) {
+          #if HAS_AUTO_FAN_0
+            WRITE(EXTRUDER_0_AUTO_FAN_PIN, 0);
+          #endif
+          #if HAS_AUTO_FAN_1
+            WRITE(EXTRUDER_1_AUTO_FAN_PIN, 0);
+          #endif
+          #if HAS_AUTO_FAN_2
+            WRITE(EXTRUDER_2_AUTO_FAN_PIN, 0);
+          #endif
+          #if HAS_AUTO_FAN_3
+            WRITE(EXTRUDER_3_AUTO_FAN_PIN, 0);
+          #endif
+        }
+      #endif
     #endif // FAN_SOFT_PWM
 
     pwm_count += BIT(SOFT_PWM_SCALE);
@@ -1393,7 +1485,7 @@ HAL_TEMP_TIMER_ISR {
     if ((pwm_count % 64) == 0) {
       slow_pwm_count++;
       slow_pwm_count &= 0x7f;
-    
+
       // HOTEND 0
       if (state_timer_heater_0 > 0) state_timer_heater_0--;
       #if HOTENDS > 1    // HOTEND 1
@@ -1409,7 +1501,7 @@ HAL_TEMP_TIMER_ISR {
         if (state_timer_heater_BED > 0) state_timer_heater_BED--;
       #endif
     } // (pwm_count % 64) == 0
-  
+
   #endif // SLOW_PWM_HEATERS
   
   #define READ_TEMP(temp_id) temp_read = getAdcFreerun(pinToAdcChannel(TEMP_## temp_id ##_PIN)); \
@@ -1424,6 +1516,7 @@ HAL_TEMP_TIMER_ISR {
     
   // Prepare or measure a sensor, each one every 14th frame
   switch(temp_state) {
+
     case PrepareTemp_0:
       #if HAS_TEMP_0
         //START_TEMP(0);
