@@ -24,6 +24,7 @@
 *   PID tuning
 *   Cartesian kinematics
 *   CoreXY kinematics (www.corexy.com/theory.html)
+*   CoreXZ kinematics
 *   Delta kinematics
 *   SCARA kinematics
 *   One firmware for all printers, see configurations.h.
@@ -37,12 +38,15 @@
 *   Setting step for unit and feedrate for extruders
 *   Setting PID for any extruder
 *   Real-time filament diameter measurement and control
-*   MKR4 suppport for 4 extruder but only two driver
+*   MKR4 suppport for 4 extruder but width only one driver
 *   Singlenozzle support
 *   NPr2 support, multiextruder by NicolaP http://www.3dmakerlab.it/extruder-npr2.html
 *   Laserbeam support
 *   Firmware test
 *   Support for a filament diameter sensor, which adjusts extrusion volume
+*   Support for a hall effect sensor for calucalte Wh. Example sensor ACS712 20A range Current Sensor Module. http://i.ebayimg.com/images/i/310506962976-0-1/s-l1000.jpg
+*   Anti extruder idle oozing system
+*   Statistics save on SD
 
 The default baudrate is 250000. This baudrate has less jitter and hence errors than the usual 115200 baud, but is less supported by drivers and host-environments.
 

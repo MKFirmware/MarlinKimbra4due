@@ -18,8 +18,9 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#include "Marlin.h"
+#include "base.h"
 #if ENABLED(SDSUPPORT)
+#include "Marlin_main.h"
 
 #include "SdBaseFile.h"
 //------------------------------------------------------------------------------
@@ -1817,7 +1818,7 @@ int16_t SdBaseFile::write(const void* buf, uint16_t nbyte) {
 }
 //------------------------------------------------------------------------------
 // suppress cpplint warnings with NOLINT comment
-#if ALLOW_DEPRECATED_FUNCTIONS && !defined(DOXYGEN)
+#if ALLOW_DEPRECATED_FUNCTIONS && DISABLED(DOXYGEN)
 void (*SdBaseFile::oldDateTime_)(uint16_t& date, uint16_t& time) = 0;  // NOLINT
 #endif  // ALLOW_DEPRECATED_FUNCTIONS
 

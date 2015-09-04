@@ -1,4 +1,4 @@
-#include "Marlin.h"
+#include "base.h"
 
 #if ENABLED(USE_WATCHDOG)
 

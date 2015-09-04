@@ -29,7 +29,7 @@
 // --------------------------------------------------------------------------
 
 #include "HAL.h"
-#include "Configuration.h"
+#include "base.h"
 
 #include <Wire.h>
 
