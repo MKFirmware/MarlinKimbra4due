@@ -42,11 +42,10 @@
  detach()    - Stops an attached servos from pulsing its i/o pin.
 
 */
-#include "Configuration.h"
 
-#if HAS_SERVOS
+#include "base.h"
 
-#include <Arduino.h>
+#if HAS(SERVOS)
 #include "servo.h"
 
 #define usToTicks(_us)    (( clockCyclesPerMicrosecond() * _us) / 32)     // converts microseconds to tick
@@ -58,6 +57,7 @@ static ServoInfo_t servo_info[MAX_SERVOS];                  // static array of s
 static volatile int8_t Channel[_Nbr_16timers ];             // counter for the servo being pulsed for each timer (or -1 if refresh interval)
 
 uint8_t ServoCount = 0;                                     // the total number of attached servos
+
 
 // convenience macros
 #define SERVO_INDEX_TO_TIMER(_servo_nbr) ((timer16_Sequence_t)(_servo_nbr / SERVOS_PER_TIMER)) // returns the timer controlling this servo
@@ -108,14 +108,14 @@ void Servo_Handler(timer16_Sequence_t timer, Tc *tc, uint8_t channel) {
   }
   else {
     if (SERVO_INDEX(timer,Channel[timer]) < ServoCount && SERVO(timer,Channel[timer]).Pin.isActive)
-      digitalWrite( SERVO(timer,Channel[timer]).Pin.nbr, LOW); // pulse this channel low if activated
+      digitalWrite( SERVO(timer,Channel[timer]).Pin.nbr,LOW); // pulse this channel low if activated
   }
 
   Channel[timer]++;    // increment to the next channel
   if (SERVO_INDEX(timer,Channel[timer]) < ServoCount && Channel[timer] < SERVOS_PER_TIMER) {
     tc->TC_CHANNEL[channel].TC_RA = tc->TC_CHANNEL[channel].TC_CV + SERVO(timer,Channel[timer]).ticks;
     if (SERVO(timer,Channel[timer]).Pin.isActive)     // check if activated
-      digitalWrite( SERVO(timer,Channel[timer]).Pin.nbr, HIGH); // its an active channel so pulse it high
+      digitalWrite( SERVO(timer,Channel[timer]).Pin.nbr,HIGH); // its an active channel so pulse it high
   }
   else {
     // finished all channels so wait for the refresh period to expire before starting over
@@ -198,12 +198,13 @@ static boolean isTimerActive(timer16_Sequence_t timer) {
   return false;
 }
 
+
 /****************** end of static functions ******************************/
 
 Servo::Servo() {
   if (ServoCount < MAX_SERVOS) {
     this->servoIndex = ServoCount++;                    // assign a servo index to this instance
-    servo_info[this->servoIndex].ticks = usToTicks(DEFAULT_PULSE_WIDTH);   // store default values
+    servo_info[this->servoIndex].ticks = usToTicks(DEFAULT_PULSE_WIDTH);   // store default values  - 12 Aug 2009
   }
   else
     this->servoIndex = INVALID_SERVO;  // too many servos
@@ -275,7 +276,7 @@ bool Servo::attached() { return servo_info[this->servoIndex].Pin.isActive; }
 void Servo::move(int value) {
   if (this->attach(0) >= 0) {
     this->write(value);
-    #ifdef DEACTIVATE_SERVOS_AFTER_MOVE
+    #if ENABLED(DEACTIVATE_SERVOS_AFTER_MOVE)
       delay(SERVO_DEACTIVATION_DELAY);
       this->detach();
     #endif

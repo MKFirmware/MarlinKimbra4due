@@ -17,7 +17,7 @@
  * along with the Arduino Sd2Card Library.  If not, see
  * <http://www.gnu.org/licenses/>.
  */
-#include "Marlin.h"
+#include "base.h"
 
 #if ENABLED(SDSUPPORT)
 #include "Sd2Card.h"
@@ -27,7 +27,7 @@
 // functions for hardware SPI
 //------------------------------------------------------------------------------
 
-#if defined (ARDUINO_ARCH_SAM)
+#if ENABLED(ARDUINO_ARCH_SAM)
 
 #include <SPI.h>
 
@@ -484,7 +484,11 @@ bool Sd2Card::readStop() {
 /**
  * Set the SPI clock rate.
  *
- * \param[in] sckRateID A value in a range depending on platform
+ * \param[in] sckRateID A value in the range [0, 6].
+ *
+ * The SPI clock will be set to F_CPU/pow(2, 1 + sckRateID). The maximum
+ * SPI rate is F_CPU/2 for \a sckRateID = 0 and the minimum rate is F_CPU/128
+ * for \a scsRateID = 6.
  *
  * \return The value one, true, is returned for success and the value zero,
  * false, is returned for an invalid value of \a sckRateID.
@@ -499,7 +503,6 @@ bool Sd2Card::setSckRate(uint8_t sckRateID) {
 #endif
   spiSetSckRate (sckRateID);
   spiRate_ = sckRateID;
-
   return true;
 }
 //------------------------------------------------------------------------------
