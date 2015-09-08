@@ -872,17 +872,17 @@ void st_init() {
   #endif
 
   //Choice E0-E1 or E0-E2 or E1-E3 pin
-  #if HAS(E0E1)
-    OUT_WRITE(E0E1_CHOICE_PIN, LOW);
+  #if ENABLED(MKR4) && HAS(E0E1)
+    OUT_WRITE_RELE(E0E1_CHOICE_PIN, LOW);
   #endif
-  #if HAS(E0E2)
-    OUT_WRITE(E0E2_CHOICE_PIN, LOW);
+  #if ENABLED(MKR4) && HAS(E0E2)
+    OUT_WRITE_RELE(E0E2_CHOICE_PIN, LOW);
   #endif
-  #if HAS(E0E3)
-    OUT_WRITE(E0E3_CHOICE_PIN, LOW);
+  #if ENABLED(MKR4) && HAS(E0E3)
+    OUT_WRITE_RELE(E0E3_CHOICE_PIN, LOW);
   #endif
-  #if HAS(E1E3)
-    OUT_WRITE(E1E3_CHOICE_PIN, LOW);
+  #if ENABLED(MKR4) && HAS(E1E3)
+    OUT_WRITE_RELE(E1E3_CHOICE_PIN, LOW);
   #endif
 
   //endstops and pullups
