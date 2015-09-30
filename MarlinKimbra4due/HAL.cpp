@@ -66,124 +66,124 @@ int freeMemory() {
   return free_memory;
 }
 
+#if DISABLED(DUE_SOFTWARE_SPI)
+  // --------------------------------------------------------------------------
+  // hardware SPI
+  // --------------------------------------------------------------------------
+  bool spiInitMaded = false;
+  void spiBegin() {
+    if(spiInitMaded == false) {
+      // Configre SPI pins
+      PIO_Configure(
+         g_APinDescription[SCK_PIN].pPort,
+         g_APinDescription[SCK_PIN].ulPinType,
+         g_APinDescription[SCK_PIN].ulPin,
+         g_APinDescription[SCK_PIN].ulPinConfiguration);
+      PIO_Configure(
+         g_APinDescription[MOSI_PIN].pPort,
+         g_APinDescription[MOSI_PIN].ulPinType,
+         g_APinDescription[MOSI_PIN].ulPin,
+         g_APinDescription[MOSI_PIN].ulPinConfiguration);
+      PIO_Configure(
+         g_APinDescription[MISO_PIN].pPort,
+         g_APinDescription[MISO_PIN].ulPinType,
+         g_APinDescription[MISO_PIN].ulPin,
+         g_APinDescription[MISO_PIN].ulPinConfiguration);
 
-// --------------------------------------------------------------------------
-// hardware SPI
-// --------------------------------------------------------------------------
-bool spiInitMaded = false;
-void spiBegin() {
-  if(spiInitMaded == false)
-  {
-    // Configre SPI pins
-    PIO_Configure(
-       g_APinDescription[SCK_PIN].pPort,
-       g_APinDescription[SCK_PIN].ulPinType,
-       g_APinDescription[SCK_PIN].ulPin,
-       g_APinDescription[SCK_PIN].ulPinConfiguration);
-    PIO_Configure(
-       g_APinDescription[MOSI_PIN].pPort,
-       g_APinDescription[MOSI_PIN].ulPinType,
-       g_APinDescription[MOSI_PIN].ulPin,
-       g_APinDescription[MOSI_PIN].ulPinConfiguration);
-    PIO_Configure(
-       g_APinDescription[MISO_PIN].pPort,
-       g_APinDescription[MISO_PIN].ulPinType,
-       g_APinDescription[MISO_PIN].ulPin,
-       g_APinDescription[MISO_PIN].ulPinConfiguration);
+      // set master mode, peripheral select, fault detection
+      SPI_Configure(SPI0, ID_SPI0, SPI_MR_MSTR | SPI_MR_MODFDIS | SPI_MR_PS);
+      SPI_Enable(SPI0);
+     
+      #if MB(ALLIGATOR)
+        // Init Motor Fault
+        pinMode(MOTOR_FAULT_PIN, INPUT);
+        pinMode(DAC0_SYNC, OUTPUT);
+        pinMode(SPI_EEPROM1_CS, OUTPUT);
+        pinMode(SPI_EEPROM2_CS, OUTPUT);
+        pinMode(SPI_FLASH_CS, OUTPUT);
+        //pinMode( SPI_PIN, OUTPUT);
+        digitalWrite(DAC0_SYNC , HIGH);
+        digitalWrite(SPI_EEPROM1_CS, HIGH);
+        digitalWrite(SPI_EEPROM2_CS, HIGH);
+        digitalWrite(SPI_FLASH_CS, HIGH);
+        digitalWrite(SDSS , HIGH);
+        //pinMode( SPI_PIN, OUTPUT);
+      #endif//MB(ALLIGATOR)
 
-    // set master mode, peripheral select, fault detection
-    SPI_Configure(SPI0, ID_SPI0, SPI_MR_MSTR | SPI_MR_MODFDIS | SPI_MR_PS);
-    SPI_Enable(SPI0);
-   
-    #if MB(ALLIGATOR)
-      // Init Motor Fault
-      pinMode(MOTOR_FAULT_PIN, INPUT);
-      pinMode(DAC0_SYNC, OUTPUT);
-      pinMode(SPI_EEPROM1_CS, OUTPUT);
-      pinMode(SPI_EEPROM2_CS, OUTPUT);
-      pinMode(SPI_FLASH_CS, OUTPUT);
-      //pinMode( SPI_PIN, OUTPUT);
-      digitalWrite(DAC0_SYNC , HIGH);
-      digitalWrite(SPI_EEPROM1_CS, HIGH);
-      digitalWrite(SPI_EEPROM2_CS, HIGH);
-      digitalWrite(SPI_FLASH_CS, HIGH);
-      digitalWrite(SDSS , HIGH);
-      //pinMode( SPI_PIN, OUTPUT);
-    #endif//MB(ALLIGATOR)
-
-    PIO_Configure(
-       g_APinDescription[SPI_PIN].pPort,
-       g_APinDescription[SPI_PIN].ulPinType,
-       g_APinDescription[SPI_PIN].ulPin,
-       g_APinDescription[SPI_PIN].ulPinConfiguration);
-    spiInit(1);
-    spiInitMaded = true;
+      PIO_Configure(
+         g_APinDescription[SPI_PIN].pPort,
+         g_APinDescription[SPI_PIN].ulPinType,
+         g_APinDescription[SPI_PIN].ulPin,
+         g_APinDescription[SPI_PIN].ulPinConfiguration);
+      spiInit(1);
+      spiInitMaded = true;
+    }
   }
-}
 
-void spiInit(uint8_t spiClock) {
-  if(spiInitMaded == false)
-  {
-    if(spiClock>4) spiClock = 1;
-    #if MB(ALLIGATOR)
-      // Set SPI mode 1, clock, select not active after transfer, with delay between transfers  
-      SPI_ConfigureNPCS(SPI0, SPI_CHAN_DAC, SPI_CSR_CSAAT |
-        SPI_CSR_SCBR(spiDueDividors[spiClock]) | SPI_CSR_DLYBCT(1));
-      // Set SPI mode 0, clock, select not active after transfer, with delay between transfers 
-      SPI_ConfigureNPCS(SPI0, SPI_CHAN_EEPROM1,SPI_CSR_NCPHA | SPI_CSR_CSAAT |
-        SPI_CSR_SCBR(spiDueDividors[spiClock]) | SPI_CSR_DLYBCT(1));
-    #endif//MB(ALLIGATOR)
+  void spiInit(uint8_t spiClock) {
+    if(spiInitMaded == false)
+    {
+      if(spiClock>4) spiClock = 1;
+      #if MB(ALLIGATOR)
+        // Set SPI mode 1, clock, select not active after transfer, with delay between transfers  
+        SPI_ConfigureNPCS(SPI0, SPI_CHAN_DAC, SPI_CSR_CSAAT |
+          SPI_CSR_SCBR(spiDueDividors[spiClock]) | SPI_CSR_DLYBCT(1));
+        // Set SPI mode 0, clock, select not active after transfer, with delay between transfers 
+        SPI_ConfigureNPCS(SPI0, SPI_CHAN_EEPROM1,SPI_CSR_NCPHA | SPI_CSR_CSAAT |
+          SPI_CSR_SCBR(spiDueDividors[spiClock]) | SPI_CSR_DLYBCT(1));
+      #endif//MB(ALLIGATOR)
 
-    // Set SPI mode 0, clock, select not active after transfer, with delay between transfers
-    SPI_ConfigureNPCS(SPI0, SPI_CHAN, SPI_CSR_NCPHA | SPI_CSR_CSAAT |
-      SPI_CSR_SCBR(spiDueDividors[spiClock]) | SPI_CSR_DLYBCT(1));
-    SPI_Enable(SPI0);
-    spiInitMaded = true;
+      // Set SPI mode 0, clock, select not active after transfer, with delay between transfers
+      SPI_ConfigureNPCS(SPI0, SPI_CHAN, SPI_CSR_NCPHA | SPI_CSR_CSAAT |
+        SPI_CSR_SCBR(spiDueDividors[spiClock]) | SPI_CSR_DLYBCT(1));
+      SPI_Enable(SPI0);
+      spiInitMaded = true;
+    }
   }
-}
 
-void spiSendByte(uint32_t chan, byte b) {
-  uint8_t dummy_read = 0;
-  // wait for transmit register empty
-  while ((SPI0->SPI_SR & SPI_SR_TDRE) == 0);
-  // write byte with address and end transmission flag
-  SPI0->SPI_TDR = (uint32_t)b | SPI_PCS(chan) | SPI_TDR_LASTXFER;
-  // wait for receive register 
-  while ((SPI0->SPI_SR & SPI_SR_RDRF) == 0);
-  // clear status
-  while ((SPI0->SPI_SR & SPI_SR_RDRF) == 1)
-    dummy_read = SPI0->SPI_RDR;
-}
-
-void spiSend(uint32_t chan ,const uint8_t* buf , size_t n) {
-  uint8_t dummy_read = 0;
-  if (n == 0) return;
-  for (int i=0; i<n-1; i++)
-  {
+  void spiSendByte(uint32_t chan, byte b) {
+    uint8_t dummy_read = 0;
+    // wait for transmit register empty
     while ((SPI0->SPI_SR & SPI_SR_TDRE) == 0);
-    SPI0->SPI_TDR = (uint32_t)buf[i] | SPI_PCS(chan);
+    // write byte with address and end transmission flag
+    SPI0->SPI_TDR = (uint32_t)b | SPI_PCS(chan) | SPI_TDR_LASTXFER;
+    // wait for receive register 
     while ((SPI0->SPI_SR & SPI_SR_RDRF) == 0);
-     while ((SPI0->SPI_SR & SPI_SR_RDRF) == 1)
+    // clear status
+    while ((SPI0->SPI_SR & SPI_SR_RDRF) == 1)
       dummy_read = SPI0->SPI_RDR;
   }
-  spiSendByte(chan, buf[n-1]);
-}
 
-uint8_t spiReceive(uint32_t chan) {
-  uint8_t spirec_tmp;
-  // wait for transmit register empty
-  while ((SPI0->SPI_SR & SPI_SR_TDRE) == 0);
-  while ((SPI0->SPI_SR & SPI_SR_RDRF) == 1)
-    spirec_tmp =  SPI0->SPI_RDR;
+  void spiSend(uint32_t chan ,const uint8_t* buf , size_t n) {
+    uint8_t dummy_read = 0;
+    if (n == 0) return;
+    for (int i=0; i<n-1; i++)
+    {
+      while ((SPI0->SPI_SR & SPI_SR_TDRE) == 0);
+      SPI0->SPI_TDR = (uint32_t)buf[i] | SPI_PCS(chan);
+      while ((SPI0->SPI_SR & SPI_SR_RDRF) == 0);
+       while ((SPI0->SPI_SR & SPI_SR_RDRF) == 1)
+        dummy_read = SPI0->SPI_RDR;
+    }
+    spiSendByte(chan, buf[n-1]);
+  }
 
-  // write dummy byte with address and end transmission flag
-  SPI0->SPI_TDR = 0x000000FF | SPI_PCS(chan) | SPI_TDR_LASTXFER;
+  uint8_t spiReceive(uint32_t chan) {
+    uint8_t spirec_tmp;
+    // wait for transmit register empty
+    while ((SPI0->SPI_SR & SPI_SR_TDRE) == 0);
+    while ((SPI0->SPI_SR & SPI_SR_RDRF) == 1)
+      spirec_tmp =  SPI0->SPI_RDR;
 
-  // wait for receive register 
-  while ((SPI0->SPI_SR & SPI_SR_RDRF) == 0);
-  // get byte from receive register
-  return SPI0->SPI_RDR;
-}
+    // write dummy byte with address and end transmission flag
+    SPI0->SPI_TDR = 0x000000FF | SPI_PCS(chan) | SPI_TDR_LASTXFER;
+
+    // wait for receive register 
+    while ((SPI0->SPI_SR & SPI_SR_RDRF) == 0);
+    // get byte from receive register
+    return SPI0->SPI_RDR;
+  }
+#endif // DISABLED(DUE_SOFTWARE_SPI)
 
 // --------------------------------------------------------------------------
 // eeprom
