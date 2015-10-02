@@ -172,7 +172,7 @@ static unsigned char soft_pwm[HOTENDS];
 static int minttemp_raw[HOTENDS] = ARRAY_BY_HOTENDS( HEATER_0_RAW_LO_TEMP , HEATER_1_RAW_LO_TEMP , HEATER_2_RAW_LO_TEMP, HEATER_3_RAW_LO_TEMP);
 static int maxttemp_raw[HOTENDS] = ARRAY_BY_HOTENDS( HEATER_0_RAW_HI_TEMP , HEATER_1_RAW_HI_TEMP , HEATER_2_RAW_HI_TEMP, HEATER_3_RAW_HI_TEMP);
 static int minttemp[HOTENDS] = { 0 };
-static int maxttemp[HOTENDS] = ARRAY_BY_HOTENDS1( 16383 );
+static int maxttemp[HOTENDS] = ARRAY_BY_HOTENDS1(16383);
 #if ENABLED(BED_MINTEMP)
   static int bed_minttemp_raw = HEATER_BED_RAW_LO_TEMP;
 #endif
@@ -810,24 +810,7 @@ static float analog2temp(int raw, uint8_t e) {
 
     return celsius;
   }
-  switch(e) {
-    #if TEMP_SENSOR_BED
-      case -1: return ((raw * ((3.3 * 100.0) / 1024.0) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN) + TEMP_SENSOR_AD595_OFFSET;
-    #endif
-    #if HEATER_0_USES_AD595
-      case 0: return ((raw * ((3.3 * 100.0) / 1024.0) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN) + TEMP_SENSOR_AD595_OFFSET;
-    #endif
-    #if HEATER_1_USES_AD595
-      case 1: return ((raw * ((3.3 * 100.0) / 1024.0) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN) + TEMP_SENSOR_AD595_OFFSET;
-    #endif
-    #if HEATER_2_USES_AD595
-      case 2: return ((raw * ((3.3 * 100.0) / 1024.0) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN) + TEMP_SENSOR_AD595_OFFSET;
-    #endif
-    #if HEATER_3_USES_AD595
-      case 3: return ((raw * ((3.3 * 100.0) / 1024.0) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN) + TEMP_SENSOR_AD595_OFFSET;
-    #endif
-  }
-  return (raw * ((3.3 * 100.0) / 1024.0) / OVERSAMPLENR);
+  return ((raw * ((5.0 * 100.0) / 1023.0) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN) + TEMP_SENSOR_AD595_OFFSET;
 }
 
 // Derived from RepRap FiveD extruder::getTemperature()
@@ -852,7 +835,7 @@ static float analog2tempBed(int raw) {
 
     return celsius;
   #elif ENABLED(BED_USES_AD595)
-    return ((raw * ((3.3 * 100.0) / 1024.0) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN) + TEMP_SENSOR_AD595_OFFSET;
+    return ((raw * ((5.0 * 100.0) / 1023.0) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN) + TEMP_SENSOR_AD595_OFFSET;
   #else
     return 0;
   #endif
@@ -930,13 +913,13 @@ static void updateTemperaturesFromRawValues() {
 #if HAS(POWER_CONSUMPTION_SENSOR)
   // Convert raw Power Consumption to watt
   float raw_analog2voltage() {
-    return (3.3 * current_raw_powconsumption) / (1023 * OVERSAMPLENR);
+    return (5.0 * current_raw_powconsumption) / (1023.0 * OVERSAMPLENR);
   }
 
   float analog2voltage() {
-    float power_zero_raw = (POWER_ZERO * 1023 * OVERSAMPLENR) / 3.3;
+    float power_zero_raw = (POWER_ZERO * 1023.0 * OVERSAMPLENR) / 5.0;
     float rel_raw_power = (current_raw_powconsumption < power_zero_raw) ? (2 * power_zero_raw - current_raw_powconsumption) : (current_raw_powconsumption);
-    return ((3.3 * rel_raw_power) / (1023 * OVERSAMPLENR)) - POWER_ZERO;
+    return ((5.0 * rel_raw_power) / (1023.0 * OVERSAMPLENR)) - POWER_ZERO;
   }
   float analog2current() {
     float temp = analog2voltage() / POWER_SENSITIVITY;
@@ -952,7 +935,7 @@ static void updateTemperaturesFromRawValues() {
     if(temp1 <= 0) return 0.0;
     float temp2 = (current) * POWER_VOLTAGE;
     if(temp2 <= 0) return 0.0;
-    return ((temp2/temp1)-1)*100;
+    return ((temp2/temp1) - 1) * 100;
   }
   float analog2efficiency(float watt) {
     return (analog2current() * POWER_VOLTAGE * 100) / watt;
@@ -1638,10 +1621,9 @@ HAL_TEMP_TIMER_ISR {
     raw_temp_bed_value += temp_read; \
     max_temp[temp_id] = max(max_temp[temp_id], temp_read); \
     min_temp[temp_id] = min(min_temp[temp_id], temp_read)
-    
+
   // Prepare or measure a sensor, each one every 14th frame
   switch(temp_state) {
-
     case PrepareTemp_0:
       #if HAS(TEMP_0)
         //START_TEMP(0);
@@ -1729,7 +1711,6 @@ HAL_TEMP_TIMER_ISR {
       #endif
       temp_state = Prepare_POWCONSUMPTION;
       break;
-
     case Prepare_POWCONSUMPTION:
       #if HAS(POWER_CONSUMPTION_SENSOR)
       // nothing todo for Due
