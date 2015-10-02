@@ -28,9 +28,8 @@
 // Includes
 // --------------------------------------------------------------------------
 
-#include "HAL.h"
 #include "base.h"
-
+#include "HAL.h"
 #include <Wire.h>
 
 uint8_t MCUSR;

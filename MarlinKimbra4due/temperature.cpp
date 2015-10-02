@@ -810,7 +810,7 @@ static float analog2temp(int raw, uint8_t e) {
 
     return celsius;
   }
-  return ((raw * ((5.0 * 100.0) / 1024.0) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN) + TEMP_SENSOR_AD595_OFFSET;
+  return ((raw * ((5.0 * 100.0) / 1023.0) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN) + TEMP_SENSOR_AD595_OFFSET;
 }
 
 // Derived from RepRap FiveD extruder::getTemperature()
@@ -835,7 +835,7 @@ static float analog2tempBed(int raw) {
 
     return celsius;
   #elif ENABLED(BED_USES_AD595)
-    return ((raw * ((5.0 * 100.0) / 1024.0) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN) + TEMP_SENSOR_AD595_OFFSET;
+    return ((raw * ((5.0 * 100.0) / 1023.0) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN) + TEMP_SENSOR_AD595_OFFSET;
   #else
     return 0;
   #endif
@@ -913,13 +913,13 @@ static void updateTemperaturesFromRawValues() {
 #if HAS(POWER_CONSUMPTION_SENSOR)
   // Convert raw Power Consumption to watt
   float raw_analog2voltage() {
-    return (5.0 * current_raw_powconsumption) / (1024 * OVERSAMPLENR);
+    return (5.0 * current_raw_powconsumption) / (1023.0 * OVERSAMPLENR);
   }
 
   float analog2voltage() {
-    float power_zero_raw = (POWER_ZERO * 1024 * OVERSAMPLENR) / 5.0;
+    float power_zero_raw = (POWER_ZERO * 1023.0 * OVERSAMPLENR) / 5.0;
     float rel_raw_power = (current_raw_powconsumption < power_zero_raw) ? (2 * power_zero_raw - current_raw_powconsumption) : (current_raw_powconsumption);
-    return ((5.0 * rel_raw_power) / (1024 * OVERSAMPLENR)) - POWER_ZERO;
+    return ((5.0 * rel_raw_power) / (1023.0 * OVERSAMPLENR)) - POWER_ZERO;
   }
   float analog2current() {
     float temp = analog2voltage() / POWER_SENSITIVITY;
@@ -935,7 +935,7 @@ static void updateTemperaturesFromRawValues() {
     if(temp1 <= 0) return 0.0;
     float temp2 = (current) * POWER_VOLTAGE;
     if(temp2 <= 0) return 0.0;
-    return ((temp2/temp1)-1)*100;
+    return ((temp2/temp1) - 1) * 100;
   }
   float analog2efficiency(float watt) {
     return (analog2current() * POWER_VOLTAGE * 100) / watt;
@@ -1621,10 +1621,9 @@ HAL_TEMP_TIMER_ISR {
     raw_temp_bed_value += temp_read; \
     max_temp[temp_id] = max(max_temp[temp_id], temp_read); \
     min_temp[temp_id] = min(min_temp[temp_id], temp_read)
-    
+
   // Prepare or measure a sensor, each one every 14th frame
   switch(temp_state) {
-
     case PrepareTemp_0:
       #if HAS(TEMP_0)
         //START_TEMP(0);
@@ -1712,7 +1711,6 @@ HAL_TEMP_TIMER_ISR {
       #endif
       temp_state = Prepare_POWCONSUMPTION;
       break;
-
     case Prepare_POWCONSUMPTION:
       #if HAS(POWER_CONSUMPTION_SENSOR)
       // nothing todo for Due
