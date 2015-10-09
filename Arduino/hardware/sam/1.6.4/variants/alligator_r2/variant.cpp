@@ -287,26 +287,18 @@ extern const PinDescription g_APinDescription[]=
   // 91 - CAN1 all pins
   { PIOB, PIO_PB15A_CANRX1|PIO_PB14A_CANTX1, ID_PIOB, PIO_PERIPH_A, PIO_DEFAULT, (PIN_ATTR_DIGITAL|PIN_ATTR_COMBO), NO_ADC, NO_ADC, NOT_ON_PWM,  NOT_ON_TIMER },
 
-// 92 , PA5
-  { PIOA, PIO_PA5,          ID_PIOA, PIO_OUTPUT_0, PIO_DEFAULT, PIN_ATTR_DIGITAL,                  NO_ADC, NO_ADC, NOT_ON_PWM,  NOT_ON_TIMER }, // 92
-  // 93 , PB12 analog
-  { PIOB, PIO_PB12X1_AD8,   ID_PIOB, PIO_OUTPUT_0,    PIO_DEFAULT, PIN_ATTR_ANALOG,                  NO_ADC, ADC8,   NOT_ON_PWM,  NOT_ON_TIMER }, // AD8 - 93
-  // 94 , PB22
-  { PIOB, PIO_PB22,          ID_PIOB, PIO_OUTPUT_0, PIO_DEFAULT, PIN_ATTR_DIGITAL,                  NO_ADC, NO_ADC, NOT_ON_PWM,  NOT_ON_TIMER }, // 94
-  // 95 , PB23
-  { PIOB, PIO_PB23,          ID_PIOB, PIO_OUTPUT_0, PIO_DEFAULT, PIN_ATTR_DIGITAL,                  NO_ADC, NO_ADC, NOT_ON_PWM,  NOT_ON_TIMER }, // 95
-  // 96 , PB24
-  { PIOB, PIO_PB24,          ID_PIOB, PIO_OUTPUT_0, PIO_DEFAULT, PIN_ATTR_DIGITAL,                  NO_ADC, NO_ADC, NOT_ON_PWM,  NOT_ON_TIMER }, // 96
-  // 97, PC20
-  { PIOC, PIO_PC20,          ID_PIOC, PIO_OUTPUT_0, PIO_DEFAULT, PIN_ATTR_DIGITAL,                  NO_ADC, NO_ADC, NOT_ON_PWM,  NOT_ON_TIMER }, // 97
-  // 98 , PC27
-  { PIOC, PIO_PC27,          ID_PIOC, PIO_OUTPUT_0, PIO_DEFAULT, PIN_ATTR_DIGITAL,                  NO_ADC, NO_ADC, NOT_ON_PWM,  NOT_ON_TIMER }, // 98
-  // 99 , PC10
-  { PIOC, PIO_PC10,          ID_PIOC, PIO_OUTPUT_0, PIO_DEFAULT, PIN_ATTR_DIGITAL,                  NO_ADC, NO_ADC, NOT_ON_PWM,  NOT_ON_TIMER }, // 99
-  // 100 , PC11
-  { PIOC, PIO_PC11,          ID_PIOC, PIO_OUTPUT_0, PIO_DEFAULT, PIN_ATTR_DIGITAL,                  NO_ADC, NO_ADC, NOT_ON_PWM,  NOT_ON_TIMER }, // 100
-    
-
+  // 92 .. 102 - ETHERNET MAC
+  { PIOB, PIO_PB0A_ETXCK,   ID_PIOB, PIO_PERIPH_A, PIO_DEFAULT, PIN_ATTR_DIGITAL,                  NO_ADC,  NO_ADC, NOT_ON_PWM,  NOT_ON_TIMER }, // ETXCK
+  { PIOB, PIO_PB1A_ETXEN,   ID_PIOB, PIO_PERIPH_A, PIO_DEFAULT, PIN_ATTR_DIGITAL,                  NO_ADC,  NO_ADC, NOT_ON_PWM,  NOT_ON_TIMER }, // ETXEN
+  { PIOB, PIO_PB2A_ETX0,   ID_PIOB, PIO_PERIPH_A, PIO_DEFAULT, PIN_ATTR_DIGITAL,                  NO_ADC,  NO_ADC, NOT_ON_PWM,  NOT_ON_TIMER }, // ETX0
+  { PIOB, PIO_PB3A_ETX1,   ID_PIOB, PIO_PERIPH_A, PIO_DEFAULT, PIN_ATTR_DIGITAL,                  NO_ADC,  NO_ADC, NOT_ON_PWM,  NOT_ON_TIMER }, // ETX1
+  { PIOB, PIO_PB4A_ECRSDV,   ID_PIOB, PIO_PERIPH_A, PIO_DEFAULT, PIN_ATTR_DIGITAL,                  NO_ADC,  NO_ADC, NOT_ON_PWM,  NOT_ON_TIMER }, // ECRSDV
+  { PIOB, PIO_PB5A_ERX0,   ID_PIOB, PIO_PERIPH_A, PIO_DEFAULT, PIN_ATTR_DIGITAL,                  NO_ADC,  NO_ADC, NOT_ON_PWM,  NOT_ON_TIMER }, // ERX0
+  { PIOB, PIO_PB6A_ERX1,   ID_PIOB, PIO_PERIPH_A, PIO_DEFAULT, PIN_ATTR_DIGITAL,                  NO_ADC,  NO_ADC, NOT_ON_PWM,  NOT_ON_TIMER }, // ERX1
+  { PIOB, PIO_PB7A_ERXER,   ID_PIOB, PIO_PERIPH_A, PIO_DEFAULT, PIN_ATTR_DIGITAL,                  NO_ADC,  NO_ADC, NOT_ON_PWM,  NOT_ON_TIMER }, // ERXER
+  { PIOB, PIO_PB8A_EMDC,   ID_PIOB, PIO_PERIPH_A, PIO_DEFAULT, PIN_ATTR_DIGITAL,                  NO_ADC,  NO_ADC, NOT_ON_PWM,  NOT_ON_TIMER }, // EMDC
+  { PIOB, PIO_PB9A_EMDIO,   ID_PIOB, PIO_PERIPH_A, PIO_DEFAULT, PIN_ATTR_DIGITAL,                  NO_ADC,  NO_ADC, NOT_ON_PWM,  NOT_ON_TIMER }, // EMDIO
+  { PIOA, PIO_PA5A_TIOA2,   ID_PIOA, PIO_PERIPH_A, PIO_DEFAULT, PIN_ATTR_DIGITAL,                  NO_ADC,  NO_ADC, NOT_ON_PWM,  NOT_ON_TIMER }, // MDINTR
 
   // END
   { NULL, 0, 0, PIO_NOT_A_PIN, PIO_DEFAULT, 0, NO_ADC, NO_ADC, NOT_ON_PWM, NOT_ON_TIMER }
@@ -455,6 +447,66 @@ void init( void )
     g_APinDescription[PINS_CAN1].ulPinType,
     g_APinDescription[PINS_CAN1].ulPin,
     g_APinDescription[PINS_CAN1].ulPinConfiguration);
+
+    // Initialize EMAC pins
+  PIO_Configure(
+    g_APinDescription[PIN_EMAC_EREFCK].pPort,
+    g_APinDescription[PIN_EMAC_EREFCK].ulPinType,
+    g_APinDescription[PIN_EMAC_EREFCK].ulPin,
+    g_APinDescription[PIN_EMAC_EREFCK].ulPinConfiguration);
+  PIO_Configure(
+    g_APinDescription[PIN_EMAC_ETXEN].pPort,
+    g_APinDescription[PIN_EMAC_ETXEN].ulPinType,
+    g_APinDescription[PIN_EMAC_ETXEN].ulPin,
+    g_APinDescription[PIN_EMAC_ETXEN].ulPinConfiguration);
+  PIO_Configure(
+    g_APinDescription[PIN_EMAC_ETX0].pPort,
+    g_APinDescription[PIN_EMAC_ETX0].ulPinType,
+    g_APinDescription[PIN_EMAC_ETX0].ulPin,
+    g_APinDescription[PIN_EMAC_ETX0].ulPinConfiguration);
+  PIO_Configure(
+    g_APinDescription[PIN_EMAC_ETX1].pPort,
+    g_APinDescription[PIN_EMAC_ETX1].ulPinType,
+    g_APinDescription[PIN_EMAC_ETX1].ulPin,
+    g_APinDescription[PIN_EMAC_ETX1].ulPinConfiguration);
+  PIO_Configure(
+    g_APinDescription[PIN_EMAC_ECRSDV].pPort,
+    g_APinDescription[PIN_EMAC_ECRSDV].ulPinType,
+    g_APinDescription[PIN_EMAC_ECRSDV].ulPin,
+    g_APinDescription[PIN_EMAC_ECRSDV].ulPinConfiguration);
+  PIO_Configure(
+    g_APinDescription[PIN_EMAC_ERX0].pPort,
+    g_APinDescription[PIN_EMAC_ERX0].ulPinType,
+    g_APinDescription[PIN_EMAC_ERX0].ulPin,
+    g_APinDescription[PIN_EMAC_ERX0].ulPinConfiguration);
+  PIO_Configure(
+    g_APinDescription[PIN_EMAC_ERX1].pPort,
+    g_APinDescription[PIN_EMAC_ERX1].ulPinType,
+    g_APinDescription[PIN_EMAC_ERX1].ulPin,
+    g_APinDescription[PIN_EMAC_ERX1].ulPinConfiguration);
+  PIO_Configure(
+    g_APinDescription[PIN_EMAC_ERXER].pPort,
+    g_APinDescription[PIN_EMAC_ERXER].ulPinType,
+    g_APinDescription[PIN_EMAC_ERXER].ulPin,
+    g_APinDescription[PIN_EMAC_ERXER].ulPinConfiguration);
+  PIO_Configure(
+    g_APinDescription[PIN_EMAC_EMDC].pPort,
+    g_APinDescription[PIN_EMAC_EMDC].ulPinType,
+    g_APinDescription[PIN_EMAC_EMDC].ulPin,
+    g_APinDescription[PIN_EMAC_EMDC].ulPinConfiguration);
+  PIO_Configure(
+    g_APinDescription[PIN_EMAC_EMDIO].pPort,
+    g_APinDescription[PIN_EMAC_EMDIO].ulPinType,
+    g_APinDescription[PIN_EMAC_EMDIO].ulPin,
+    g_APinDescription[PIN_EMAC_EMDIO].ulPinConfiguration);
+  PIO_Configure(
+    g_APinDescription[PIN_TC0_TIOA2].pPort,
+    g_APinDescription[PIN_TC0_TIOA2].ulPinType,
+    g_APinDescription[PIN_TC0_TIOA2].ulPin,
+    g_APinDescription[PIN_TC0_TIOA2].ulPinConfiguration);
+
+
+
 
   // Initialize Analog Controller
   pmc_enable_periph_clk(ID_ADC);
