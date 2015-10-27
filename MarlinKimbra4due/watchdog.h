@@ -3,7 +3,7 @@
 
 
 #if ENABLED(USE_WATCHDOG)
-  // initialize watch dog with a 1 sec interrupt time
+  // Initialize watchdog with a 4 second interrupt time
   void watchdog_init();
   // pad the dog/reset watchdog. MUST be called at least every second after the first watchdog_init or AVR will go into emergency procedures..
   void watchdog_reset();
