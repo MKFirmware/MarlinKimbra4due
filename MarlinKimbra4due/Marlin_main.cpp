@@ -1112,7 +1112,8 @@ void get_command() {
         // }
         comment_mode = false; //for new command
         serial_count = 0; //clear buffer
-      } else {
+      }
+      else {
         if (serial_char == ';') comment_mode = true;
         if (!comment_mode) command_queue[cmd_queue_index_w][serial_count++] = serial_char;
       }
@@ -1997,7 +1998,7 @@ static void clean_up_after_endstop_move() {
 
     float high_endstop  = 0;
     float low_endstop   = 0;
-    for(int8_t i = 0; i < 3; i++) {
+    for (int8_t i = 0; i < 3; i++) {
       if (endstop_adj[i] > high_endstop) high_endstop = endstop_adj[i];
       if (endstop_adj[i] < low_endstop) low_endstop = endstop_adj[i];
     }
@@ -4997,7 +4998,7 @@ inline void gcode_M92() {
       n = sp - ptr;
 
       // Scan through the range looking for the biggest block of 0xE5's we can find
-      for(i = 0; i < n; i++) {
+      for (i = 0; i < n; i++) {
         if ( *(ptr+i) == (unsigned char) 0xe5) {
           j = how_many_E5s_are_here((unsigned char*) ptr + i);
           if ( j > 8) {
@@ -6949,26 +6950,22 @@ inline void gcode_T(uint8_t tmp_extruder) {
             active_driver = 0;
             ECHO_LMV(DB, MSG_ACTIVE_COLOR, (int)active_extruder);
           #elif ENABLED(DONDOLO)
+            st_synchronize();
+            servo[DONDOLO_SERVO_INDEX].attach(0);
+            if (target_extruder == 0) {
+              servo[DONDOLO_SERVO_INDEX].write(DONDOLO_SERVOPOS_E0);
+            }
+            else if (target_extruder == 1) {
+              servo[DONDOLO_SERVO_INDEX].write(DONDOLO_SERVOPOS_E1);
+            }
+            delay(DONDOLO_SERVO_DELAY);
+            servo[DONDOLO_SERVO_INDEX].detach();
             active_extruder = target_extruder;
             active_driver = 0;
-            if (active_extruder == 0) {
-              st_synchronize();
-              servo[DONDOLO_SERVO_INDEX].attach(0);
-              servo[DONDOLO_SERVO_INDEX].write(DONDOLO_SERVOPOS_E0);
-              delay (DONDOLO_SERVO_DELAY);
-              servo[DONDOLO_SERVO_INDEX].detach();
-            }
-            else if (active_extruder == 1) {
-              st_synchronize();
-              servo[DONDOLO_SERVO_INDEX].attach(0);
-              servo[DONDOLO_SERVO_INDEX].write(DONDOLO_SERVOPOS_E1);
-              delay(DONDOLO_SERVO_DELAY);
-              servo[DONDOLO_SERVO_INDEX].detach();
-            }
             set_stepper_direction(true);
             ECHO_LMV(DB, MSG_ACTIVE_DRIVER, active_driver);
             ECHO_LMV(DB, MSG_ACTIVE_EXTRUDER, active_extruder);
-          #else 
+          #else
             active_driver = active_extruder = target_extruder;
             ECHO_LMV(DB, MSG_ACTIVE_EXTRUDER, active_extruder);
           #endif // end MKR4 || NPR2 || DONDOLO

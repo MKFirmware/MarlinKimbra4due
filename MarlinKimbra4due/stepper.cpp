@@ -44,6 +44,7 @@
 #if HAS(DIGIPOTSS)
   #include <SPI.h>
 #endif
+
 //===========================================================================
 //============================= public variables ============================
 //===========================================================================
@@ -149,11 +150,13 @@ volatile signed char count_direction[NUM_AXIS] = { 1, 1, 1, 1 };
       if (Z_HOME_DIR > 0) {\
         if (!(TEST(old_endstop_bits, Z_MAX) && (count_direction[Z_AXIS] > 0)) && !locked_z_motor) Z_STEP_WRITE(v); \
         if (!(TEST(old_endstop_bits, Z2_MAX) && (count_direction[Z_AXIS] > 0)) && !locked_z2_motor) Z2_STEP_WRITE(v); \
-      } else {\
+      } \
+      else { \
         if (!(TEST(old_endstop_bits, Z_MIN) && (count_direction[Z_AXIS] < 0)) && !locked_z_motor) Z_STEP_WRITE(v); \
         if (!(TEST(old_endstop_bits, Z2_MIN) && (count_direction[Z_AXIS] < 0)) && !locked_z2_motor) Z2_STEP_WRITE(v); \
       } \
-    } else { \
+    } \
+    else { \
       Z_STEP_WRITE(v); \
       Z2_STEP_WRITE(v); \
     }
@@ -339,7 +342,7 @@ inline void update_endstops() {
               COPY_BIT(current_endstop_bits, Z_MIN, Z2_MIN);
             #endif
 
-            byte z_test = (TEST_ENDSTOP(Z_MIN) << 0) + (TEST_ENDSTOP(Z2_MIN) << 1); // bit 0 for Z, bit 1 for Z2
+            byte z_test = TEST_ENDSTOP(Z_MIN) | (TEST_ENDSTOP(Z2_MIN) << 1); // bit 0 for Z, bit 1 for Z2
 
             if (z_test && current_block->steps[Z_AXIS] > 0) { // z_test = Z_MIN || Z2_MIN
               endstops_trigsteps[Z_AXIS] = count_position[Z_AXIS];
@@ -375,7 +378,7 @@ inline void update_endstops() {
               COPY_BIT(current_endstop_bits, Z_MAX, Z2_MAX);
             #endif
 
-            byte z_test = (TEST_ENDSTOP(Z_MAX) << 0) + (TEST_ENDSTOP(Z2_MAX) << 1); // bit 0 for Z, bit 1 for Z2
+            byte z_test = TEST_ENDSTOP(Z_MAX) | (TEST_ENDSTOP(Z2_MAX) << 1); // bit 0 for Z, bit 1 for Z2
 
             if (z_test && current_block->steps[Z_AXIS] > 0) {  // t_test = Z_MAX || Z2_MAX
               endstops_trigsteps[Z_AXIS] = count_position[Z_AXIS];
@@ -481,24 +484,22 @@ void set_stepper_direction(bool onlye) {
 
   #if DISABLED(ADVANCE) && ENABLED(DONDOLO)
     if (TEST(out_bits, E_AXIS)) {
-      if (active_extruder == 0) {
-        REV_E_DIR();
-        count_direction[E_AXIS] = -1;
+      switch(active_extruder) {
+        case 0:
+          REV_E_DIR(); break;
+        case 1:
+          NORM_E_DIR(); break;
       }
-      else {
-        NORM_E_DIR();
-        count_direction[E_AXIS] = -1;
-      }
+      count_direction[E_AXIS] = -1;
     }
     else {
-      if (active_extruder == 0) {
-        NORM_E_DIR();
-        count_direction[E_AXIS] = 1;
+      switch(active_extruder) {
+        case 0:
+          NORM_E_DIR(); break;
+        case 1:
+          REV_E_DIR(); break;
       }
-      else {
-        REV_E_DIR();
-        count_direction[E_AXIS] = 1;
-      }
+      count_direction[E_AXIS] = 1;
     }
   #elif DISABLED(ADVANCE)
     if (TEST(out_bits, E_AXIS)) {
