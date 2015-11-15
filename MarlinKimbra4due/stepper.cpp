@@ -87,12 +87,12 @@ volatile long endstops_trigsteps[3] = { 0 };
 volatile long endstops_stepsTotal, endstops_stepsDone;
 static volatile char endstop_hit_bits = 0; // use X_MIN, Y_MIN, Z_MIN and Z_PROBE as BIT value
 
-#if DISABLED(Z_DUAL_ENDSTOPS)
-  static byte
-#else
+#if ENABLED(Z_DUAL_ENDSTOPS) || ENABLED(NPR2)
   static uint16_t
+#else
+  static byte
 #endif
-  old_endstop_bits = 0; // use X_MIN, X_MAX... Z_MAX, Z_PROBE, Z2_MIN, Z2_MAX
+  old_endstop_bits = 0; // use X_MIN, X_MAX... Z_MAX, Z_PROBE, Z2_MIN, Z2_MAX, E_MIN
 
 #if ENABLED(ABORT_ON_ENDSTOP_HIT_FEATURE_ENABLED)
   bool abort_on_endstop_hit = false;
@@ -196,16 +196,16 @@ void checkHitEndstops() {
       LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT MSG_ENDSTOP_ZS);
     }
     #if ENABLED(Z_PROBE_ENDSTOP)
-    if (endstop_hit_bits & BIT(Z_PROBE)) {
-      ECHO_MV(MSG_ENDSTOP_ZPS, (float)endstops_trigsteps[Z_AXIS] / axis_steps_per_unit[Z_AXIS]);
-      LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT MSG_ENDSTOP_ZPS);
-    }
+      if (endstop_hit_bits & BIT(Z_PROBE)) {
+        ECHO_MV(MSG_ENDSTOP_ZPS, (float)endstops_trigsteps[Z_AXIS] / axis_steps_per_unit[Z_AXIS]);
+        LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT MSG_ENDSTOP_ZPS);
+      }
     #endif
     #if ENABLED(NPR2)
-    if (endstop_hit_bits & BIT(E_MIN)) {
-      ECHO_MV(MSG_ENDSTOP_E, (float)endstops_trigsteps[E_AXIS] / axis_steps_per_unit[E_AXIS]);
-      LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT MSG_ENDSTOP_ES);
-    }
+      if (endstop_hit_bits & BIT(E_MIN)) {
+        ECHO_MV(MSG_ENDSTOP_E, (float)endstops_trigsteps[E_AXIS] / axis_steps_per_unit[E_AXIS]);
+        LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT MSG_ENDSTOP_ES);
+      }
     #endif
     ECHO_E;
 
@@ -234,7 +234,7 @@ void enable_endstops(bool check) {
 // Check endstops
 inline void update_endstops() {
 
-  #if ENABLED(Z_DUAL_ENDSTOPS)
+  #if ENABLED(Z_DUAL_ENDSTOPS) || ENABLED(NPR2)
     uint16_t
   #else
     byte
@@ -396,6 +396,9 @@ inline void update_endstops() {
       }
   #if MECH(COREXZ)
     }
+  #endif
+  #if ENABLED(NPR2)
+    UPDATE_ENDSTOP(E, MIN);
   #endif
   old_endstop_bits = current_endstop_bits;
 }
