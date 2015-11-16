@@ -92,7 +92,7 @@ static volatile char endstop_hit_bits = 0; // use X_MIN, Y_MIN, Z_MIN and Z_PROB
 #else
   static byte
 #endif
-  old_endstop_bits = 0; // use X_MIN, X_MAX... Z_MAX, Z_PROBE, Z2_MIN, Z2_MAX, E_MIN
+    old_endstop_bits = 0; // use X_MIN, X_MAX... Z_MAX, Z_PROBE, Z2_MIN, Z2_MAX, E_MIN
 
 #if ENABLED(ABORT_ON_ENDSTOP_HIT_FEATURE_ENABLED)
   bool abort_on_endstop_hit = false;
@@ -936,7 +936,7 @@ void st_init() {
   #if HAS(Y_MIN)
     SET_INPUT(Y_MIN_PIN);
     #if ENABLED(ENDSTOPPULLUP_YMIN)
-      PULLUP(Y_MIN_PIN ,HIGH);
+      PULLUP(Y_MIN_PIN, HIGH);
     #endif
   #endif
 
@@ -950,7 +950,7 @@ void st_init() {
   #if HAS(Z2_MIN)
     SET_INPUT(Z2_MIN_PIN);
     #if ENABLED(ENDSTOPPULLUP_Z2MIN)
-      PULLUP(Z2_MIN_PIN,HIGH);
+      PULLUP(Z2_MIN_PIN, HIGH);
     #endif
   #endif
 
