@@ -268,7 +268,7 @@ void eeprom_write_byte(unsigned char *pos, unsigned char value) {
 
 unsigned char eeprom_read_byte(unsigned char *pos) {
   #if MB(ALLIGATOR)
-      return eprGetValue((unsigned) pos);
+    return eprGetValue((unsigned) pos);
   #else
     byte data = 0xFF;
     unsigned eeprom_address = (unsigned) pos;
