@@ -60,7 +60,7 @@
 #define MSG_MOVE_01MM                       "Muovi di 0.1mm"
 #define MSG_MOVE_1MM                        "Muovi di   1mm"
 #define MSG_MOVE_10MM                       "Muovi di  10mm"
-#define MSG_SPEED                           "Velocità"
+#define MSG_SPEED                           "Velocita"
 #define MSG_NOZZLE                          "Ugello"
 #define MSG_BED                             "Piatto"
 #define MSG_FAN_SPEED                       "Ventola"
