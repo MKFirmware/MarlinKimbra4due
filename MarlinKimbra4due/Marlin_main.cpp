@@ -353,7 +353,7 @@ unsigned long printer_usage_seconds;
 
 #endif // FWRETRACT
 
-#if ENABLED(ULTIPANEL) && HAS(POWER_SWITCH)
+#if (ENABLED(ULTIPANEL) || ENABLED(NEXTION)) && HAS(POWER_SWITCH)
   bool powersupply = 
     #if ENABLED(PS_DEFAULT_OFF)
       false
@@ -2943,6 +2943,13 @@ void gcode_get_destination() {
     float next_feedrate = code_value();
     if (next_feedrate > 0.0) feedrate = next_feedrate;
   }
+
+  #if ENABLED(NEXTION_GFX)
+    if((code_seen(axis_codes[X_AXIS]) || code_seen(axis_codes[Y_AXIS])) && code_seen(axis_codes[E_AXIS]))
+      gfx_line_to(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS]);
+    else
+      gfx_cursor_to(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS]);
+  #endif
 }
 
 void unknown_command_error() {
@@ -3505,6 +3512,11 @@ inline void gcode_G28() {
     #endif
   }
 
+  #if ENABLED(NEXTION_GFX)
+    gfx_clear(X_MAX_POS, Y_MAX_POS, Z_MAX_POS);
+    gfx_cursor_to(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS]);
+  #endif
+
   if (debugLevel & DEBUG_INFO) ECHO_LM(DB, "<<< gcode_G28");
 }
 
@@ -3692,13 +3704,13 @@ inline void gcode_G28() {
 
           // raise extruder
           float measured_z,
-                z_before = probePointCounter ? Z_RAISE_BETWEEN_PROBINGS + current_position[Z_AXIS] : Z_RAISE_BEFORE_PROBING;
+                z_before = probePointCounter ? Z_RAISE_BETWEEN_PROBINGS + current_position[Z_AXIS] : Z_RAISE_BEFORE_PROBING + current_position[Z_AXIS];
 
           if (debugLevel & DEBUG_INFO) {
             if (probePointCounter)
               ECHO_LMV(DB, "z_before = (between) ", (float)(Z_RAISE_BETWEEN_PROBINGS + current_position[Z_AXIS]));
             else
-              ECHO_LMV(DB, "z_before = (before) ", (float)Z_RAISE_BEFORE_PROBING);
+              ECHO_LMV(DB, "z_before = (before) ", (float)Z_RAISE_BEFORE_PROBING + current_position[Z_AXIS]);
           }
 
           ProbeAction act;

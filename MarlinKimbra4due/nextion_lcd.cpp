@@ -14,16 +14,22 @@
   #include "stepper.h"
   #include "configuration_store.h"
   #include "nextion_lcd.h"
+  #include "nextion_gfx.h"
   #include <Nextion.h>
 
   const float MaxWave   = 0.2;
   bool NextionON        = false;
   bool PageInfo         = false;
+  bool gfxON            = false;
   char buffer[100]      = {0};
   uint32_t slidermaxval = 20;
   char lcd_status_message[30] = WELCOME_MSG; // worst case is kana with up to 3*LCD_WIDTH+1
   uint8_t lcd_status_message_level = 0;
   static millis_t next_lcd_update_ms;
+
+  #if ENABLED(NEXTION_GFX)
+    GFX gfx = GFX(196, 194);
+  #endif
 
   // Page
   NexPage Pstart        = NexPage(0, 0, "start");
@@ -487,6 +493,16 @@
       Exit1.attachPop(ExitPopCallback);
       Exit3.attachPop(ExitPopCallback);
 
+      #if ENABLED(NEXTION_GFX)
+        gfx.color_set(VC_AXIS + X_AXIS, 63488);
+        gfx.color_set(VC_AXIS + Y_AXIS, 2016);
+        gfx.color_set(VC_AXIS + Z_AXIS, 31);
+        gfx.color_set(VC_MOVE, 2047);
+        gfx.color_set(VC_FEED, 65504);
+        gfx.color_set(VC_TOOL, 65535);
+        //gfx.clear(X_MAX_POS, Y_MAX_POS, Z_MAX_POS);
+      #endif
+
       #if ENABLED(SDSUPPORT)
         MSD.attachPop(setpagePopCallback, &MSD);
         sdlist.attachPop(sdlistPopCallback);
@@ -533,8 +549,8 @@
     itoa(T2, valuetemp, 10);
     strcat(buffer, valuetemp);
     uint32_t color = 1023;
-    uint32_t prc = (T1/(T2 + 0.1)) * 100;
-    
+    uint32_t prc = (T1/(T2 + 0.01)) * 100;
+
     if (prc >= 50 && prc < 75)
       color = 65519;
     else if (prc >= 75 && prc < 95)
@@ -544,8 +560,11 @@
 
     hotend_list[h]->setText(buffer);
     hotend_list[h]->setColor(color);
-    graph_list[h]->addValue(0, (int)(T1 * MaxWave));
-    graph_list[h]->addValue(1, (int)(T2 * MaxWave));
+
+    if (!gfxON) {
+      graph_list[h]->addValue(0, (int)(T1 * MaxWave));
+      graph_list[h]->addValue(1, (int)(T2 * MaxWave));
+    }
   }
 
   static void coordtoLCD() {
@@ -663,6 +682,23 @@
   }
 
   void lcd_reset_alert_level() { lcd_status_message_level = 0; }
+
+  void gfx_clear(float x_mm, float y_mm, float z_mm) {
+    if (PageInfo) {
+      gfx.clear(x_mm, y_mm, z_mm);
+      gfxON = true;
+    }
+  }
+
+  void gfx_cursor_to(float x, float y, float z) {
+    if (PageInfo)
+      gfx.cursor_to(x, y, z);
+  }
+
+  void gfx_line_to(float x, float y, float z){
+    if (PageInfo)
+      gfx.line_to(VC_TOOL, x, y, z);
+  }
 
   /*********************************/
   /** Number to string conversion **/
