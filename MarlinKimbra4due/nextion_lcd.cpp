@@ -23,7 +23,7 @@
   bool gfxON            = false;
   char buffer[100]      = {0};
   uint32_t slidermaxval = 20;
-  char lcd_status_message[30] = WELCOME_MSG; // worst case is kana with up to 3*LCD_WIDTH+1
+  char lcd_status_message[30] = WELCOME_MSG;
   uint8_t lcd_status_message_level = 0;
   static millis_t next_lcd_update_ms;
 
@@ -278,6 +278,7 @@
 
     static void setpagesdcard() {
       PageInfo = false;
+      gfxON    = false;
       Psdcard.show();
       uint16_t fileCnt = card.getnrfilenames();
 
@@ -435,10 +436,12 @@
   void setpagePopCallback(void *ptr) {
     if (ptr == &Menu) {
       PageInfo = false;
+      gfxON    = false;
       Pmenu.show();
     }
     else if (ptr == &MSetup) {
       PageInfo = false;
+      gfxON    = false;
       Psetup.show();
     }
 
@@ -683,22 +686,24 @@
 
   void lcd_reset_alert_level() { lcd_status_message_level = 0; }
 
-  void gfx_clear(float x_mm, float y_mm, float z_mm) {
-    if (PageInfo) {
-      gfx.clear(x_mm, y_mm, z_mm);
-      gfxON = true;
+  #if ENABLED(NEXTION_GFX)
+    void gfx_clear(float x, float y, float z) {
+      if (PageInfo) {
+        gfx.clear(x, y, z);
+        gfxON = true;
+      }
     }
-  }
 
-  void gfx_cursor_to(float x, float y, float z) {
-    if (PageInfo)
-      gfx.cursor_to(x, y, z);
-  }
+    void gfx_cursor_to(float x, float y, float z) {
+      if (PageInfo && gfxON)
+        gfx.cursor_to(x, y, z);
+    }
 
-  void gfx_line_to(float x, float y, float z){
-    if (PageInfo)
-      gfx.line_to(VC_TOOL, x, y, z);
-  }
+    void gfx_line_to(float x, float y, float z){
+      if (PageInfo && gfxON)
+        gfx.line_to(VC_TOOL, x, y, z);
+    }
+  #endif
 
   /*********************************/
   /** Number to string conversion **/
