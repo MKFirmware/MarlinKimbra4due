@@ -1024,7 +1024,8 @@ void dqrlss(double a[], int lda, int m, int n, int kr, double b[], double x[],
 
   if (kr != 0) {
     job = 110;
-    info = dqrsl ( a, lda, m, kr, qraux, b, rsd, rsd, x, rsd, rsd, job );  UNUSED(info);
+    info = dqrsl(a, lda, m, kr, qraux, b, rsd, rsd, x, rsd, rsd, job);
+    UNUSED(info);
   }
 
   for (i = 0; i < n; i++)
