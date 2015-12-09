@@ -58,7 +58,7 @@
  * ADVANCED MOTION FEATURES:
  * - Stepper auto deactivation
  * - Microstepping
- * - Low speed stepper
+ * - High speed stepper
  * - Motor's current
  * - I2C DIGIPOT
  * - Toshiba steppers
@@ -1255,16 +1255,14 @@
 
 
 /***********************************************************************
- ************************* Low speed stepper ***************************
+ ************************* High speed stepper **************************
  ***********************************************************************
  *                                                                     *
- * Use it if you have low speed stepper driver                         *
- *                                                                     *
- * Uncomment STEPPER_HIGH_LOW to enable this feature                   *
+ * Activate for very high stepping rates, normally only needed for 1/64*
+ * or more micro steps (AXIS_STEPS_PER_UNIT * MAX_FEEDRATE > 150,000)  *
  *                                                                     *
  ***********************************************************************/
-//#define STEPPER_HIGH_LOW
-#define STEPPER_HIGH_LOW_DELAY 1u  // Delay in microseconds
+//#define ENABLE_HIGH_SPEED_STEPPING
 /***********************************************************************/
 
 
