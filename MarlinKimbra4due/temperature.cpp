@@ -348,19 +348,10 @@ void autotempShutdown() {
 
       // Every 2 seconds...
       if (ms > temp_ms + 2000) {
-        int p;
-        if (hotend < 0) {
-          p = soft_pwm_bed;
-          ECHO_MV(MSG_B, input);
-          ECHO_MV(" /", temp, 1);
-          ECHO_EMV(" " MSG_AT, p);
-        }
-        else {
-          p = soft_pwm[hotend];
-          ECHO_MV(MSG_T, input, 1);
-          ECHO_MV(" /", temp, 1);
-          ECHO_EMV(" " MSG_AT, p);
-        }
+        #if HAS(TEMP_0) || HAS(TEMP_BED) || ENABLED(HEATER_0_USES_MAX6675)
+          print_heaterstates();
+          ECHO_E;
+        #endif
 
         temp_ms = ms;
       } // every 2 seconds
@@ -399,7 +390,7 @@ void autotempShutdown() {
 void updatePID() {
   #if ENABLED(PIDTEMP)
     for (int h = 0; h < HOTENDS; h++) {
-      temp_iState_max[h] = PID_INTEGRAL_DRIVE_MAX / PID_PARAM(Ki,h);
+      temp_iState_max[h] = PID_INTEGRAL_DRIVE_MAX / PID_PARAM(Ki, h);
     }
     #if ENABLED(PID_ADD_EXTRUSION_RATE)
       for (int e = 0; e < EXTRUDERS; e++) last_position[e] = 0;
@@ -543,10 +534,10 @@ float get_pid_output(int h) {
           temp_iState[h] = 0.0;
           pid_reset[h] = false;
         }
-        pTerm[h] = PID_PARAM(Kp,h) * pid_error[h];
+        pTerm[h] = PID_PARAM(Kp, h) * pid_error[h];
         temp_iState[h] += pid_error[h];
         temp_iState[h] = constrain(temp_iState[h], temp_iState_min[h], temp_iState_max[h]);
-        iTerm[h] = PID_PARAM(Ki,h) * temp_iState[h];
+        iTerm[h] = PID_PARAM(Ki, h) * temp_iState[h];
 
         pid_output = pTerm[h] + iTerm[h] - dTerm[h];
 
@@ -562,7 +553,7 @@ float get_pid_output(int h) {
               lpq[lpq_ptr++] = 0;
             }
             if (lpq_ptr >= lpq_len) lpq_ptr = 0;
-            cTerm[0] = (lpq[lpq_ptr] / axis_steps_per_unit[E_AXIS + active_extruder]) * Kc[0];
+            cTerm[0] = (lpq[lpq_ptr] / axis_steps_per_unit[E_AXIS + active_extruder]) * PID_PARAM(Kc, 0);
             pid_output += cTerm[0] / 100.0;
           #else  
             if (h == active_extruder) {
@@ -570,11 +561,12 @@ float get_pid_output(int h) {
               if (e_position > last_position[h]) {
                 lpq[lpq_ptr++] = e_position - last_position[h];
                 last_position[h] = e_position;
-              } else {
+              }
+              else {
                 lpq[lpq_ptr++] = 0;
               }
               if (lpq_ptr >= lpq_len) lpq_ptr = 0;
-              cTerm[h] = (lpq[lpq_ptr] / axis_steps_per_unit[E_AXIS + active_extruder]) * Kc[h];
+              cTerm[h] = (lpq[lpq_ptr] / axis_steps_per_unit[E_AXIS + active_extruder]) * PID_PARAM(Kc, h);
               pid_output += cTerm[h] / 100.0;
             }
           #endif // SINGLENOZZLE
@@ -969,7 +961,7 @@ void tp_init() {
     maxttemp[h] = maxttemp[0];
     #if ENABLED(PIDTEMP)
       temp_iState_min[h] = 0.0;
-      temp_iState_max[h] = PID_INTEGRAL_DRIVE_MAX / PID_PARAM(Ki,h);
+      temp_iState_max[h] = PID_INTEGRAL_DRIVE_MAX / PID_PARAM(Ki, h);
     #endif //PIDTEMP
     #if ENABLED(PIDTEMPBED)
       temp_iState_min_bed = 0.0;
@@ -1038,13 +1030,13 @@ void tp_init() {
       START_BED_TEMP();
     #endif
     #if HAS(TEMP_1)
-      START_TEMP(1)
+      START_TEMP(1);
     #endif
     #if HAS(TEMP_2)
-      START_TEMP(2)
+      START_TEMP(2);
     #endif
     #if HAS(TEMP_3)
-      START_TEMP(3)
+      START_TEMP(3);
     #endif
 
   // Use timer0 for temperature measurement
@@ -1646,7 +1638,7 @@ HAL_TEMP_TIMER_ISR {
 
     case PrepareTemp_1:
       #if HAS(TEMP_1)
-        START_TEMP(1)
+        START_TEMP(1);
       #endif
       lcd_buttons_update();
       temp_state = MeasureTemp_1;
@@ -1660,7 +1652,7 @@ HAL_TEMP_TIMER_ISR {
 
     case PrepareTemp_2:
       #if HAS(TEMP_2)
-        START_TEMP(2)
+        START_TEMP(2);
       #endif
       lcd_buttons_update();
       temp_state = MeasureTemp_2;
@@ -1674,14 +1666,14 @@ HAL_TEMP_TIMER_ISR {
 
     case PrepareTemp_3:
       #if HAS(TEMP_3)
-        START_TEMP(3)
+        START_TEMP(3);
       #endif
       lcd_buttons_update();
       temp_state = MeasureTemp_3;
       break;
     case MeasureTemp_3:
       #if HAS(TEMP_3)
-        READ_TEMP(3)
+        READ_TEMP(3);
       #endif
       temp_state = Prepare_FILWIDTH;
       break;

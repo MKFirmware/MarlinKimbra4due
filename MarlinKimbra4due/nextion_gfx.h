@@ -23,15 +23,11 @@
   #if ENABLED(NEXTION_GFX)
     #include <nextion.h>
 
-    #define VC_INVISIBLE   -1
     #define VC_AXIS         0
     #define VC_MOVE         3
     #define VC_TOOL         4
-    #define VC_FEED         5
-    #define VC_BACKGROUND   6
-    #define VC_BORDER       7
-
-    #define VC_MAX          8
+    #define VC_BACKGROUND   5
+    #define VC_MAX          6
 
     struct point {
       int x, y;
@@ -130,7 +126,6 @@
         }
 
         void line_to(int color_ndx, const float *pos);
-        void pixel_at(int color_ndx, const float *pos);
 
         void cursor_to(float x, float y, float z) {
           float pos[3] = { x, y, z };
@@ -142,13 +137,8 @@
           line_to(color_ndx, pos);
         }
 
-        void pixel_at(int color_ndx, float x, float y, float z) {
-          float pos[3] = { x, y, z };
-          pixel_at(color_ndx, pos);
-        }
-
       private:
-        void _flatten(const float *pos, struct point *pt) {
+        void _flatten(const float* pos, struct point* pt) {
           pt->x = ((pos[X_AXIS] - _origin[X_AXIS]) +
                    (pos[Y_AXIS] - _origin[Y_AXIS]) / 4.0) * _scale + 1;
           pt->y = (_height - 1) -
@@ -156,9 +146,9 @@
                    (pos[Y_AXIS] - _origin[Y_AXIS]) / 4) * _scale - 1;
         }
 
-        void _pixel2d_clipped(uint16_t color, const struct point *pt);
-        void _line2d_clipped(const float *a_color, const struct point *a,
-                             const float *b_color, const struct point *b);
+        void _line2d_clipped(const float* a_color, const struct point* a,
+                             const float* b_color, const struct point* b);
+
         bool fill(const int x0, const int y0, const int x1, const int y1, uint16_t color) {
           char buf0[10], buf1[10], buf2[10], buf3[10], buf4[10] = {0};
           String cmd;
@@ -180,6 +170,7 @@
           sendCommand(cmd.c_str());
           return recvRetCommandFinished();
         }
+
         bool drawPixel(const int x, const int y, uint16_t color) {
           char buf0[10], buf1[10], buf2[10] = {0};
           String cmd;

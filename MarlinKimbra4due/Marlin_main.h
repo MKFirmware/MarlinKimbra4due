@@ -111,7 +111,6 @@ extern float home_offset[3];
   extern float tower_adj[6];
   extern float delta_radius;
   extern float delta_diagonal_rod;
-  extern float delta_segments_per_second;
 #elif ENABLED(Z_DUAL_ENDSTOPS)
   extern float z_endstop_adj;
 #endif
@@ -205,6 +204,10 @@ extern uint8_t active_driver;
 #if ENABLED(DIGIPOT_I2C)
   extern void digipot_i2c_set_current( int channel, float current );
   extern void digipot_i2c_init();
+#endif
+
+#if HAS(TEMP_0) || HAS(TEMP_BED) || ENABLED(HEATER_0_USES_MAX6675)
+  void print_heaterstates();
 #endif
 
 #if ENABLED(FIRMWARE_TEST)
