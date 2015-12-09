@@ -2314,7 +2314,7 @@
 #define ORIG_FAN_PIN 	           9
 #define ORIG_FAN2_PIN            8
 
-#define PS_ON_PIN               40
+#define ORIG_PS_ON_PIN          40
 
 #define KILL_PIN                -1
 
