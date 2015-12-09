@@ -196,7 +196,7 @@
  * M300 - Play beep sound S<frequency Hz> P<duration ms>
  * M301 - Set PID parameters P I D and C
  * M302 - Allow cold extrudes, or set the minimum extrude S<temperature>.
- * M303 - PID relay autotune S<temperature> sets the target temperature. (default target temperature = 150C)
+ * M303 - PID relay autotune S<temperature> sets the target temperature (default target temperature = 150C). H<hotend> C<cycles>
  * M304 - Set bed PID parameters P I and D
  * M350 - Set microstepping mode.
  * M351 - Toggle MS1 MS2 pins directly.
@@ -375,7 +375,6 @@ unsigned long printer_usage_seconds;
   float DELTA_DIAGONAL_ROD1_2;
   float DELTA_DIAGONAL_ROD2_2;
   float DELTA_DIAGONAL_ROD3_2;
-  float delta_segments_per_second = DELTA_SEGMENTS_PER_SECOND;
   float ac_prec = AUTOCALIBRATION_PRECISION;
   float delta_tower1_x, delta_tower1_y,
         delta_tower2_x, delta_tower2_y,
@@ -415,7 +414,7 @@ unsigned long printer_usage_seconds;
 #endif
 
 #if MECH(SCARA)
-  float delta_segments_per_second = SCARA_SEGMENTS_PER_SECOND;
+  #define DELTA_SEGMENTS_PER_SECOND SCARA_SEGMENTS_PER_SECOND
   static float delta[3] = { 0 };
   float axis_scaling[3] = { 1, 1, 1 };    // Build size scaling, default to 1
 #endif
@@ -2838,8 +2837,63 @@ static void clean_up_after_endstop_move() {
   }
 #endif //Z_PROBE_SLED
 
-inline void wait_heater() {
+#if HAS(TEMP_0) || HAS(TEMP_BED) || ENABLED(HEATER_0_USES_MAX6675)
+  void print_heaterstates() {
+    #if HAS(TEMP_0) || ENABLED(HEATER_0_USES_MAX6675)
+      ECHO_MV(MSG_T, degHotend(target_extruder), 1);
+      ECHO_MV(" /", degTargetHotend(target_extruder), 1);
+    #endif
+    #if HAS(TEMP_BED)
+      ECHO_MV(" " MSG_B, degBed(), 1);
+      ECHO_MV(" /", degTargetBed(), 1);
+    #endif
+    #if HOTENDS > 1
+      for (int8_t h = 0; h < HOTENDS; ++h) {
+        ECHO_MV(" T", h);
+        ECHO_MV(":", degHotend(h), 1);
+        ECHO_MV(" /", degTargetHotend(h), 1);
+      }
+    #endif
+    #if HAS(TEMP_BED)
+      ECHO_M(" " MSG_BAT);
+      #if ENABLED(BED_WATTS)
+        ECHO_VM((BED_WATTS * getHeaterPower(-1)) / 127, "W");
+      #else
+        ECHO_V(getHeaterPower(-1));
+      #endif
+    #endif
+    ECHO_M(" " MSG_AT ":");
+    #if ENABLED(HOTEND_WATTS)
+      ECHO_VM((HOTEND_WATTS * getHeaterPower(target_extruder)) / 127, "W");
+    #else
+      ECHO_V(getHeaterPower(target_extruder));
+    #endif
+    #if HOTENDS > 1
+      for (int8_t h = 0; h < HOTENDS; ++h) {
+        ECHO_MV(" " MSG_AT, h);
+        ECHO_C(':');
+        #if ENABLED(EXTRUDER_WATTS)
+          ECHO_VM((EXTRUDER_WATTS * getHeaterPower(h)) / 127. "W");
+        #else
+          ECHO_V(getHeaterPower(h));
+        #endif
+      }
+    #endif
+    #if ENABLED(SHOW_TEMP_ADC_VALUES)
+      #if HAS(TEMP_BED)
+        ECHO_MV("    ADC B:", degBed(), 1);
+        ECHO_MV("C->", rawBedTemp() / OVERSAMPLENR, 0);
+      #endif
+      for (int8_t cur_hotend = 0; cur_hotend < HOTENDS; ++cur_hotend) {
+        ECHO_MV("  T", cur_hotend);
+        ECHO_MV(":", degHotend(cur_hotend), 1);
+        ECHO_MV("C->", rawHotendTemp(cur_hotend) / OVERSAMPLENR, 0);
+      }
+    #endif
+  }
+#endif
 
+inline void wait_heater() {
   millis_t temp_ms = millis();
 
   /* See if we are heating up or cooling down */
@@ -2859,8 +2913,9 @@ inline void wait_heater() {
 
     { // while loop
       if (millis() > temp_ms + 1000UL) { //Print temp & remaining time every 1s while waiting
-        ECHO_MV(MSG_T, degHotend(target_extruder), 1);
-        ECHO_MV(" E:", (int)target_extruder);
+        #if HAS(TEMP_0) || HAS(TEMP_BED) || ENABLED(HEATER_0_USES_MAX6675)
+          print_heaterstates();
+        #endif
         #if ENABLED(TEMP_RESIDENCY_TIME)
           ECHO_M(" " MSG_W);
           if (residency_start_ms > -1) {
@@ -2906,9 +2961,10 @@ inline void wait_bed() {
     if (ms > temp_ms + 1000UL) { //Print Temp Reading every 1 second while heating up.
       temp_ms = ms;
       float tt = degHotend(active_extruder);
-      ECHO_MV(MSG_T, tt);
-      ECHO_MV(" E:", active_extruder);
-      ECHO_EMV(" " MSG_B, degBed(), 1);
+      #if HAS(TEMP_0) || HAS(TEMP_BED) || ENABLED(HEATER_0_USES_MAX6675)
+        print_heaterstates();
+        ECHO_E;
+      #endif
     }
     idle();
   }
@@ -4001,11 +4057,11 @@ inline void gcode_G28() {
 
       deploy_z_probe();
       probe_value = probe_bed(x, y);
-      if (debugLevel & DEBUG_INFO) {
-        ECHO_SMV(DB, "Bed Z-Height at X:", x);
-        ECHO_MV(" Y:", y);
-        ECHO_EMV(" = ", probe_value, 4);
+      ECHO_SMV(DB, "Bed Z-Height at X:", x);
+      ECHO_MV(" Y:", y);
+      ECHO_EMV(" = ", probe_value, 4);
 
+      if (debugLevel & DEBUG_INFO) {
         ECHO_SMV(DB, "Carriage Positions: [", saved_position[X_AXIS]);
         ECHO_MV(", ", saved_position[Y_AXIS]);
         ECHO_MV(", ", saved_position[Z_AXIS]);
@@ -5134,48 +5190,11 @@ inline void gcode_M105() {
 
   #if HAS(TEMP_0) || HAS(TEMP_BED) || ENABLED(HEATER_0_USES_MAX6675)
     ECHO_S(OK);
-    #if HAS(TEMP_0)
-      ECHO_MV(MSG_T, degHotend(target_extruder), 1);
-      ECHO_MV(" /", degTargetHotend(target_extruder), 1);
-    #endif
-    #if HAS(TEMP_BED)
-      ECHO_MV(" " MSG_B, degBed(), 1);
-      ECHO_MV(" /", degTargetBed(), 1);
-    #endif
-    for (int8_t e = 0; e < EXTRUDERS; ++e) {
-      ECHO_MV(" T", e);
-      ECHO_MV(":", degHotend(e), 1);
-      ECHO_MV(" /", degTargetHotend(e), 1);
-    }
+    print_heaterstates();
   #else // HASNT(TEMP_0) && HASNT(TEMP_BED)
     ECHO_LM(ER, MSG_ERR_NO_THERMISTORS);
   #endif
 
-  ECHO_M(" " MSG_AT);
-  #if ENABLED(HOTEND_WATTS)
-    ECHO_VM((HOTEND_WATTS * getHeaterPower(target_extruder))/127, "W");
-  #else
-    ECHO_V(getHeaterPower(target_extruder));
-  #endif
-
-  ECHO_M(" " MSG_BAT);
-  #if ENABLED(BED_WATTS)
-    ECHO_VM((BED_WATTS * getHeaterPower(-1))/127, "W");
-  #else
-    ECHO_V(getHeaterPower(-1));
-  #endif
-
-  #if ENABLED(SHOW_TEMP_ADC_VALUES)
-    #if HAS(TEMP_BED)
-      ECHO_MV("    ADC B:", degBed(), 1);
-      ECHO_MV("C->", rawBedTemp()/OVERSAMPLENR, 0);
-    #endif
-    for (int8_t cur_extruder = 0; cur_extruder < EXTRUDERS; ++cur_extruder) {
-      ECHO_MV("  T", cur_extruder);
-      ECHO_MV(":", degHotend(cur_extruder),1);
-      ECHO_MV("C->", rawHotendTemp(cur_extruder)/OVERSAMPLENR,0);
-    }
-  #endif
   ECHO_E;
 }
 
@@ -5991,14 +6010,16 @@ inline void gcode_M226() {
   /**
    * M303: PID relay autotune
    *       S<temperature> sets the target temperature. (default target temperature = 150C)
-   *       E<extruder> (-1 for the bed)
+   *       H<hotend> (-1 for the bed)
    *       C<cycles>
    */
   inline void gcode_M303() {
-    int e = code_seen('E') ? code_value_short() : 0;
+    int h = code_seen('H') ? code_value_short() : 0;
     int c = code_seen('C') ? code_value_short() : 5;
-    float temp = code_seen('S') ? code_value() : (e < 0 ? 70.0 : 150.0);
-    PID_autotune(temp, e, c);
+    float temp = code_seen('S') ? code_value() : (h < 0 ? 70.0 : 150.0);
+    
+    if (h >= 0 && h < HOTENDS) target_extruder = h;
+    PID_autotune(temp, h, c);
   }
 #endif
 
@@ -7549,30 +7570,37 @@ void clamp_to_software_endstops(float target[3]) {
     if (cartesian_mm < 0.000001) cartesian_mm = abs(difference[E_AXIS]);
     if (cartesian_mm < 0.000001) return false;
 
-    #if ENABLED(DELTA_SEGMENTS_PER_SECOND) || ENABLED(SCARA_SEGMENTS_PER_SECOND)
+    #if ENABLED(DELTA_SEGMENTS_PER_SECOND)
       float seconds = 6000 * cartesian_mm / feedrate / feedrate_multiplier;
-      int steps = max(1, int(delta_segments_per_second * seconds));
+      int steps = max(1, int(DELTA_SEGMENTS_PER_SECOND * seconds));
+      /*
+      if (debugLevel & DEBUG_INFO) {
+        ECHO_SMV(DB, "mm=", cartesian_mm);
+        ECHO_MV(" seconds=", seconds);
+        ECHO_EMV(" steps=", steps);
+      }
+      */
     #else
       float fTemp = cartesian_mm * 5;
       int steps = (int)fTemp;
 
       if (steps == 0) {
         steps = 1;
-        for (int8_t i=0; i < NUM_AXIS; i++) fractions[i] = difference[i];
+        for (int8_t i = 0; i < NUM_AXIS; i++) fractions[i] = difference[i];
       }
       else {
         fTemp = 1 / float(steps);
-        for (int8_t i=0; i < NUM_AXIS; i++) fractions[i] = difference[i] * fTemp;
+        for (int8_t i = 0; i < NUM_AXIS; i++) fractions[i] = difference[i] * fTemp;
       }
 
       // For number of steps, for each step add one fraction
       // First, set initial target to current position
-      for (int8_t i=0; i < NUM_AXIS; i++) addDistance[i] = 0.0;
+      for (int8_t i = 0; i < NUM_AXIS; i++) addDistance[i] = 0.0;
     #endif
 
     for (int s = 1; s <= steps; s++) {
 
-      #if ENABLED(DELTA_SEGMENTS_PER_SECOND) || ENABLED(SCARA_SEGMENTS_PER_SECOND)
+      #if ENABLED(DELTA_SEGMENTS_PER_SECOND)
         float fraction = float(s) / float(steps);
         for (int8_t i = 0; i < NUM_AXIS; i++)
           target[i] = current_position[i] + difference[i] * fraction;
@@ -7584,8 +7612,16 @@ void clamp_to_software_endstops(float target[3]) {
       #endif
 
       calculate_delta(target);
-
       adjust_delta(target);
+
+      if (debugLevel & DEBUG_INFO) {
+        ECHO_LMV(DB, "target[X_AXIS]=", target[X_AXIS]);
+        ECHO_LMV(DB, "target[Y_AXIS]=", target[Y_AXIS]);
+        ECHO_LMV(DB, "target[Z_AXIS]=", target[Z_AXIS]);
+        ECHO_LMV(DB, "delta[X_AXIS]=", delta[X_AXIS]);
+        ECHO_LMV(DB, "delta[Y_AXIS]=", delta[Y_AXIS]);
+        ECHO_LMV(DB, "delta[Z_AXIS]=", delta[Z_AXIS]);
+      }
 
       plan_buffer_line(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], target[E_AXIS], frfm, active_extruder, active_driver);
     }
@@ -8273,8 +8309,7 @@ void kill(const char* lcd_msg) {
       #endif
     }
   }
-
-#endif //FAST_PWM_FAN
+#endif // FAST_PWM_FAN
 
 void Stop() {
   disable_all_heaters();

@@ -501,9 +501,7 @@
         gfx.color_set(VC_AXIS + Y_AXIS, 2016);
         gfx.color_set(VC_AXIS + Z_AXIS, 31);
         gfx.color_set(VC_MOVE, 2047);
-        gfx.color_set(VC_FEED, 65504);
         gfx.color_set(VC_TOOL, 65535);
-        //gfx.clear(X_MAX_POS, Y_MAX_POS, Z_MAX_POS);
       #endif
 
       #if ENABLED(SDSUPPORT)
