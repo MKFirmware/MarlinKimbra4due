@@ -146,23 +146,30 @@
    #define NEWPANEL
 #endif
 
+#if ENABLED(DOGLCD) // Change number of lines to match the DOG graphic display
+  #if DISABLED(LCD_WIDTH)
+    #define LCD_WIDTH 22
+  #endif
+  #if DISABLED(LCD_HEIGHT)
+    #define LCD_HEIGHT 5
+  #endif
+#endif
+
 #if ENABLED(ULTIPANEL)
   #define NEWPANEL  //enable this if you have a click-encoder panel
   #define ULTRA_LCD
-  #if ENABLED(DOGLCD) // Change number of lines to match the DOG graphic display
-    #define LCD_WIDTH 22
-    #define LCD_HEIGHT 5
-  #else
+  #if DISABLED(LCD_WIDTH)
     #define LCD_WIDTH 20
+  #endif
+  #if DISABLED(LCD_HEIGHT)
     #define LCD_HEIGHT 4
   #endif
 #else //no panel but just LCD
   #if ENABLED(ULTRA_LCD)
-    #if ENABLED(DOGLCD) // Change number of lines to match the 128x64 graphics display
-      #define LCD_WIDTH 22
-      #define LCD_HEIGHT 5
-    #else
+    #if DISABLED(LCD_WIDTH)
       #define LCD_WIDTH 16
+    #endif
+    #if DISABLED(LCD_HEIGHT)
       #define LCD_HEIGHT 2
     #endif
   #endif
@@ -383,12 +390,12 @@
  * MAX_STEP_FREQUENCY differs for TOSHIBA OR ARDUINO DUE OR ARDUINO MEGA
  */
 #ifdef __SAM3X8E__
-  #if ENABLED(CONFIG_STEPPERS_TOSHIBA) || DISABLED(ENABLE_HIGH_SPEED_STEPPING)
+  #if ENABLED(CONFIG_STEPPERS_TOSHIBA)
     #define MAX_STEP_FREQUENCY 150000 // Max step frequency for Toshiba Stepper Controllers
     #define DOUBLE_STEP_FREQUENCY MAX_STEP_FREQUENCY
   #else
-    #define MAX_STEP_FREQUENCY 500000     // Max step frequency for the Due is approx. 330kHz
-    #define DOUBLE_STEP_FREQUENCY 100000  // 96kHz is close to maximum for an Arduino Due
+    #define MAX_STEP_FREQUENCY 320000     // Max step frequency for the Due is approx. 330kHz
+    #define DOUBLE_STEP_FREQUENCY 90000  // 96kHz is close to maximum for an Arduino Due
   #endif
 #else
   #if ENABLED(CONFIG_STEPPERS_TOSHIBA)
@@ -502,32 +509,32 @@
   #define BED_USES_THERMISTOR
 #endif
 
+#define HEATER_USES_AD595 (ENABLED(HEATER_0_USES_AD595) || ENABLED(HEATER_1_USES_AD595) || ENABLED(HEATER_2_USES_AD595) || ENABLED(HEATER_3_USES_AD595))
+
 /**
  * ARRAY_BY_EXTRUDERS based on EXTRUDERS
  */
 #if EXTRUDERS > 9
-  #define ARRAY_BY_EXTRUDER(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) { v1, v2, v3, v4, v5, v6, v7, v8, v9, v10 }
+  #define ARRAY_BY_EXTRUDERS(v1) { v1, v1, v1, v1, v1, v1, v1, v1, v1, v1 }
 #elif EXTRUDERS > 8
-  #define ARRAY_BY_EXTRUDER(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) { v1, v2, v3, v4, v5, v6, v7, v8, v9 }
+  #define ARRAY_BY_EXTRUDERS(v1) { v1, v1, v1, v1, v1, v1, v1, v1, v1 }
 #elif EXTRUDERS > 7
-  #define ARRAY_BY_EXTRUDER(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) { v1, v2, v3, v4, v5, v6, v7, v8 }
+  #define ARRAY_BY_EXTRUDERS(v1) { v1, v1, v1, v1, v1, v1, v1, v1 }
 #elif EXTRUDERS > 6
-  #define ARRAY_BY_EXTRUDER(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) { v1, v2, v3, v4, v5, v6, v7 }
+  #define ARRAY_BY_EXTRUDERS(v1) { v1, v1, v1, v1, v1, v1, v1 }
 #elif EXTRUDERS > 5
-  #define ARRAY_BY_EXTRUDER(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) { v1, v2, v3, v4, v5, v6 }
+  #define ARRAY_BY_EXTRUDERS(v1) { v1, v1, v1, v1, v1, v1 }
 #elif EXTRUDERS > 4
-  #define ARRAY_BY_EXTRUDER(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) { v1, v2, v3, v4, v5 }
+  #define ARRAY_BY_EXTRUDERS(v1) { v1, v1, v1, v1, v1 }
 #elif EXTRUDERS > 3
-  #define ARRAY_BY_EXTRUDER(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) { v1, v2, v3, v4 }
+  #define ARRAY_BY_EXTRUDERS(v1) { v1, v1, v1, v1 }
 #elif EXTRUDERS > 2
-  #define ARRAY_BY_EXTRUDER(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) { v1, v2, v3 }
+  #define ARRAY_BY_EXTRUDERS(v1) { v1, v1, v1 }
 #elif EXTRUDERS > 1
-  #define ARRAY_BY_EXTRUDER(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) { v1, v2 }
+  #define ARRAY_BY_EXTRUDERS(v1) { v1, v1 }
 #else
-  #define ARRAY_BY_EXTRUDER(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) { v1 }
+  #define ARRAY_BY_EXTRUDERS(v1) { v1 }
 #endif
-
-#define ARRAY_BY_EXTRUDERS(v1) ARRAY_BY_EXTRUDER(v1, v1, v1, v1, v1, v1, v1, v1, v1, v1)
 
 /**
  * ARRAY_BY_HOTENDS based on HOTENDS
