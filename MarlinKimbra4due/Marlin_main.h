@@ -61,7 +61,8 @@ enum DebugFlags {
   DEBUG_INFO          = BIT(1),
   DEBUG_ERRORS        = BIT(2),
   DEBUG_DRYRUN        = BIT(3),
-  DEBUG_COMMUNICATION = BIT(4)
+  DEBUG_COMMUNICATION = BIT(4),
+  DEBUG_DEBUG         = BIT(5)
 };
 
 void clamp_to_software_endstops(float target[3]);
@@ -100,6 +101,11 @@ extern float home_offset[3];
 #if HOTENDS > 1
   extern float hotend_offset[3][HOTENDS];
 #endif // HOTENDS > 1
+
+#if HEATER_USES_AD595
+  extern float ad595_offset[HOTENDS];
+  extern float ad595_gain[HOTENDS];
+#endif
 
 #if ENABLED(NPR2)
   extern int old_color; // old color for system NPR2

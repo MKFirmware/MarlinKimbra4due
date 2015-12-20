@@ -216,6 +216,7 @@
  * M502 - Revert to the default "factory settings". You still need to store them in EEPROM afterwards if you want to.
  * M503 - Print the current settings (from memory not from EEPROM). Use S0 to leave off headings.
  * M540 - Use S[0|1] to enable or disable the stop SD card print on endstop hit (requires ABORT_ON_ENDSTOP_HIT_FEATURE_ENABLED)
+ * M595 - Set hotend AD595 offset and gain
  * M600 - Pause for filament change X[pos] Y[pos] Z[relative lift] E[initial retract] L[later retract distance for removal]
  * M605 - Set dual x-carriage movement mode: S<mode> [ X<duplication x-offset> R<duplication temp offset> ]
  * M666 - Set z probe offset or Endstop and delta geometry adjustment
@@ -321,6 +322,11 @@ unsigned long printer_usage_seconds;
 // Hotend offset
 #if HOTENDS > 1
   float hotend_offset[3][HOTENDS];
+#endif
+
+#if HEATER_USES_AD595
+  float ad595_offset[HOTENDS] = ARRAY_BY_HOTENDS1(TEMP_SENSOR_AD595_OFFSET);
+  float ad595_gain[HOTENDS] = ARRAY_BY_HOTENDS1(TEMP_SENSOR_AD595_GAIN);
 #endif
 
 #if ENABLED(NPR2)
@@ -2511,9 +2517,8 @@ static void clean_up_after_endstop_move() {
 
   float probe_bed(float x, float y) {
     //Probe bed at specified location and return z height of bed
-    float probe_z, probe_bed_array[20];
-    int probe_count;
-    boolean probe_done;
+    uint8_t probe_count = 5;
+    float probe_z, probe_bed_array[probe_count], probe_bed_mean = 0;
 
     destination[X_AXIS] = x - z_probe_offset[X_AXIS];
     if (destination[X_AXIS] < X_MIN_POS) destination[X_AXIS] = X_MIN_POS;
@@ -2522,18 +2527,21 @@ static void clean_up_after_endstop_move() {
     if (destination[Y_AXIS] < Y_MIN_POS) destination[Y_AXIS] = Y_MIN_POS;
     if (destination[Y_AXIS] > Y_MAX_POS) destination[Y_AXIS] = Y_MAX_POS;
 
-    probe_count = 0;
-    do {
-      probe_z = z_probe() + z_probe_offset[Z_AXIS];
-      probe_bed_array[probe_count] = probe_z;
-      probe_done = false;
-      if (probe_count > 0) {
-        for(int xx = 0; xx < probe_count; xx++) {
-          if (probe_bed_array[xx] == probe_z) probe_done = true;
-        }
+    for(int i = 0; i < probe_count; i++) {
+      probe_bed_array[i] = z_probe() + z_probe_offset[Z_AXIS];
+      probe_bed_mean += probe_bed_array[i];
+    }
+
+    probe_z = probe_bed_mean / probe_count;
+
+    if (debugLevel & DEBUG_INFO) {
+      ECHO_SM(DB, "Bed probe heights: ");
+      for(int i = 0; i < probe_count; i++) {
+        if (probe_bed_array[i] >= 0) ECHO_M(" ");
+        ECHO_VM(probe_bed_array[i], " ", 4);
       }
-      probe_count ++;
-    } while ((probe_done == false) and (probe_count < 20));
+      ECHO_EMV("mean ", probe_z, 4);
+    }
 
     bed_safe_z = probe_z + 5;
     return probe_z;
@@ -2574,13 +2582,17 @@ static void clean_up_after_endstop_move() {
     ECHO_SM(DB, "| \t");
     if (bed_level_z >= 0) ECHO_M(" ");
     ECHO_MV("", bed_level_z, 4);
-    ECHO_MV("\t\t\tX:", endstop_adj[0]);
-    ECHO_MV(" Y:", endstop_adj[1]);
-    ECHO_EMV(" Z:", endstop_adj[2]);
+    ECHO_MV("\t\t\tX:", endstop_adj[0], 4);
+    ECHO_MV(" Y:", endstop_adj[1], 4);
+    ECHO_EMV(" Z:", endstop_adj[2], 4);
 
-    ECHO_SMV(DB, "| ", bed_level_oy, 4);
-    ECHO_M("\t\t");
-    ECHO_EVM(bed_level_ox, "\t\tTower Offsets", 4);
+    ECHO_SM(DB, "| ");
+    if (bed_level_ox >= 0) ECHO_M(" ");
+    ECHO_MV("", bed_level_ox, 4);
+    ECHO_M("\t");
+    if (bed_level_oy >= 0) ECHO_M(" ");
+    ECHO_MV("", bed_level_oy, 4);
+    ECHO_EM("\t\tTower Offsets");
 
     ECHO_SM(DB, "| \t");
     if (bed_level_c >= 0) ECHO_M(" ");
@@ -2589,18 +2601,22 @@ static void clean_up_after_endstop_move() {
     ECHO_MV(" B:",tower_adj[1]);
     ECHO_EMV(" C:",tower_adj[2]);
 
-    ECHO_SMV(DB, "| ", bed_level_x, 4);
-    ECHO_MV("\t\t", bed_level_y, 4);
+    ECHO_SM(DB, "| ");
+    if (bed_level_x >= 0) ECHO_M(" ");
+    ECHO_MV("", bed_level_x, 4);
+    ECHO_M("\t");
+    if (bed_level_y >= 0) ECHO_M(" ");
+    ECHO_MV("", bed_level_y, 4);
     ECHO_MV("\t\tI:",tower_adj[3]);
     ECHO_MV(" J:",tower_adj[4]);
     ECHO_EMV(" K:",tower_adj[5]);
 
     ECHO_SM(DB, "| \t");
-    if (bed_level_oz >= 0) {ECHO_M(" ");}
+    if (bed_level_oz >= 0) ECHO_M(" ");
     ECHO_MV("", bed_level_oz, 4);
     ECHO_EMV("\t\t\tDelta Radius: ", delta_radius, 4);
 
-    ECHO_LMV(DB, "| X-Tower\t\tY-Tower\t\tDiagonal Rod: ", delta_diagonal_rod, 4);
+    ECHO_LMV(DB, "| X-Tower\tY-Tower\t\tDiagonal Rod: ", delta_diagonal_rod, 4);
     ECHO_E;
   }
 
@@ -2654,7 +2670,7 @@ static void clean_up_after_endstop_move() {
   }
 
   void prepare_move_raw() {
-    if (debugLevel & DEBUG_INFO) {
+    if (debugLevel & DEBUG_DEBUG) {
       ECHO_S(DB);
       print_xyz("prepare_move_raw > destination", destination);
     }
@@ -4104,9 +4120,9 @@ inline void gcode_G28() {
 
         bed_probe_all();
         calibration_report();
-      } while ((bed_level_x < -ac_prec) or (bed_level_x > ac_prec)
-            or (bed_level_y < -ac_prec) or (bed_level_y > ac_prec)
-            or (bed_level_z < -ac_prec) or (bed_level_z > ac_prec));
+      } while ((bed_level_x <= -ac_prec) or (bed_level_x >= ac_prec)
+            or (bed_level_y <= -ac_prec) or (bed_level_y >= ac_prec)
+            or (bed_level_z <= -ac_prec) or (bed_level_z >= ac_prec));
 
       ECHO_LM(DB, "Endstop adjustment complete");
     }
@@ -4126,10 +4142,10 @@ inline void gcode_G28() {
         ECHO_LM(DB, "Checking delta radius");
         adj_deltaradius();
 
-      } while ((bed_level_c < -ac_prec) or (bed_level_c > ac_prec)
-            or (bed_level_x < -ac_prec) or (bed_level_x > ac_prec)
-            or (bed_level_y < -ac_prec) or (bed_level_y > ac_prec)
-            or (bed_level_z < -ac_prec) or (bed_level_z > ac_prec));
+      } while ((bed_level_c <= -ac_prec) or (bed_level_c >= ac_prec)
+            or (bed_level_x <= -ac_prec) or (bed_level_x >= ac_prec)
+            or (bed_level_y <= -ac_prec) or (bed_level_y >= ac_prec)
+            or (bed_level_z <= -ac_prec) or (bed_level_z >= ac_prec));
     }
      
     if (code_seen('I')) {
@@ -4165,26 +4181,28 @@ inline void gcode_G28() {
           bed_probe_all();
           calibration_report();
 
-          if ((bed_level_c < -ac_prec) or (bed_level_c > ac_prec)) {
+          if ((bed_level_c <= -ac_prec) or (bed_level_c >= ac_prec)) {
             ECHO_LM(DB, "Checking delta radius");
             dr_adjusted = adj_deltaradius();
           }
-          else dr_adjusted = 0;
-          /*
-          ECHO_EMV("bed_level_c=", bed_level_c, 4);
-          ECHO_EMV("bed_level_x=", bed_level_x, 4);
-          ECHO_EMV("bed_level_y=", bed_level_y, 4);
-          ECHO_EMV("bed_level_z=", bed_level_z, 4);
-          */
-        } while ((bed_level_c < -ac_prec) or (bed_level_c > ac_prec)
-              or (bed_level_x < -ac_prec) or (bed_level_x > ac_prec)
-              or (bed_level_y < -ac_prec) or (bed_level_y > ac_prec)
-              or (bed_level_z < -ac_prec) or (bed_level_z > ac_prec)
+          else
+            dr_adjusted = 0;
+
+          if (debugLevel & DEBUG_DEBUG) {
+            ECHO_LMV(DB, "bed_level_c=", bed_level_c, 4);
+            ECHO_LMV(DB, "bed_level_x=", bed_level_x, 4);
+            ECHO_LMV(DB, "bed_level_y=", bed_level_y, 4);
+            ECHO_LMV(DB, "bed_level_z=", bed_level_z, 4);
+          }
+        } while ((bed_level_c <= -ac_prec) or (bed_level_c >= ac_prec)
+              or (bed_level_x <= -ac_prec) or (bed_level_x >= ac_prec)
+              or (bed_level_y <= -ac_prec) or (bed_level_y >= ac_prec)
+              or (bed_level_z <= -ac_prec) or (bed_level_z >= ac_prec)
               or (dr_adjusted != 0));
 
-        if ((bed_level_ox < -ac_prec) or (bed_level_ox > ac_prec) or
-            (bed_level_oy < -ac_prec) or (bed_level_oy > ac_prec) or
-            (bed_level_oz < -ac_prec) or (bed_level_oz > ac_prec)) {
+        if ((bed_level_ox <= -ac_prec) or (bed_level_ox >= ac_prec) or
+            (bed_level_oy <= -ac_prec) or (bed_level_oy >= ac_prec) or
+            (bed_level_oz <= -ac_prec) or (bed_level_oz >= ac_prec)) {
           ECHO_LM(DB, "Checking for tower geometry errors..");
           if (fix_tower_errors() != 0 ) {
             // Tower positions have been changed .. home to endstops
@@ -4201,25 +4219,27 @@ inline void gcode_G28() {
               bed_safe_z = Z_RAISE_BETWEEN_PROBINGS - z_probe_offset[Z_AXIS];
             }
           }
+          bed_safe_z = Z_RAISE_BETWEEN_PROBINGS - z_probe_offset[Z_AXIS];
           bed_probe_all();
           calibration_report();
         }
-        /*
-        ECHO_EMV("bed_level_c=", bed_level_c, 4);
-        ECHO_EMV("bed_level_x=", bed_level_x, 4);
-        ECHO_EMV("bed_level_y=", bed_level_y, 4);
-        ECHO_EMV("bed_level_z=", bed_level_z, 4);
-        ECHO_EMV("bed_level_ox=", bed_level_ox, 4);
-        ECHO_EMV("bed_level_oy=", bed_level_oy, 4);
-        ECHO_EMV("bed_level_oz=", bed_level_oz, 4);
-        */
-      } while((bed_level_c < -ac_prec) or (bed_level_c > ac_prec)
-           or (bed_level_x < -ac_prec) or (bed_level_x > ac_prec)
-           or (bed_level_y < -ac_prec) or (bed_level_y > ac_prec)
-           or (bed_level_z < -ac_prec) or (bed_level_z > ac_prec)
-           or (bed_level_ox < -ac_prec) or (bed_level_ox > ac_prec)
-           or (bed_level_oy < -ac_prec) or (bed_level_oy > ac_prec)
-           or (bed_level_oz < -ac_prec) or (bed_level_oz > ac_prec));
+
+        if (debugLevel & DEBUG_DEBUG) {
+          ECHO_LMV(DB, "bed_level_c=", bed_level_c, 4);
+          ECHO_LMV(DB, "bed_level_x=", bed_level_x, 4);
+          ECHO_LMV(DB, "bed_level_y=", bed_level_y, 4);
+          ECHO_LMV(DB, "bed_level_z=", bed_level_z, 4);
+          ECHO_LMV(DB, "bed_level_ox=", bed_level_ox, 4);
+          ECHO_LMV(DB, "bed_level_oy=", bed_level_oy, 4);
+          ECHO_LMV(DB, "bed_level_oz=", bed_level_oz, 4);
+        }
+      } while((bed_level_c <= -ac_prec) or (bed_level_c >= ac_prec)
+           or (bed_level_x <= -ac_prec) or (bed_level_x >= ac_prec)
+           or (bed_level_y <= -ac_prec) or (bed_level_y >= ac_prec)
+           or (bed_level_z <= -ac_prec) or (bed_level_z >= ac_prec)
+           or (bed_level_ox <= -ac_prec) or (bed_level_ox >= ac_prec)
+           or (bed_level_oy <= -ac_prec) or (bed_level_oy >= ac_prec)
+           or (bed_level_oz <= -ac_prec) or (bed_level_oz >= ac_prec));
 
       ECHO_LM(DB, "Autocalibration Complete");
     }
@@ -4230,7 +4250,6 @@ inline void gcode_G28() {
     lcd_reset_alert_level();
 
     clean_up_after_endstop_move();
-
   }
 #endif // DELTA && Z_PROBE_ENDSTOP
 
@@ -5257,11 +5276,7 @@ inline void gcode_M111() {
     ECHO_LM(DB, MSG_DEBUG_DRYRUN);
     disable_all_heaters();
   }
-  #if ENABLED(DEBUG_LEVELING_FEATURE)
-    if (debugLevel & DEBUG_LEVELING) {
-      ECHO_LM(DB, MSG_DEBUG_LEVELING);
-    }
-  #endif
+  if (debugLevel & DEBUG_DEBUG) ECHO_LM(DB, MSG_DEBUG);
 }
 
 /**
@@ -6017,7 +6032,7 @@ inline void gcode_M226() {
     int h = code_seen('H') ? code_value_short() : 0;
     int c = code_seen('C') ? code_value_short() : 5;
     float temp = code_seen('S') ? code_value() : (h < 0 ? 70.0 : 150.0);
-    
+
     if (h >= 0 && h < HOTENDS) target_extruder = h;
     PID_autotune(temp, h, c);
   }
@@ -6366,6 +6381,31 @@ inline void gcode_M503() {
   }
 
 #endif // ABORT_ON_ENDSTOP_HIT_FEATURE_ENABLED
+
+#if HEATER_USES_AD595
+  /**
+   * M595 - set Hotennd AD595 offset & Gain T<hotend_number> O<offset> G<gain>
+   */
+  inline void gcode_M595() {
+    if (setTargetedHotend(595)) return;
+
+    if (code_seen('O')) ad595_offset[target_extruder] = code_value();
+    if (code_seen('G')) ad595_gain[target_extruder] = code_value();
+
+    for (int h = 0; h < HOTENDS; h++) {
+      // if gain == 0 you get MINTEMP!
+      if (ad595_gain[h] == 0) ad595_gain[h]= 1;
+    }
+
+    ECHO_SM(DB, MSG_HOTEND_AD595);
+    ECHO_E;
+    for (int h = 0; h < HOTENDS; h++) {
+      ECHO_SMV(DB, "T", h);
+      ECHO_MV(" Offset: ", ad595_offset[h]);
+      ECHO_EMV(", Gain: ", ad595_gain[h]);
+    }
+  }
+#endif
 
 #if ENABLED(FILAMENTCHANGEENABLE)
   /**
@@ -7445,6 +7485,11 @@ void process_next_command() {
           gcode_M540(); break;
       #endif
 
+      #if HEATER_USES_AD595
+        case 595: // M595 set Hotends AD595 offset & gain
+          gcode_M595(); break;
+      #endif
+
       #if ENABLED(FILAMENTCHANGEENABLE)
         case 600: //Pause for filament change X[pos] Y[pos] Z[relative lift] E[initial retract] L[later retract distance for removal]
           gcode_M600(); break;
@@ -7573,13 +7618,13 @@ void clamp_to_software_endstops(float target[3]) {
     #if ENABLED(DELTA_SEGMENTS_PER_SECOND)
       float seconds = 6000 * cartesian_mm / feedrate / feedrate_multiplier;
       int steps = max(1, int(DELTA_SEGMENTS_PER_SECOND * seconds));
-      /*
-      if (debugLevel & DEBUG_INFO) {
+
+      if (debugLevel & DEBUG_DEBUG) {
         ECHO_SMV(DB, "mm=", cartesian_mm);
         ECHO_MV(" seconds=", seconds);
         ECHO_EMV(" steps=", steps);
       }
-      */
+
     #else
       float fTemp = cartesian_mm * 5;
       int steps = (int)fTemp;
@@ -7614,7 +7659,7 @@ void clamp_to_software_endstops(float target[3]) {
       calculate_delta(target);
       adjust_delta(target);
 
-      if (debugLevel & DEBUG_INFO) {
+      if (debugLevel & DEBUG_DEBUG) {
         ECHO_LMV(DB, "target[X_AXIS]=", target[X_AXIS]);
         ECHO_LMV(DB, "target[Y_AXIS]=", target[Y_AXIS]);
         ECHO_LMV(DB, "target[Z_AXIS]=", target[Z_AXIS]);

@@ -1359,6 +1359,7 @@ HAL_TEMP_TIMER_ISR {
   }
 
   HAL_timer_isr_status (TEMP_TIMER_COUNTER, TEMP_TIMER_CHANNEL);
+
   #if DISABLED(SLOW_PWM_HEATERS)
     /**
      * standard PWM modulation
@@ -1638,7 +1639,7 @@ HAL_TEMP_TIMER_ISR {
 
     case PrepareTemp_1:
       #if HAS(TEMP_1)
-        START_TEMP(1);
+        //START_TEMP(1);
       #endif
       lcd_buttons_update();
       temp_state = MeasureTemp_1;
@@ -1652,7 +1653,7 @@ HAL_TEMP_TIMER_ISR {
 
     case PrepareTemp_2:
       #if HAS(TEMP_2)
-        START_TEMP(2);
+        //START_TEMP(2);
       #endif
       lcd_buttons_update();
       temp_state = MeasureTemp_2;
@@ -1666,7 +1667,7 @@ HAL_TEMP_TIMER_ISR {
 
     case PrepareTemp_3:
       #if HAS(TEMP_3)
-        START_TEMP(3);
+        //START_TEMP(3);
       #endif
       lcd_buttons_update();
       temp_state = MeasureTemp_3;
