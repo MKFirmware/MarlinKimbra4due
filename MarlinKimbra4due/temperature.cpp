@@ -231,9 +231,9 @@ void autotempShutdown() {
     millis_t temp_ms = millis(), t1 = temp_ms, t2 = temp_ms;
     long t_high = 0, t_low = 0;
 
-    long bias, d;
-    float Ku, Tu;
-    float Kp_temp, Ki_temp, Kd_temp;
+    long bias = 0, d = 0;
+    float Ku = 0, Tu = 0;
+    float Kp_temp = 0, Ki_temp = 0, Kd_temp = 0;
     float max = 0, min = 10000;
 
     #if HAS(AUTO_FAN)
@@ -245,11 +245,11 @@ void autotempShutdown() {
          || hotend < 0
       #endif
     ) {
-      ECHO_LM(ER, MSG_PID_BAD_EXTRUDER_NUM);
+      ECHO_LM(ER, SERIAL_PID_BAD_EXTRUDER_NUM);
       return;
     }
 
-    ECHO_LM(DB, MSG_PID_AUTOTUNE_START);
+    ECHO_LM(DB, SERIAL_PID_AUTOTUNE_START);
     if (hotend < 0) {
       ECHO_SM(DB, "BED");
     }
@@ -310,23 +310,23 @@ void autotempShutdown() {
               bias = constrain(bias, 20, max_pow - 20);
               d = (bias > max_pow / 2) ? max_pow - 1 - bias : bias;
 
-              ECHO_MV(MSG_BIAS, bias);
-              ECHO_MV(MSG_D, d);
-              ECHO_MV(MSG_T_MIN, min);
-              ECHO_MV(MSG_T_MAX, max);
+              ECHO_MV(SERIAL_BIAS, bias);
+              ECHO_MV(SERIAL_D, d);
+              ECHO_MV(SERIAL_T_MIN, min);
+              ECHO_MV(SERIAL_T_MAX, max);
               if (cycles > 2) {
                 Ku = (4.0 * d) / (3.14159265 * (max - min) / 2.0);
                 Tu = ((float)(t_low + t_high) / 1000.0);
-                ECHO_MV(MSG_KU, Ku);
-                ECHO_EMV(MSG_TU, Tu);
+                ECHO_MV(SERIAL_KU, Ku);
+                ECHO_EMV(SERIAL_TU, Tu);
                 Kp_temp = 0.6 * Ku;
                 Ki_temp = 2 * Kp_temp / Tu;
                 Kd_temp = Kp_temp * Tu / 8;
                 
-                ECHO_EM(MSG_CLASSIC_PID);
-                ECHO_MV(MSG_KP, Kp_temp);
-                ECHO_MV(MSG_KI, Ki_temp);
-                ECHO_EMV(MSG_KD, Kd_temp);
+                ECHO_EM(SERIAL_CLASSIC_PID);
+                ECHO_MV(SERIAL_KP, Kp_temp);
+                ECHO_MV(SERIAL_KI, Ki_temp);
+                ECHO_EMV(SERIAL_KD, Kd_temp);
               }
               else {
                 ECHO_E;
@@ -342,7 +342,7 @@ void autotempShutdown() {
         }
       }
       if (input > temp + MAX_OVERSHOOT_PID_AUTOTUNE) {
-        ECHO_LM(ER, MSG_PID_TEMP_TOO_HIGH);
+        ECHO_LM(ER, SERIAL_PID_TEMP_TOO_HIGH);
         return;
       }
 
@@ -358,11 +358,11 @@ void autotempShutdown() {
 
       // Over 2 minutes?
       if (((ms - t1) + (ms - t2)) > (10L*60L*1000L*2L)) {
-        ECHO_LM(ER, MSG_PID_TIMEOUT);
+        ECHO_LM(ER, SERIAL_PID_TIMEOUT);
         return;
       }
       if (cycles > ncycles) {
-        ECHO_LM(DB, MSG_PID_AUTOTUNE_FINISHED);
+        ECHO_LM(DB, SERIAL_PID_AUTOTUNE_FINISHED);
         #if ENABLED(PIDTEMP)
           if (hotend >= 0) {
             PID_PARAM(Kp, hotend) = Kp_temp;
@@ -370,9 +370,9 @@ void autotempShutdown() {
             PID_PARAM(Kd, hotend) = scalePID_d(Kd_temp);
             updatePID();
 
-            ECHO_SMV(DB, MSG_KP, PID_PARAM(Kp, hotend));
-            ECHO_MV(MSG_KI, unscalePID_i(PID_PARAM(Ki, hotend)));
-            ECHO_EMV(MSG_KD, unscalePID_d(PID_PARAM(Kd, hotend)));
+            ECHO_SMV(DB, SERIAL_KP, PID_PARAM(Kp, hotend));
+            ECHO_MV(SERIAL_KI, unscalePID_i(PID_PARAM(Ki, hotend)));
+            ECHO_EMV(SERIAL_KD, unscalePID_d(PID_PARAM(Kd, hotend)));
           }
           else {
             ECHO_LMV(DB, "#define DEFAULT_bedKp ", Kp_temp);
@@ -488,8 +488,8 @@ inline void _temp_error(int h, const char* serial_msg, const char* lcd_msg) {
   if (IsRunning()) {
     ECHO_S(ER);
     PS_PGM(serial_msg);
-    ECHO_M(MSG_STOPPED_HEATER);
-    if (h >= 0) ECHO_EV((int)h); else ECHO_EM(MSG_HEATER_BED);
+    ECHO_M(SERIAL_STOPPED_HEATER);
+    if (h >= 0) ECHO_EV((int)h); else ECHO_EM(SERIAL_HEATER_BED);
     #if ENABLED(ULTRA_LCD)
       lcd_setalertstatuspgm(lcd_msg);
     #endif
@@ -506,10 +506,10 @@ inline void _temp_error(int h, const char* serial_msg, const char* lcd_msg) {
 }
 
 void max_temp_error(uint8_t h) {
-  _temp_error(h, PSTR(MSG_T_MAXTEMP), PSTR(MSG_ERR_MAXTEMP));
+  _temp_error(h, PSTR(SERIAL_T_MAXTEMP), PSTR(MSG_ERR_MAXTEMP));
 }
 void min_temp_error(uint8_t h) {
-  _temp_error(h, PSTR(MSG_T_MINTEMP), PSTR(MSG_ERR_MINTEMP));
+  _temp_error(h, PSTR(SERIAL_T_MINTEMP), PSTR(MSG_ERR_MINTEMP));
 }
 
 float get_pid_output(int h) {
@@ -584,14 +584,14 @@ float get_pid_output(int h) {
     #endif // PID_OPENLOOP
 
     #if ENABLED(PID_DEBUG)
-      ECHO_SMV(DB, MSG_PID_DEBUG, h);
-      ECHO_MV(MSG_PID_DEBUG_INPUT, current_temperature[h]);
-      ECHO_MV(MSG_PID_DEBUG_OUTPUT, pid_output);
-      ECHO_MV(MSG_PID_DEBUG_PTERM, pTerm[h]);
-      ECHO_MV(MSG_PID_DEBUG_ITERM, iTerm[h]);
-      ECHO_MV(MSG_PID_DEBUG_DTERM, dTerm[h]);
+      ECHO_SMV(DB, SERIAL_PID_DEBUG, h);
+      ECHO_MV(SERIAL_PID_DEBUG_INPUT, current_temperature[h]);
+      ECHO_MV(SERIAL_PID_DEBUG_OUTPUT, pid_output);
+      ECHO_MV(SERIAL_PID_DEBUG_PTERM, pTerm[h]);
+      ECHO_MV(SERIAL_PID_DEBUG_ITERM, iTerm[h]);
+      ECHO_MV(SERIAL_PID_DEBUG_DTERM, dTerm[h]);
       #if ENABLED(PID_ADD_EXTRUSION_RATE)
-        ECHO_MV(MSG_PID_DEBUG_CTERM, cTerm[h]);
+        ECHO_MV(SERIAL_PID_DEBUG_CTERM, cTerm[h]);
       #endif
       ECHO_E;
     #endif // PID_DEBUG
@@ -686,7 +686,7 @@ void manage_heater() {
         // Has it failed to increase enough?
         if (degHotend(h) < watch_target_temp[h]) {
           // Stop!
-          _temp_error(h, PSTR(MSG_T_HEATING_FAILED), PSTR(MSG_HEATING_FAILED_LCD));
+          _temp_error(h, PSTR(SERIAL_T_HEATING_FAILED), PSTR(MSG_HEATING_FAILED_LCD));
         }
         else {
           // Start again if the target is still far off
@@ -764,34 +764,34 @@ void manage_heater() {
         WRITE_HEATER_BED(LOW);
       }
     #endif
-  #endif //TEMP_SENSOR_BED != 0
+  #endif // TEMP_SENSOR_BED != 0
 }
 
 #define PGM_RD_W(x)   (short)pgm_read_word(&x)
 // Derived from RepRap FiveD extruder::getTemperature()
 // For hot end temperature measurement.
-static float analog2temp(int raw, uint8_t e) {
+static float analog2temp(int raw, uint8_t h) {
   #if ENABLED(TEMP_SENSOR_1_AS_REDUNDANT)
-    if (e > EXTRUDERS)
+    if (h > HOTENDS)
   #else
-    if (e >= EXTRUDERS)
+    if (h >= HOTENDS)
   #endif
     {
-      ECHO_LVM(ER, (int)e, MSG_INVALID_EXTRUDER_NUM);
+      ECHO_LVM(ER, (int)h, SERIAL_INVALID_EXTRUDER_NUM);
       kill(PSTR(MSG_KILLED));
       return 0.0;
     }
 
   #if ENABLED(HEATER_0_USES_MAX6675)
-    if (e == 0) return 0.25 * raw;
+    if (h == 0) return 0.25 * raw;
   #endif
 
-  if (heater_ttbl_map[e] != NULL) {
+  if (heater_ttbl_map[h] != NULL) {
     float celsius = 0;
     uint8_t i;
-    short(*tt)[][2] = (short(*)[][2])(heater_ttbl_map[e]);
+    short(*tt)[][2] = (short(*)[][2])(heater_ttbl_map[h]);
 
-    for (i = 1; i < heater_ttbllen_map[e]; i++) {
+    for (i = 1; i < heater_ttbllen_map[h]; i++) {
       if (PGM_RD_W((*tt)[i][0]) > raw) {
         celsius = PGM_RD_W((*tt)[i - 1][1]) +
                   (raw - PGM_RD_W((*tt)[i - 1][0])) *
@@ -802,11 +802,16 @@ static float analog2temp(int raw, uint8_t e) {
     }
 
     // Overflow: Set to last value in the table
-    if (i == heater_ttbllen_map[e]) celsius = PGM_RD_W((*tt)[i - 1][1]);
+    if (i == heater_ttbllen_map[h]) celsius = PGM_RD_W((*tt)[i - 1][1]);
 
     return celsius;
   }
-  return ((raw * ((5.0 * 100.0) / 1024.0) / OVERSAMPLENR) * TEMP_SENSOR_AD595_GAIN) + TEMP_SENSOR_AD595_OFFSET;
+
+  #if HEATER_USES_AD595
+    return ((raw * ((5.0 * 100.0) / 1024.0) / OVERSAMPLENR) * ad595_gain[h]) + ad595_offset[h];
+  #else
+    return 0;
+  #endif
 }
 
 // Derived from RepRap FiveD extruder::getTemperature()
@@ -1178,7 +1183,7 @@ void tp_init() {
           *state = TRRunaway;
         break;
       case TRRunaway:
-        _temp_error(heater_id, PSTR(MSG_T_THERMAL_RUNAWAY), PSTR(MSG_THERMAL_RUNAWAY));
+        _temp_error(heater_id, PSTR(SERIAL_T_THERMAL_RUNAWAY), PSTR(MSG_THERMAL_RUNAWAY));
     }
   }
 
@@ -1596,12 +1601,12 @@ HAL_TEMP_TIMER_ISR {
     } // (pwm_count % 64) == 0
 
   #endif // SLOW_PWM_HEATERS
-  
+
   #define READ_TEMP(temp_id) temp_read = getAdcFreerun(pinToAdcChannel(TEMP_## temp_id ##_PIN)); \
     raw_temp_value[temp_id] += temp_read; \
     max_temp[temp_id] = max(max_temp[temp_id], temp_read); \
     min_temp[temp_id] = min(min_temp[temp_id], temp_read)
-    
+
   #define READ_BED_TEMP(temp_id) temp_read = getAdcFreerun(pinToAdcChannel(TEMP_BED_PIN)); \
     raw_temp_bed_value += temp_read; \
     max_temp[temp_id] = max(max_temp[temp_id], temp_read); \
@@ -1826,8 +1831,8 @@ HAL_TEMP_TIMER_ISR {
       #else
         #define GEBED >=
       #endif
-      if (current_temperature_bed_raw GEBED bed_maxttemp_raw) _temp_error(-1, PSTR(MSG_T_MAXTEMP), PSTR(MSG_ERR_MAXTEMP_BED));
-      if (bed_minttemp_raw GEBED current_temperature_bed_raw) _temp_error(-1, PSTR(MSG_T_MINTEMP), PSTR(MSG_ERR_MINTEMP_BED));
+      if (current_temperature_bed_raw GEBED bed_maxttemp_raw) _temp_error(-1, PSTR(SERIAL_T_MAXTEMP), PSTR(MSG_ERR_MAXTEMP_BED));
+      if (bed_minttemp_raw GEBED current_temperature_bed_raw) _temp_error(-1, PSTR(SERIAL_T_MINTEMP), PSTR(MSG_ERR_MINTEMP_BED));
     #endif
 
   } // temp_count >= OVERSAMPLENR
