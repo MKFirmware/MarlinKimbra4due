@@ -15,8 +15,6 @@
  *
  */
 
-#include "base.h"
-
 #ifndef NEXTION_GFX_H
   #define NEXTION_GFX_H
 
