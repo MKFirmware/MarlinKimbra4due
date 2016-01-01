@@ -27,8 +27,12 @@
 #ifndef	_FASTIO_H
 #define	_FASTIO_H
 
-#define HIGH 1
-#define LOW 0
+#ifndef HIGH
+  #define HIGH 1
+#endif
+#ifndef LOW
+  #define LOW 0
+#endif
 
 // --------------------------------------------------------------------------
 // magic I/O routines

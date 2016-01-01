@@ -75,22 +75,6 @@
 #ifndef PINS_H
 #define PINS_H
 
-// Preset optional pins
-#define X_MS1_PIN     -1
-#define X_MS2_PIN     -1
-#define Y_MS1_PIN     -1
-#define Y_MS2_PIN     -1
-#define Z_MS1_PIN     -1
-#define Z_MS2_PIN     -1
-#define E0_MS1_PIN    -1
-#define E0_MS2_PIN    -1
-#define E1_MS1_PIN    -1
-#define E1_MS2_PIN    -1
-#define DIGIPOTSS_PIN -1
-#define LCD_CONTRAST  -1
-#define Z2_MIN_PIN    -1
-#define Z2_MAX_PIN    -1
-
 
 /******************************************************************************
 * 10
@@ -5433,6 +5417,48 @@ DaveX plan for Teensylu/printrboard-type pinouts (ref teensylu & sprinter) for a
   #endif
 #endif
 
+#ifndef X_MS1_PIN
+  #define X_MS1_PIN     -1
+#endif
+#ifndef X_MS2_PIN
+  #define X_MS2_PIN     -1
+#endif
+#ifndef Y_MS1_PIN
+  #define Y_MS1_PIN     -1
+#endif
+#ifndef Y_MS2_PIN
+  #define Y_MS2_PIN     -1
+#endif
+#ifndef Z_MS1_PIN
+  #define Z_MS1_PIN     -1
+#endif
+#ifndef Z_MS2_PIN
+  #define Z_MS2_PIN     -1
+#endif
+#ifndef E0_MS1_PIN
+  #define E0_MS1_PIN    -1
+#endif
+#ifndef E0_MS2_PIN
+  #define E0_MS2_PIN    -1
+#endif
+#ifndef E1_MS1_PIN
+  #define E1_MS1_PIN    -1
+#endif
+#ifndef E1_MS2_PIN
+  #define E1_MS2_PIN    -1
+#endif
+#ifndef DIGIPOTSS_PIN
+  #define DIGIPOTSS_PIN -1
+#endif
+#ifndef LCD_CONTRAST
+  #define LCD_CONTRAST  -1
+#endif
+#ifndef Z2_MIN_PIN
+  #define Z2_MIN_PIN    -1
+#endif
+#ifndef Z2_MAX_PIN
+  #define Z2_MAX_PIN    -1
+#endif
 
 /****************************************************************************************/
 #include "Configuration_Pins.h"
@@ -5440,20 +5466,26 @@ DaveX plan for Teensylu/printrboard-type pinouts (ref teensylu & sprinter) for a
 
 
 #if X_HOME_DIR > 0    // Home X to MAX
+  #undef X_MIN_PIN
   #define X_MIN_PIN -1
 #elif X_HOME_DIR < 0  // Home X to MIN
+  #undef X_MAX_PIN
   #define X_MAX_PIN -1
 #endif //X_HOME_DIR > 0
 
 #if Y_HOME_DIR > 0    // Home Y to MAX
+  #undef Y_MIN_PIN
   #define Y_MIN_PIN -1
 #elif Y_HOME_DIR < 0  // Home Y to MIN
+  #undef Y_MAX_PIN
   #define Y_MAX_PIN -1
 #endif //Y_HOME_DIR > 0
 
 #if Z_HOME_DIR > 0    // Home Z to MAX
+  #undef Z_MIN_PIN
   #define Z_MIN_PIN -1
 #elif Z_HOME_DIR < 0  // Home Z to MIN
+  #undef Z_MAX_PIN
   #define Z_MAX_PIN -1
 #endif //Z_HOME_DIR > 0
 
