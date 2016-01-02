@@ -17,6 +17,7 @@
  * - Fan configuration
  * - Mediancount (ONLY FOR DUE)
  * EXTRUDER FEATURES:
+ * - Default nominal filament diameter
  * - Dangerous extrution prevention
  * - Single nozzle
  * - BariCUDA paste extruder
@@ -274,7 +275,7 @@
 #define THERMAL_PROTECTION_HYSTERESIS 4     // Degrees Celsius
 
 // Whenever an M104 or M109 increases the target temperature the firmware will wait for the
-// WATCH_TEMP_PERIOD to expire, and if the temperature hasn't increased by WATCH_TEMP_INCREASE
+// WATCH TEMP PERIOD to expire, and if the temperature hasn't increased by WATCH TEMP INCREASE
 // degrees, the machine is halted, requiring a hard reset. This test restarts with any M104/M109,
 //but only if the current temperature is far enough below the target for a reliable test.
 #define WATCH_TEMP_PERIOD  16               // Seconds
@@ -296,7 +297,7 @@
 
 // Use software PWM to drive the fan, as for the heaters. This uses a very low frequency
 // which is not ass annoying as with the hardware PWM. On the other hand, if this frequency
-// is too low, you should also increment SOFT_PWM_SCALE.
+// is too low, you should also increment SOFT PWM SCALE.
 //#define FAN_SOFT_PWM
 
 // Incrementing this by 1 will double the software PWM frequency,
@@ -320,9 +321,9 @@
 // and turn off after the set amount of seconds from last driver being disabled again
 // You need to set CONTROLLERFAN_PIN in Configuration_pins.h
 //#define CONTROLLERFAN
-#define CONTROLLERFAN_SECS 60     // How many seconds, after all motors were disabled, the fan should run
-#define CONTROLLERFAN_SPEED 255   // 255 = full speed
-#define CONTROLLERFAN_MIN_SPEED 0
+#define CONTROLLERFAN_SECS       60   // How many seconds, after all motors were disabled, the fan should run
+#define CONTROLLERFAN_SPEED     255   // 255 = full speed
+#define CONTROLLERFAN_MIN_SPEED   0
 
 // Extruder cooling fans
 // Configure fan pin outputs to automatically turn on/off when the associated
@@ -331,9 +332,9 @@
 // the fan will turn on when any selected extruder is above the threshold.
 // You need to set _AUTO_FAN_PIN in Configuration_pins.h
 //#define EXTRUDER_AUTO_FAN
-#define EXTRUDER_AUTO_FAN_TEMPERATURE 50
-#define EXTRUDER_AUTO_FAN_SPEED 255  // 255 = full speed
-#define EXTRUDER_AUTO_FAN_MIN_SPEED 0
+#define EXTRUDER_AUTO_FAN_TEMPERATURE  50
+#define EXTRUDER_AUTO_FAN_SPEED       255  // 255 = full speed
+#define EXTRUDER_AUTO_FAN_MIN_SPEED     0
 /**************************************************************************/
 
 
@@ -351,6 +352,22 @@
 //===========================================================================
 //============================= EXTRUDER FEATURES ===========================
 //===========================================================================
+
+
+/***********************************************************************
+ ******************** DEFAULT NOMINAL FILAMENT DIA *********************
+ ***********************************************************************
+ *                                                                     *
+ * Enter the diameter (in mm) of the filament generally used           *
+ * (3.0 mm or 1.75 mm)                                                 *
+ * This is then used in the slicer software.                           *
+ * Used for volumetric.                                                *
+ * Used for sensor reading validation.                                 *
+ *                                                                     *
+ ***********************************************************************/
+#define DEFAULT_NOMINAL_FILAMENT_DIA 1.75
+/***********************************************************************/
+
 
 /***********************************************************************
  ******************** Dangerous extrution prevention *******************
@@ -587,7 +604,8 @@
 // If you select a configuration below, this will receive a default value and does not need to be set manually
 // set it manually if you have more servos than extruders and wish to manually control some
 // leaving it defining as 0 will disable the servo subsystem
-#define NUM_SERVOS 0      // Servo index starts with 0 for M280 command
+#define NUM_SERVOS 0
+// Servo index starts with 0 for M280 command
 
 // Servo Endstops
 // This allows for servo actuated endstops, primary usage is for the Z Axis to eliminate calibration or bed height changes.
@@ -709,7 +727,7 @@
  * Uncomment FWRETRACT to enable this feature                             *
  *                                                                        *
  **************************************************************************/
-//#define FWRETRACT  //ONLY PARTIALLY TESTED
+//#define FWRETRACT                     //ONLY PARTIALLY TESTED
 
 #define MIN_RETRACT                 0.1 //minimum extruded mm to accept a automatic gcode retraction attempt
 #define RETRACT_LENGTH              3   //default retract length (positive mm)
@@ -867,8 +885,6 @@
 
 #define FILAMENT_SENSOR_EXTRUDER_NUM  0     //The number of the extruder that has the filament sensor (0,1,2,3)
 #define MEASUREMENT_DELAY_CM         14     //measurement delay in cm.  This is the distance from filament sensor to middle of barrel
-
-#define DEFAULT_NOMINAL_FILAMENT_DIA  1.75  //Enter the diameter (in mm) of the filament generally used (3.0 mm or 1.75 mm) - this is then used in the slicer software.  Used for sensor reading validation
 #define MEASURED_UPPER_LIMIT          2.00  //upper limit factor used for sensor reading validation in mm
 #define MEASURED_LOWER_LIMIT          1.35  //lower limit factor for sensor reading validation in mm
 #define MAX_MEASUREMENT_DELAY        20     //delay buffer size in bytes (1 byte = 1cm)- limits maximum measurement delay allowable (must be larger than MEASUREMENT_DELAY_CM  and lower number saves RAM)
@@ -1239,7 +1255,7 @@
  * Default stepper release if idle. Set to 0 to deactivate.            *
  *                                                                     *
  ***********************************************************************/
-#define DEFAULT_STEPPER_DEACTIVE_TIME    60
+#define DEFAULT_STEPPER_DEACTIVE_TIME 60
 /***********************************************************************/
 
 
@@ -1460,20 +1476,20 @@
 
 //The ASCII buffer for receiving from the serial:
 #define MAX_CMD_SIZE 96
-#define BUFSIZE 8
+#define BUFSIZE       8
 
 // Defines the number of memory slots for saving/restoring position (G60/G61)
 // The values should not be less than 1
 #define NUM_POSITON_SLOTS 2
 
-#define DROP_SEGMENTS 5                      // everything with less than this number of steps will be ignored as move and joined with the next movement
-#define DEFAULT_MINSEGMENTTIME        20000 // minimum time in microseconds that a movement needs to take if the buffer is emptied.
+#define DROP_SEGMENTS               5   // everything with less than this number of steps will be ignored as move and joined with the next movement
+#define DEFAULT_MINSEGMENTTIME  20000   // minimum time in microseconds that a movement needs to take if the buffer is emptied.
 
 // Arc interpretation settings:
 #define MM_PER_ARC_SEGMENT 1
 #define N_ARC_CORRECTION 25
 
-//#define M100_FREE_MEMORY_WATCHER // Uncomment to add the M100 Free Memory Watcher for debug purpose
+//#define M100_FREE_MEMORY_WATCHER    // Uncomment to add the M100 Free Memory Watcher for debug purpose
 #define M100_FREE_MEMORY_DUMPER       // Comment out to remove Dump sub-command
 #define M100_FREE_MEMORY_CORRUPTOR    // Comment out to remove Corrupt sub-command
 /****************************************************************************************/

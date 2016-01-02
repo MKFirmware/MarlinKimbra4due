@@ -31,7 +31,7 @@
 
 #include "Marlin_main.h"
 #include "ultralcd.h"
-#include "nextion/nextion_lcd.h"
+#include "module/nextion_lcd.h"
 #include "base.h"
 #if ENABLED(AUTO_BED_LEVELING_FEATURE)
   #include "vector_3.h"
@@ -54,16 +54,15 @@
 #endif
 
 #if HAS(BUZZER)
-  #include "buzzer.h"
+  #include "module/buzzer.h"
 #endif
 
 #if ENABLED(BLINKM)
-  #include "blinkm.h"
-  #include "Wire.h"
+  #include "module/blinkm.h"
 #endif
 
 #if HAS(SERVOS)
-  #include "servo.h"
+  #include "module/servo.h"
 #endif
 
 #if HAS(DIGIPOTSS)
@@ -71,7 +70,7 @@
 #endif
 
 #if ENABLED(FIRMWARE_TEST)
-  #include "firmware_test.h"
+  #include "module/firmware_test.h"
 #endif
 
 /**
@@ -2998,7 +2997,7 @@ inline void wait_bed() {
 void gcode_get_destination() {
   #if ENABLED(IDLE_OOZING_PREVENT)
     if(code_seen(axis_codes[E_AXIS])) IDLE_OOZING_retract(false);
-  #endif 
+  #endif
   for (int i = 0; i < NUM_AXIS; i++) {
     if (code_seen(axis_codes[i])) {
       destination[i] = code_value() + (axis_relative_modes[i] || relative_mode ? current_position[i] : 0);

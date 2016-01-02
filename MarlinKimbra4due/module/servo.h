@@ -48,7 +48,7 @@
 #define SERVO_H
 
 #include <inttypes.h>
-#include "ServoTimers.h"
+#include "servotimers.h"
 
 /*
  * Defines for 16 bit timers used with  Servo library
