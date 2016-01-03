@@ -57,7 +57,7 @@ extern "C"{
 // Number of pins defined in PinDescription array
 #define PINS_COUNT           (100u)
 #define NUM_DIGITAL_PINS     (85u)
-#define NUM_ANALOG_INPUTS    (13u)
+#define NUM_ANALOG_INPUTS    (12u)
 
 #define digitalPinToPort(P)        ( g_APinDescription[P].pPort )
 #define digitalPinToBitMask(P)     ( g_APinDescription[P].ulPin )
@@ -201,42 +201,6 @@ static const uint8_t CAN1TX = 89;
 #define PINS_CAN0            (90u)
 // CAN1
 #define PINS_CAN1            (91u)
-
-// EMAC
-
-
-#define PIN_EMAC_EREFCK      (92u)
-#define PIN_EMAC_ETXEN      (93u)
-#define PIN_EMAC_ETX0      (94u)
-#define PIN_EMAC_ETX1      (95u)
-#define PIN_EMAC_ECRSDV      (96u)
-#define PIN_EMAC_ERX0      (97u)
-#define PIN_EMAC_ERX1      (98u)
-#define PIN_EMAC_ERXER      (99u)
-#define PIN_EMAC_EMDC      (100u)
-#define PIN_EMAC_EMDIO      (101u)
-#define PIN_TC0_TIOA2      (102u)
-#define PIN_EMAC_FLAGS        PIO_PERIPH_A | PIO_DEFAULT
-
-/*
-#define PIN_EMAC_EREFCK      PIO_PB0_IDX
-#define PIN_EMAC_ETXEN      PIO_PB1_IDX
-#define PIN_EMAC_ETX0      PIO_PB2_IDX
-#define PIN_EMAC_ETX1      PIO_PB3_IDX
-#define PIN_EMAC_ECRSDV      PIO_PB4_IDX
-#define PIN_EMAC_ERX0      PIO_PB5_IDX
-#define PIN_EMAC_ERX1      PIO_PB6_IDX
-#define PIN_EMAC_ERXER      PIO_PB7_IDX
-#define PIN_EMAC_EMDC      PIO_PB8_IDX
-#define PIN_EMAC_EMDIO      PIO_PB9_IDX
-#define PIN_TC0_TIOA2      PIO_PA5_IDX
-#define PIN_EMAC_FLAGS        PIO_PERIPH_A | PIO_DEFAULT
-*/
-
-/** EMAC PHY address */
-#define BOARD_EMAC_PHY_ADDR  0
-/*! EMAC RMII mode */
-#define BOARD_EMAC_MODE_RMII 1
 
 
 /*
