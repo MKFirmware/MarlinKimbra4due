@@ -19,7 +19,7 @@
 /***********************************************************************
  ********************** Serial comunication type ***********************
  ***********************************************************************/
-// SERIAL_PORT selects which serial port should be used for communication with the host.
+// SERIAL PORT selects which serial port should be used for communication with the host.
 // This allows the connection of wireless adapters (for instance) to non-default port pins.
 // Serial port 0 is still used by the Arduino bootloader regardless of this setting.
 #define SERIAL_PORT 0
@@ -41,10 +41,11 @@
 #define MACHINE_UUID "00000000-0000-0000-0000-000000000000"
 
 // If you want test the firmware uncomment below. Use Serial arduino monitor...
-//#define FIRMWARE_TEST // ONLY BAUDRATE 115200
+// ONLY BAUDRATE 115200
+//#define FIRMWARE_TEST
 
 // Some particular clients re-start sending commands only after receiving a 'wait' when there is a bed serial-connection.
-#define NO_TIMEOUTS 1000  // Milliseconds
+//#define NO_TIMEOUTS 1000  // Milliseconds
 //#define ADVANCED_OK     // Uncomment to include more info in ok command
 /***********************************************************************/
 
@@ -195,16 +196,16 @@
 
 //Preheat Constants
 #define PLA_PREHEAT_HOTEND_TEMP 190
-#define PLA_PREHEAT_HPB_TEMP 60
-#define PLA_PREHEAT_FAN_SPEED 255   // Insert Value between 0 and 255
+#define PLA_PREHEAT_HPB_TEMP     60
+#define PLA_PREHEAT_FAN_SPEED   255   // Insert Value between 0 and 255
 
 #define ABS_PREHEAT_HOTEND_TEMP 240
-#define ABS_PREHEAT_HPB_TEMP 100
-#define ABS_PREHEAT_FAN_SPEED 255   // Insert Value between 0 and 255
+#define ABS_PREHEAT_HPB_TEMP    100
+#define ABS_PREHEAT_FAN_SPEED   255   // Insert Value between 0 and 255
 
 #define GUM_PREHEAT_HOTEND_TEMP 230
-#define GUM_PREHEAT_HPB_TEMP 60
-#define GUM_PREHEAT_FAN_SPEED 255   // Insert Value between 0 and 255
+#define GUM_PREHEAT_HPB_TEMP     60
+#define GUM_PREHEAT_FAN_SPEED   255   // Insert Value between 0 and 255
 /*****************************************************************************************************/
 
 

@@ -27,8 +27,12 @@
 #ifndef	_FASTIO_H
 #define	_FASTIO_H
 
-#define HIGH 1
-#define LOW 0
+#ifndef HIGH
+  #define HIGH 1
+#endif
+#ifndef LOW
+  #define LOW 0
+#endif
 
 // --------------------------------------------------------------------------
 // magic I/O routines
@@ -52,35 +56,35 @@ static inline void digitalFastWrite(int pin, bool v) {
 
 
 /// Read a pin
-#define READ(pin)           _FASTREAD(pin)
+#define READ(IO)            _FASTREAD(IO)
 
 /// write to a pin
-#define WRITE_VAR(pin, v)   digitalWrite(pin, v)
-#define WRITE(pin, v)       _FASTWRITE(pin, v)
+#define WRITE_VAR(IO, v)    digitalWrite(IO, v)
+#define WRITE(IO, v)        _FASTWRITE(IO, v)
 
 /// set pin as input
-#define	  SET_INPUT(pin)  pmc_enable_periph_clk(g_APinDescription[pin].ulPeripheralId); \
-                          PIO_Configure(g_APinDescription[pin].pPort, PIO_INPUT, g_APinDescription[pin].ulPin, 0)
+#define	  SET_INPUT(IO)   pmc_enable_periph_clk(g_APinDescription[IO].ulPeripheralId); \
+                          PIO_Configure(g_APinDescription[IO].pPort, PIO_INPUT, g_APinDescription[IO].ulPin, 0)
 /// set pin as output
-#define	  SET_OUTPUT(pin) PIO_Configure(g_APinDescription[pin].pPort, PIO_OUTPUT_1, \
-                          g_APinDescription[pin].ulPin, g_APinDescription[pin].ulPinConfiguration)
+#define	  SET_OUTPUT(IO)  PIO_Configure(g_APinDescription[IO].pPort, PIO_OUTPUT_1, \
+                          g_APinDescription[IO].ulPin, g_APinDescription[IO].ulPinConfiguration)
 /// toggle a pin	
-#define   TOGGLE(pin)     WRITE(pin, !READ(pin))
+#define   TOGGLE(IO)      WRITE(IO, !READ(IO))
 
 // Write doesn't work for pullups
-#define   PULLUP(pin, v)  {pinMode(pin, (v!=LOW ? INPUT_PULLUP : INPUT));}
+#define   PULLUP(IO, v)   { pinMode(IO, (v!=LOW ? INPUT_PULLUP : INPUT)); }
 
 /// check if pin is an input
-#define   GET_INPUT(pin)
+#define   GET_INPUT(IO)
 
 /// check if pin is an output
-#define   GET_OUTPUT(pin)
+#define   GET_OUTPUT(IO)
 
 /// check if pin is an timer
-#define   GET_TIMER(pin)
+#define   GET_TIMER(IO)
 
 // Shorthand
-#define   OUT_WRITE(pin, v) {SET_OUTPUT(pin); WRITE_VAR(pin, v);}
+#define   OUT_WRITE(IO, v)  { SET_OUTPUT(IO); WRITE_VAR(IO, v); }
 
 
 /*

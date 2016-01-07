@@ -1,13 +1,13 @@
 /**
  * @file NexButton.h
  *
- * The definition of class NexButton. 
+ * The definition of class NexButton.
  *
  * @author Wu Pengfei (email:<pengfei.wu@itead.cc>)
  * @date 2015/8/13
  *
- * @copyright 
- * Copyright (C) 2014-2015 ITEAD Intelligent Systems Co., Ltd. \n
+ * @copyright
+ * Copyright (C) 2014-2015 ITEAD Intelligent Systems Co., Ltd.
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
  * published by the Free Software Foundation; either version 2 of
@@ -20,17 +20,17 @@
 #include "NexTouch.h"
 #include "NexHardware.h"
 /**
- * @addtogroup Component 
- * @{ 
+ * @addtogroup Component
+ * @{
  */
 
 /**
- * NexButton component. 
+ * NexButton component.
  *
  * Commonly, you want to do something after push and pop it. It is recommanded that only
- * call @ref NexTouch::attachPop to satisfy your purpose. 
- * 
- * @warning Please do not call @ref NexTouch::attachPush on this component, even though you can. 
+ * call @ref NexTouch::attachPop to satisfy your purpose.
+ *
+ * @warning Please do not call @ref NexTouch::attachPush on this component, even though you can.
  */
 class NexButton: public NexTouch
 {
@@ -44,19 +44,19 @@ public: /* methods */
     /**
      * Get text attribute of component.
      *
-     * @param buffer - buffer storing text returned. 
-     * @param len - length of buffer. 
-     * @return The real length of text returned. 
+     * @param buffer - buffer storing text returned.
+     * @param len - length of buffer.
+     * @return The real length of text returned.
      */
     uint16_t getText(char *buffer, uint16_t len);    
 
     /**
      * Set text attribute of component.
      *
-     * @param buffer - text buffer terminated with '\0'. 
-     * @return true if success, false for failure. 
+     * @param buffer - text buffer terminated with '\0'.
+     * @return true if success, false for failure.
      */
-    bool setText(const char *buffer);    
+    bool setText(const char *buffer);
 };
 /**
  * @}

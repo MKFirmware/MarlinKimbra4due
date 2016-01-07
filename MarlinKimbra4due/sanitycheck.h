@@ -13,26 +13,37 @@
   #if DISABLED(BAUDRATE)
     #error DEPENDENCY ERROR: Missing setting BAUDRATE
   #endif
+  #if DISABLED(STRING_CONFIG_H_AUTHOR)
+    #define STRING_CONFIG_H_AUTHOR "(none, default config)"
+  #endif
   #if DISABLED(MACHINE_UUID)
     #error DEPENDENCY ERROR: Missing setting MACHINE_UUID
   #endif
 
-  //board
+  // Board
   #if DISABLED(MOTHERBOARD)
     #error DEPENDENCY ERROR: Missing setting MOTHERBOARD
   #endif
 
-  //Mechanism
+  // Mechanism
   #if DISABLED(MECHANISM)
     #error DEPENDENCY ERROR: Missing setting MECHANISM
   #endif
 
-  //Power supply
+  // Power supply
   #if DISABLED(POWER_SUPPLY)
-    #error DEPENDENCY ERROR: Missing setting POWER_SUPPLY
+    #define POWER_SUPPLY 0
   #endif
 
-  //Thermistor
+  // Extruders
+  #if DISABLED(EXTRUDERS)
+    #error DEPENDENCY ERROR: Missing setting EXTRUDERS
+  #endif
+  #if DISABLED(DRIVER_EXTRUDERS)
+    #error DEPENDENCY ERROR: Missing setting DRIVER_EXTRUDERS
+  #endif
+
+  // Thermistor
   #if DISABLED(TEMP_SENSOR_0)
     #error DEPENDENCY ERROR: Missing setting TEMP_SENSOR_0
   #endif
@@ -50,11 +61,16 @@
   #endif
   #if (THERMISTORHEATER_0 == 998) || (THERMISTORHEATER_1 == 998) || (THERMISTORHEATER_2 == 998) || (THERMISTORHEATER_3 == 998) || (THERMISTORBED == 998) //User EXIST table
     #if DISABLED(DUMMY_THERMISTOR_998_VALUE)
-      #error DEPENDENCY ERROR: Missing setting DUMMY_THERMISTOR_998_VALUE
+      #define DUMMY_THERMISTOR_998_VALUE 25
+    #endif
+  #endif
+  #if (THERMISTORHEATER_0 == 999) || (THERMISTORHEATER_1 == 999) || (THERMISTORHEATER_2 == 999) || (THERMISTORHEATER_3 == 999) || (THERMISTORBED == 999) //User EXIST table
+    #if DISABLED(DUMMY_THERMISTOR_999_VALUE)
+      #define DUMMY_THERMISTOR_999_VALUE 25
     #endif
   #endif
 
-  //Temperature
+  // Temperature
   /**
    * Temperature defines
    */
@@ -78,7 +94,7 @@
     #if DISABLED(HEATER_1_MAXTEMP)
       #error DEPENDENCY ERROR: Missing setting HEATER_1_MAXTEMP
     #endif
-    #if DISABLED(HEATER_0_MINTEMP)
+    #if DISABLED(HEATER_1_MINTEMP)
       #error DEPENDENCY ERROR: Missing setting HEATER_1_MINTEMP
     #endif
   #endif
@@ -86,7 +102,7 @@
     #if DISABLED(HEATER_2_MAXTEMP)
       #error DEPENDENCY ERROR: Missing setting HEATER_2_MAXTEMP
     #endif
-    #if DISABLED(HEATER_0_MINTEMP)
+    #if DISABLED(HEATER_2_MINTEMP)
       #error DEPENDENCY ERROR: Missing setting HEATER_2_MINTEMP
     #endif
   #endif
@@ -94,7 +110,7 @@
     #if DISABLED(HEATER_3_MAXTEMP)
       #error DEPENDENCY ERROR: Missing setting HEATER_3_MAXTEMP
     #endif
-    #if DISABLED(HEATER_0_MINTEMP)
+    #if DISABLED(HEATER_3_MINTEMP)
       #error DEPENDENCY ERROR: Missing setting HEATER_3_MINTEMP
     #endif
   #endif
@@ -102,7 +118,7 @@
     #if DISABLED(BED_MAXTEMP)
       #error DEPENDENCY ERROR: Missing setting BED_MAXTEMP
     #endif
-    #if DISABLED(HEATER_0_MINTEMP)
+    #if DISABLED(BED_MINTEMP)
       #error DEPENDENCY ERROR: Missing setting BED_MINTEMP
     #endif
   #endif
@@ -134,22 +150,14 @@
     #error DEPENDENCY ERROR: Missing setting GUM_PREHEAT_FAN_SPEED
   #endif
 
-  //extruders
-  #if DISABLED(EXTRUDERS)
-    #error DEPENDENCY ERROR: Missing setting EXTRUDERS
-  #endif
-  #if DISABLED(DRIVER_EXTRUDERS)
-    #error DEPENDENCY ERROR: Missing setting DRIVER_EXTRUDERS
-  #endif
-
-  //Language
+  // Language
   #if DISABLED(LANGUAGE_CHOICE)
     #error DEPENDENCY ERROR: Missing setting LANGUAGE_CHOICE
   #endif
 
-  ///FEATURE
+  /// FEATURE
 
-  //Temperature
+  // Temperature
   #if DISABLED(PID_MAX)
     #error DEPENDENCY ERROR: Missing setting PID_MAX
   #endif
@@ -464,14 +472,20 @@
       #if DISABLED(Z_ENDSTOP_SERVO_NR)
         #error DEPENDENCY ERROR: Missing setting Z_ENDSTOP_SERVO_NR
       #endif
-      #if DISABLED(X_ENDSTOP_SERVO_ANGLES)
-        #error DEPENDENCY ERROR: Missing setting X_ENDSTOP_SERVO_ANGLES
+      #if ENABLED(X_ENDSTOP_SERVO_NR) && X_ENDSTOP_SERVO_NR > -1
+        #if DISABLED(X_ENDSTOP_SERVO_ANGLES)
+          #error DEPENDENCY ERROR: Missing setting X_ENDSTOP_SERVO_ANGLES
+        #endif
       #endif
-      #if DISABLED(Y_ENDSTOP_SERVO_ANGLES)
-        #error DEPENDENCY ERROR: Missing setting Y_ENDSTOP_SERVO_ANGLES
+      #if ENABLED(Y_ENDSTOP_SERVO_NR) && Y_ENDSTOP_SERVO_NR > -1
+        #if DISABLED(Y_ENDSTOP_SERVO_ANGLES)
+          #error DEPENDENCY ERROR: Missing setting Y_ENDSTOP_SERVO_ANGLES
+        #endif
       #endif
-      #if DISABLED(Z_ENDSTOP_SERVO_ANGLES)
-        #error DEPENDENCY ERROR: Missing setting Z_ENDSTOP_SERVO_ANGLES
+      #if ENABLED(Z_ENDSTOP_SERVO_NR) && Z_ENDSTOP_SERVO_NR > -1
+        #if DISABLED(Z_ENDSTOP_SERVO_ANGLES)
+          #error DEPENDENCY ERROR: Missing setting Z_ENDSTOP_SERVO_ANGLES
+        #endif
       #endif
       #if DISABLED(SERVO_DEACTIVATION_DELAY)
         #error DEPENDENCY ERROR: Missing setting SERVO_DEACTIVATION_DELAY

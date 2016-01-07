@@ -1,5 +1,5 @@
-#ifndef Configuration_Feature_H
-#define Configuration_Feature_H
+#ifndef CONFIGURATION_FEATURE_H
+#define CONFIGURATION_FEATURE_H
 
 /*
  * This configuration file contains all features that can be enabled.
@@ -12,10 +12,12 @@
  * - Temperature status LEDs
  * - PID Settings - HOTEND
  * - PID Settings - BED
+ * - Inverted PINS
  * - Thermal runaway protection
  * - Fan configuration
  * - Mediancount (ONLY FOR DUE)
  * EXTRUDER FEATURES:
+ * - Default nominal filament diameter
  * - Dangerous extrution prevention
  * - Single nozzle
  * - BariCUDA paste extruder
@@ -57,7 +59,7 @@
  * ADVANCED MOTION FEATURES:
  * - Stepper auto deactivation
  * - Microstepping
- * - Low speed stepper
+ * - High speed stepper
  * - Motor's current
  * - I2C DIGIPOT
  * - Toshiba steppers
@@ -66,6 +68,7 @@
  * ADVANCED FEATURES:
  * - Buffer stuff
  * - Whatchdog
+ * - Start / Stop Gcode
  *
  * Basic-settings can be found in Configuration_Basic.h
  * Mechanisms-settings can be found in Configuration_Xxxxxx.h (where Xxxxxx can be: Cartesian - Delta - Core - Scara)
@@ -218,20 +221,31 @@
 #define PID_BED_INTEGRAL_DRIVE_MAX MAX_BED_POWER // limit for the integral term
 // 120v 250W silicone heater into 4mm borosilicate (MendelMax 1.5+)
 // from FOPDT model - kp=.39 Tp=405 Tdead=66, Tc set to 79.2, aggressive factor of .15 (vs .1, 1, 10)
-#define  DEFAULT_bedKp 10.00
-#define  DEFAULT_bedKi .023
-#define  DEFAULT_bedKd 305.4
+#define DEFAULT_bedKp 10.00
+#define DEFAULT_bedKi .023
+#define DEFAULT_bedKd 305.4
 
 // 120v 250W silicone heater into 4mm borosilicate (MendelMax 1.5+)
 // from pidautotune
-//#define  DEFAULT_bedKp 97.1
-//#define  DEFAULT_bedKi 1.41
-//#define  DEFAULT_bedKd 1675.16
+//#define DEFAULT_bedKp 97.1
+//#define DEFAULT_bedKi 1.41
+//#define DEFAULT_bedKd 1675.16
 
 // FIND YOUR OWN: "M303 E-1 C8 S90" to run autotune on the bed at 90 degreesC for 8 cycles.
 
 //#define PID_BED_DEBUG // Sends debug data to the serial port.
 /***********************************************************************/
+
+
+/********************************************************************************
+ ************************ Inverted Heater or Bed PINS ***************************
+ ********************************************************************************
+ *                                                                              *
+ * For inverted logical Heater or Bed pins                                      *
+ *                                                                              *
+ ********************************************************************************/
+//#define INVERTED_HEATER_PINS
+//#define INVERTED_BED_PINS
 
 
 /********************************************************************************
@@ -261,7 +275,7 @@
 #define THERMAL_PROTECTION_HYSTERESIS 4     // Degrees Celsius
 
 // Whenever an M104 or M109 increases the target temperature the firmware will wait for the
-// WATCH_TEMP_PERIOD to expire, and if the temperature hasn't increased by WATCH_TEMP_INCREASE
+// WATCH TEMP PERIOD to expire, and if the temperature hasn't increased by WATCH TEMP INCREASE
 // degrees, the machine is halted, requiring a hard reset. This test restarts with any M104/M109,
 //but only if the current temperature is far enough below the target for a reliable test.
 #define WATCH_TEMP_PERIOD  16               // Seconds
@@ -283,7 +297,7 @@
 
 // Use software PWM to drive the fan, as for the heaters. This uses a very low frequency
 // which is not ass annoying as with the hardware PWM. On the other hand, if this frequency
-// is too low, you should also increment SOFT_PWM_SCALE.
+// is too low, you should also increment SOFT PWM SCALE.
 //#define FAN_SOFT_PWM
 
 // Incrementing this by 1 will double the software PWM frequency,
@@ -307,9 +321,9 @@
 // and turn off after the set amount of seconds from last driver being disabled again
 // You need to set CONTROLLERFAN_PIN in Configuration_pins.h
 //#define CONTROLLERFAN
-#define CONTROLLERFAN_SECS 60     // How many seconds, after all motors were disabled, the fan should run
-#define CONTROLLERFAN_SPEED 255   // 255 = full speed
-#define CONTROLLERFAN_MIN_SPEED 0
+#define CONTROLLERFAN_SECS       60   // How many seconds, after all motors were disabled, the fan should run
+#define CONTROLLERFAN_SPEED     255   // 255 = full speed
+#define CONTROLLERFAN_MIN_SPEED   0
 
 // Extruder cooling fans
 // Configure fan pin outputs to automatically turn on/off when the associated
@@ -318,9 +332,9 @@
 // the fan will turn on when any selected extruder is above the threshold.
 // You need to set _AUTO_FAN_PIN in Configuration_pins.h
 //#define EXTRUDER_AUTO_FAN
-#define EXTRUDER_AUTO_FAN_TEMPERATURE 50
-#define EXTRUDER_AUTO_FAN_SPEED 255  // 255 = full speed
-#define EXTRUDER_AUTO_FAN_MIN_SPEED 0
+#define EXTRUDER_AUTO_FAN_TEMPERATURE  50
+#define EXTRUDER_AUTO_FAN_SPEED       255  // 255 = full speed
+#define EXTRUDER_AUTO_FAN_MIN_SPEED     0
 /**************************************************************************/
 
 
@@ -339,6 +353,22 @@
 //============================= EXTRUDER FEATURES ===========================
 //===========================================================================
 
+
+/***********************************************************************
+ ******************** DEFAULT NOMINAL FILAMENT DIA *********************
+ ***********************************************************************
+ *                                                                     *
+ * Enter the diameter (in mm) of the filament generally used           *
+ * (3.0 mm or 1.75 mm)                                                 *
+ * This is then used in the slicer software.                           *
+ * Used for volumetric.                                                *
+ * Used for sensor reading validation.                                 *
+ *                                                                     *
+ ***********************************************************************/
+#define DEFAULT_NOMINAL_FILAMENT_DIA 1.75
+/***********************************************************************/
+
+
 /***********************************************************************
  ******************** Dangerous extrution prevention *******************
  ***********************************************************************
@@ -349,9 +379,9 @@
 #define PREVENT_DANGEROUS_EXTRUDE
 #define EXTRUDE_MINTEMP 170 // degC
 
-//if PREVENT DANGEROUS EXTRUDE is on, you can still disable (uncomment) very long bits of extrusion separately.
-#define PREVENT_LENGTHY_EXTRUDE
-#define EXTRUDE_MAXLENGTH (X_MAX_LENGTH+Y_MAX_LENGTH) //prevent extrusion of very large distances.
+// if PREVENT DANGEROUS EXTRUDE is on, you can still disable (uncomment) very long bits of extrusion separately.
+//#define PREVENT_LENGTHY_EXTRUDE
+#define EXTRUDE_MAXLENGTH (X_MAX_LENGTH + Y_MAX_LENGTH) // prevent extrusion of very large distances.
 /***********************************************************************/
 
 
@@ -406,7 +436,7 @@
  *                                                                     *
  ***********************************************************************/
 //#define NPR2
-#define COLOR_STEP {120,25,-65,-155} // CARTER ANGLE
+#define COLOR_STEP {0, 10, 20, 30}   // CARTER ANGLE
 #define COLOR_SLOWRATE 170           // MICROSECOND delay for carter motor routine (Carter Motor Feedrate: upper value-slow feedrate)  
 #define COLOR_HOMERATE 4             // FEEDRATE for carter home
 #define MOTOR_ANGLE 1.8              // Nema angle for single step 
@@ -426,6 +456,7 @@
  * Set DONDOLO SERVOPOS E0 angle for E0 extruder                       *
  * Set DONDOLO SERVOPOS E1 angle for E1 extruder                       *
  * Remember set HOTEND OFFSET X Y Z                                    *
+ *                                                                     *
  ***********************************************************************/
 //#define DONDOLO
 #define DONDOLO_SERVO_INDEX 0
@@ -573,7 +604,8 @@
 // If you select a configuration below, this will receive a default value and does not need to be set manually
 // set it manually if you have more servos than extruders and wish to manually control some
 // leaving it defining as 0 will disable the servo subsystem
-#define NUM_SERVOS 0      // Servo index starts with 0 for M280 command
+#define NUM_SERVOS 0
+// Servo index starts with 0 for M280 command
 
 // Servo Endstops
 // This allows for servo actuated endstops, primary usage is for the Z Axis to eliminate calibration or bed height changes.
@@ -674,10 +706,10 @@
  *                                                                        *
  **************************************************************************/
 //#define BABYSTEPPING
-//#define BABYSTEP_XY  // not only z, but also XY in the menu. more clutter, more functions
-                       // not implemented for CoreXY and deltabots!
-#define BABYSTEP_INVERT_Z false     // true for inverse movements in Z
-#define BABYSTEP_Z_MULTIPLICATOR 2  // faster z movements
+#define BABYSTEP_XY  // not only z, but also XY in the menu. more clutter, more functions
+                     // not implemented for CoreXY and deltabots!
+#define BABYSTEP_INVERT_Z false   // true for inverse movements in Z
+#define BABYSTEP_MULTIPLICATOR 2  // faster z movements
 /**************************************************************************/
 
 
@@ -695,7 +727,7 @@
  * Uncomment FWRETRACT to enable this feature                             *
  *                                                                        *
  **************************************************************************/
-//#define FWRETRACT  //ONLY PARTIALLY TESTED
+//#define FWRETRACT                     //ONLY PARTIALLY TESTED
 
 #define MIN_RETRACT                 0.1 //minimum extruded mm to accept a automatic gcode retraction attempt
 #define RETRACT_LENGTH              3   //default retract length (positive mm)
@@ -853,8 +885,6 @@
 
 #define FILAMENT_SENSOR_EXTRUDER_NUM  0     //The number of the extruder that has the filament sensor (0,1,2,3)
 #define MEASUREMENT_DELAY_CM         14     //measurement delay in cm.  This is the distance from filament sensor to middle of barrel
-
-#define DEFAULT_NOMINAL_FILAMENT_DIA  1.75  //Enter the diameter (in mm) of the filament generally used (3.0 mm or 1.75 mm) - this is then used in the slicer software.  Used for sensor reading validation
 #define MEASURED_UPPER_LIMIT          2.00  //upper limit factor used for sensor reading validation in mm
 #define MEASURED_LOWER_LIMIT          1.35  //lower limit factor for sensor reading validation in mm
 #define MAX_MEASUREMENT_DELAY        20     //delay buffer size in bytes (1 byte = 1cm)- limits maximum measurement delay allowable (must be larger than MEASUREMENT_DELAY_CM  and lower number saves RAM)
@@ -964,10 +994,10 @@
  * M501 - reads parameters from EEPROM (if you need reset them after you changed them temporarily).                     *
  * M502 - reverts to the default "factory settings".  You still need to store them in EEPROM afterwards if you want to. *
  *                                                                                                                      *
- * Uncomment EEPROM_SETTINGS to enable this feature.                                                                    *
+ * Uncomment EEPROM SETTINGS to enable this feature.                                                                    *
+ * Uncomment EEPROM CHITCHAT to enable EEPROM Serial responses.                                                         *
  *                                                                                                                      *
  ************************************************************************************************************************/
-// Uncomment EEPROM_SETTINGS to enable EEPROM support
 //#define EEPROM_SETTINGS
 //#define EEPROM_CHITCHAT // Uncomment this to enable EEPROM Serial responses.
 //#define DISABLE_M503
@@ -982,7 +1012,7 @@
 //#define SDEXTRASLOW                            // Use even slower SD transfer mode (not normally needed - uncomment if you're getting volume init error)
 //#define SD_CHECK_AND_RETRY                     // Use CRC checks and retries on the SD communication
 
-// Decomment thi if you are external SD without DETECT_PIN
+// Decomment this if you are external SD without DETECT_PIN
 //#define SD_DISABLED_DETECT
 // Some RAMPS and other boards don't detect when an SD card is inserted. You can work
 // around this by connecting a push button or single throw switch to the pin defined
@@ -1039,6 +1069,8 @@
 //#define LCD_SCREEN_ROT_180   //Rotate screen orientation for graphics display by 180 degree clockwise
 //#define LCD_SCREEN_ROT_270   //Rotate screen orientation for graphics display by 270 degree clockwise
 
+//#define INVERT_CLICK_BUTTON           // Option for invert encoder button logic
+//#define INVERT_BACK_BUTTON            // Option for invert back button logic if avaible
 //#define INVERT_ROTARY_SWITCH          // Option for invert rotary encoder
 #define ENCODER_RATE_MULTIPLIER         // If defined, certain menu edit operations automatically multiply the steps when the encoder is moved quickly
 #define ENCODER_10X_STEPS_PER_SEC   75  // If the encoder steps per sec exceeds this value, multiply steps moved x10 to quickly advance the value
@@ -1074,13 +1106,13 @@
 
 // The Panucatt Devices Viki 2.0 and mini Viki with Graphic LCD
 // http://panucatt.com
-// ==> REMEMBER TO INSTALL U8glib to your ARDUINO library folder: http://code.google.com/p/u8glib/wiki/u8glib
+// REMEMBER TO INSTALL U8glib to your ARDUINO library folder: https://github.com/olikraus/U8glib_Arduino
 //#define VIKI2
 //#define miniVIKI
 
 // This is a new controller currently under development.  https://github.com/eboston/Adafruit-ST7565-Full-Graphic-Controller/
 //
-// ==> REMEMBER TO INSTALL U8glib to your ARDUINO library folder: http://code.google.com/p/u8glib/wiki/u8glib
+// REMEMBER TO INSTALL U8glib to your ARDUINO library folder: https://github.com/olikraus/U8glib_Arduino
 //#define ELB_FULL_GRAPHIC_CONTROLLER
 //#define SD_DETECT_INVERTED
 
@@ -1095,7 +1127,7 @@
 // The RepRapDiscount FULL GRAPHIC Smart Controller (quadratic white PCB)
 // http://reprap.org/wiki/RepRapDiscount_Full_Graphic_Smart_Controller
 //
-// ==> REMEMBER TO INSTALL U8glib to your ARDUINO library folder: http://code.google.com/p/u8glib/wiki/u8glib
+// REMEMBER TO INSTALL U8glib to your ARDUINO library folder: https://github.com/olikraus/U8glib_Arduino
 //#define REPRAP_DISCOUNT_FULL_GRAPHIC_SMART_CONTROLLER
 
 // The RepRapWorld REPRAPWORLD_KEYPAD v1.1
@@ -1110,11 +1142,13 @@
 
 // The MakerLab Mini Panel with graphic controller and SD support
 // http://reprap.org/wiki/Mini_panel
-// #define MINIPANEL
+//#define MINIPANEL
 
 // Nextion HMI panel
-// REMEMBER TO INSTALL Nextion library in your ARDUINO library folder. You can find it in Arduino\libraries\
+// REMEMBER TO INSTALL Nextion library in your ARDUINO library folder. You can find it in Arduino/libraries/
 //#define NEXTION
+// For GFX Visualization enable Nextion GFX
+//#define NEXTION_GFX
 
 // I2C Panels
 //#define LCD_I2C_SAINSMART_YWROBOT
@@ -1132,7 +1166,7 @@
 //#define LCD_I2C_VIKI
   
 // SSD1306 OLED generic display support
-// ==> REMEMBER TO INSTALL U8glib to your ARDUINO library folder: http://code.google.com/p/u8glib/wiki/u8glib
+// REMEMBER TO INSTALL U8glib to your ARDUINO library folder: https://github.com/olikraus/U8glib_Arduino
 //#define U8GLIB_SSD1306
 
 // Shift register panels
@@ -1221,7 +1255,7 @@
  * Default stepper release if idle. Set to 0 to deactivate.            *
  *                                                                     *
  ***********************************************************************/
-#define DEFAULT_STEPPER_DEACTIVE_TIME    60
+#define DEFAULT_STEPPER_DEACTIVE_TIME 60
 /***********************************************************************/
 
 
@@ -1241,16 +1275,14 @@
 
 
 /***********************************************************************
- ************************* Low speed stepper ***************************
+ ************************* High speed stepper **************************
  ***********************************************************************
  *                                                                     *
- * Use it if you have low speed stepper driver                         *
- *                                                                     *
- * Uncomment STEPPER_HIGH_LOW to enable this feature                   *
+ * Activate for very high stepping rates, normally only needed for 1/64*
+ * or more micro steps (AXIS_STEPS_PER_UNIT * MAX_FEEDRATE > 150,000)  *
  *                                                                     *
  ***********************************************************************/
-//#define STEPPER_HIGH_LOW
-#define STEPPER_HIGH_LOW_DELAY 1u  // Delay in microseconds
+//#define ENABLE_HIGH_SPEED_STEPPING
 /***********************************************************************/
 
 
@@ -1444,20 +1476,20 @@
 
 //The ASCII buffer for receiving from the serial:
 #define MAX_CMD_SIZE 96
-#define BUFSIZE 8
+#define BUFSIZE       8
 
 // Defines the number of memory slots for saving/restoring position (G60/G61)
 // The values should not be less than 1
 #define NUM_POSITON_SLOTS 2
 
-#define DROP_SEGMENTS 5                      // everything with less than this number of steps will be ignored as move and joined with the next movement
-#define DEFAULT_MINSEGMENTTIME        20000 // minimum time in microseconds that a movement needs to take if the buffer is emptied.
+#define DROP_SEGMENTS               5   // everything with less than this number of steps will be ignored as move and joined with the next movement
+#define DEFAULT_MINSEGMENTTIME  20000   // minimum time in microseconds that a movement needs to take if the buffer is emptied.
 
 // Arc interpretation settings:
 #define MM_PER_ARC_SEGMENT 1
 #define N_ARC_CORRECTION 25
 
-//#define M100_FREE_MEMORY_WATCHER // Uncomment to add the M100 Free Memory Watcher for debug purpose
+//#define M100_FREE_MEMORY_WATCHER    // Uncomment to add the M100 Free Memory Watcher for debug purpose
 #define M100_FREE_MEMORY_DUMPER       // Comment out to remove Dump sub-command
 #define M100_FREE_MEMORY_CORRUPTOR    // Comment out to remove Corrupt sub-command
 /****************************************************************************************/
@@ -1481,4 +1513,19 @@
 //#define WATCHDOG_RESET_MANUAL
 /*****************************************************************************************/
 
+
+/*****************************************************************************************
+ ********************************* Start - Stop Gcode ************************************
+ *****************************************************************************************
+ *                                                                                       *
+ * Start - Stop Gcode use when Start or Stop printing width M11 command                  *
+ *                                                                                       *
+ *****************************************************************************************/
+//#define START_GCODE
+#define START_PRINTING_SCRIPT "G28\nG1 Z10 F8000"
+
+//#define STOP_GCODE
+#define STOP_PRINTING_SCRIPT "G28\nM107\nM104 T0 S0\nM140 S0\nM84\nM81"
+/*****************************************************************************************/
+ 
 #endif

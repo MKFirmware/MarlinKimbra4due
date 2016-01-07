@@ -36,8 +36,8 @@
 #include "stepper.h"
 #include "temperature.h"
 #include "ultralcd.h"
-#include "nextion_lcd.h"
-#include "language.h"
+#include "module/nextion_lcd.h"
+
 #if ENABLED(SDSUPPORT)
   #include "cardreader.h"
 #endif
@@ -87,12 +87,12 @@ volatile long endstops_trigsteps[3] = { 0 };
 volatile long endstops_stepsTotal, endstops_stepsDone;
 static volatile char endstop_hit_bits = 0; // use X_MIN, Y_MIN, Z_MIN and Z_PROBE as BIT value
 
-#if DISABLED(Z_DUAL_ENDSTOPS)
-  static byte
-#else
+#if ENABLED(Z_DUAL_ENDSTOPS) || ENABLED(NPR2)
   static uint16_t
+#else
+  static byte
 #endif
-  old_endstop_bits = 0; // use X_MIN, X_MAX... Z_MAX, Z_PROBE, Z2_MIN, Z2_MAX
+    old_endstop_bits = 0; // use X_MIN, X_MAX... Z_MAX, Z_PROBE, Z2_MIN, Z2_MAX, E_MIN
 
 #if ENABLED(ABORT_ON_ENDSTOP_HIT_FEATURE_ENABLED)
   bool abort_on_endstop_hit = false;
@@ -182,30 +182,30 @@ void endstops_hit_on_purpose() {
 
 void checkHitEndstops() {
   if (endstop_hit_bits) {
-    ECHO_SM(DB, MSG_ENDSTOPS_HIT);
+    ECHO_SM(DB, SERIAL_ENDSTOPS_HIT);
     if (endstop_hit_bits & BIT(X_MIN)) {
-      ECHO_MV(MSG_ENDSTOP_X, (float)endstops_trigsteps[X_AXIS] / axis_steps_per_unit[X_AXIS]);
+      ECHO_MV(SERIAL_ENDSTOP_X, (float)endstops_trigsteps[X_AXIS] / axis_steps_per_unit[X_AXIS]);
       LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT MSG_ENDSTOP_XS);
     }
     if (endstop_hit_bits & BIT(Y_MIN)) {
-      ECHO_MV(MSG_ENDSTOP_Y, (float)endstops_trigsteps[Y_AXIS] / axis_steps_per_unit[Y_AXIS]);
+      ECHO_MV(SERIAL_ENDSTOP_Y, (float)endstops_trigsteps[Y_AXIS] / axis_steps_per_unit[Y_AXIS]);
       LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT MSG_ENDSTOP_YS);
     }
     if (endstop_hit_bits & BIT(Z_MIN)) {
-      ECHO_MV(MSG_ENDSTOP_Z, (float)endstops_trigsteps[Z_AXIS] / axis_steps_per_unit[Z_AXIS]);
+      ECHO_MV(SERIAL_ENDSTOP_Z, (float)endstops_trigsteps[Z_AXIS] / axis_steps_per_unit[Z_AXIS]);
       LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT MSG_ENDSTOP_ZS);
     }
     #if ENABLED(Z_PROBE_ENDSTOP)
-    if (endstop_hit_bits & BIT(Z_PROBE)) {
-      ECHO_MV(MSG_ENDSTOP_ZPS, (float)endstops_trigsteps[Z_AXIS] / axis_steps_per_unit[Z_AXIS]);
-      LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT MSG_ENDSTOP_ZPS);
-    }
+      if (endstop_hit_bits & BIT(Z_PROBE)) {
+        ECHO_MV(SERIAL_ENDSTOP_PROBE, (float)endstops_trigsteps[Z_AXIS] / axis_steps_per_unit[Z_AXIS]);
+        LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT MSG_ENDSTOP_ZPS);
+      }
     #endif
     #if ENABLED(NPR2)
-    if (endstop_hit_bits & BIT(E_MIN)) {
-      ECHO_MV(MSG_ENDSTOP_E, (float)endstops_trigsteps[E_AXIS] / axis_steps_per_unit[E_AXIS]);
-      LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT MSG_ENDSTOP_ES);
-    }
+      if (endstop_hit_bits & BIT(E_MIN)) {
+        ECHO_MV(SERIAL_ENDSTOP_E, (float)endstops_trigsteps[E_AXIS] / axis_steps_per_unit[E_AXIS]);
+        LCD_MESSAGEPGM(MSG_ENDSTOPS_HIT MSG_ENDSTOP_ES);
+      }
     #endif
     ECHO_E;
 
@@ -223,7 +223,7 @@ void checkHitEndstops() {
 }
 
 void enable_endstops(bool check) {
-  if (debugLevel & DEBUG_INFO) {
+  if (debugLevel & DEBUG_DEBUG) {
     ECHO_SM(DB, "setup_for_endstop_move > enable_endstops");
     if (check) ECHO_EM("(true)");
     else ECHO_EM("(false)");
@@ -234,7 +234,7 @@ void enable_endstops(bool check) {
 // Check endstops
 inline void update_endstops() {
 
-  #if ENABLED(Z_DUAL_ENDSTOPS)
+  #if ENABLED(Z_DUAL_ENDSTOPS) || ENABLED(NPR2)
     uint16_t
   #else
     byte
@@ -396,6 +396,9 @@ inline void update_endstops() {
       }
   #if MECH(COREXZ)
     }
+  #endif
+  #if ENABLED(NPR2)
+    UPDATE_ENDSTOP(E, MIN);
   #endif
   old_endstop_bits = current_endstop_bits;
 }
@@ -933,7 +936,7 @@ void st_init() {
   #if HAS(Y_MIN)
     SET_INPUT(Y_MIN_PIN);
     #if ENABLED(ENDSTOPPULLUP_YMIN)
-      PULLUP(Y_MIN_PIN ,HIGH);
+      PULLUP(Y_MIN_PIN, HIGH);
     #endif
   #endif
 
@@ -947,7 +950,7 @@ void st_init() {
   #if HAS(Z2_MIN)
     SET_INPUT(Z2_MIN_PIN);
     #if ENABLED(ENDSTOPPULLUP_Z2MIN)
-      PULLUP(Z2_MIN_PIN,HIGH);
+      PULLUP(Z2_MIN_PIN, HIGH);
     #endif
   #endif
 
@@ -1319,21 +1322,21 @@ void microstep_mode(uint8_t driver, uint8_t stepping_mode) {
 }
 
 void microstep_readings() {
-  ECHO_SM(DB, MSG_MICROSTEP_MS1_MS2);
-  ECHO_M(MSG_MICROSTEP_X);
+  ECHO_SM(DB, SERIAL_MICROSTEP_MS1_MS2);
+  ECHO_M(SERIAL_MICROSTEP_X);
   ECHO_V(digitalRead(X_MS1_PIN));
   ECHO_EV(digitalRead(X_MS2_PIN));
-  ECHO_SM(DB, MSG_MICROSTEP_Y);
+  ECHO_SM(DB, SERIAL_MICROSTEP_Y);
   ECHO_V(digitalRead(Y_MS1_PIN));
   ECHO_EV(digitalRead(Y_MS2_PIN));
-  ECHO_SM(DB, MSG_MICROSTEP_Z);
+  ECHO_SM(DB, SERIAL_MICROSTEP_Z);
   ECHO_V(digitalRead(Z_MS1_PIN));
   ECHO_EV(digitalRead(Z_MS2_PIN));
-  ECHO_SM(DB, MSG_MICROSTEP_E0);
+  ECHO_SM(DB, SERIAL_MICROSTEP_E0);
   ECHO_V(digitalRead(E0_MS1_PIN));
   ECHO_EV(digitalRead(E0_MS2_PIN));
   #if HAS(MICROSTEPS_E1)
-    ECHO_SM(DB, MSG_MICROSTEP_E1);
+    ECHO_SM(DB, SERIAL_MICROSTEP_E1);
     ECHO_V(digitalRead(E1_MS1_PIN));
     ECHO_EV(digitalRead(E1_MS2_PIN));
   #endif

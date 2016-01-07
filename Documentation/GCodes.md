@@ -27,7 +27,7 @@
 *  M3   - S[0-255] Put output in laser beam control
 *  M4   - Turn on laser beam
 *  M5   - Turn off laser beam
-*  M11  - Start printer for pause mode
+*  M11  - Start/Stop printing serial mode
 *  M17  - Enable/Power all stepper motors
 *  M18  - Disable all stepper motors; same as M84
 *  M20  - List SD card
@@ -65,6 +65,7 @@
 *  M119 - Output Endstop status to serial port
 *  M120 - Disable Endstop
 *  M121 - Enable Endstop
+*  M122 - S<1=true/0=false> Enable or disable check software endstop
 *  M126 - Solenoid Air Valve Open (BariCUDA support by jmil)
 *  M127 - Solenoid Air Valve Closed (BariCUDA vent to atmospheric pressure by jmil)
 *  M128 - EtoP Open (BariCUDA EtoP = electricity to air pressure transducer by jmil)
@@ -88,7 +89,7 @@
 *  M300 - Play beep sound S[frequency Hz] P[duration ms]
 *  M301 - Set PID parameters P I and D
 *  M302 - Allow cold extrudes
-*  M303 - PID relay autotune S[temperature] sets the target temperature. (default target temperature = 150C)
+*  M303 - PID relay autotune S<temperature> sets the target temperature (default target temperature = 150C). H<hotend> C<cycles>
 *  M304 - Set bed PID parameters P I and D
 *  M350 - Set microstepping mode.
 *  M351 - Toggle MS1 MS2 pins directly.
@@ -106,6 +107,7 @@
 *  M502 - reverts to the default "factory settings".  You still need to store them in EEPROM afterwards if you want to.
 *  M503 - print the current settings (from memory not from EEPROM)
 *  M540 - Use S[0|1] to enable or disable the stop SD card print on endstop hit (requires ABORT_ON_ENDSTOP_HIT_FEATURE_ENABLED)
+*  M595 - Set hotend AD595 offset and gain
 *  M600 - Pause for filament change X[pos] Y[pos] Z[relative lift] E[initial retract] L[later retract distance for removal]
 *  M605 - Set dual x-carriage movement mode: Smode [ X<duplication x-offset> Rduplication temp offset ]
 *  M666 - Set z probe offset or Endstop and delta geometry adjustment. M666 L for list command

@@ -53,6 +53,9 @@
  * HOTENDS OFFSET:
  *  M218 T  XY            hotend_offset (x4) (T0..3)
  *
+ * HOTENDS AD595:
+ *  M595 T O G            Hotend AD595 Offset & Gain
+ *
  * DELTA:
  *  M666  XYZ             endstop_adj (x3)
  *  M666  R               delta_radius
@@ -118,7 +121,7 @@ void _EEPROM_writeData(int& pos, uint8_t* value, uint8_t size) {
     eeprom_write_byte((unsigned char*)pos, *value);
     c = eeprom_read_byte((unsigned char*)pos);
     if (c != *value) {
-      ECHO_LM(ER, MSG_ERR_EEPROM_WRITE);
+      ECHO_LM(ER, SERIAL_ERR_EEPROM_WRITE);
     }
     pos++;
     value++;
@@ -169,6 +172,11 @@ void Config_StoreSettings() {
 
   #if HOTENDS > 1
     EEPROM_WRITE_VAR(i, hotend_offset);
+  #endif
+
+  #if HEATER_USES_AD595
+    EEPROM_WRITE_VAR(i, ad595_offset);
+    EEPROM_WRITE_VAR(i, ad595_gain);
   #endif
 
   #if MECH(DELTA)
@@ -314,6 +322,11 @@ void Config_RetrieveSettings() {
       EEPROM_READ_VAR(i, hotend_offset);
     #endif
 
+    #if HEATER_USES_AD595
+      EEPROM_READ_VAR(i, ad595_offset);
+      EEPROM_READ_VAR(i, ad595_gain);
+    #endif
+
     #if MECH(DELTA)
       EEPROM_READ_VAR(i, endstop_adj);
       EEPROM_READ_VAR(i, delta_radius);
@@ -426,9 +439,9 @@ void Config_RetrieveSettings() {
 void Config_ResetDefault() {
   float tmp1[] = DEFAULT_AXIS_STEPS_PER_UNIT;
   float tmp2[] = DEFAULT_MAX_FEEDRATE;
-  long  tmp3[] = DEFAULT_MAX_ACCELERATION;
-  long  tmp4[] = DEFAULT_RETRACT_ACCELERATION;
-  long  tmp5[] = DEFAULT_EJERK;
+  float tmp3[] = DEFAULT_MAX_ACCELERATION;
+  float tmp4[] = DEFAULT_RETRACT_ACCELERATION;
+  float tmp5[] = DEFAULT_EJERK;
   #if ENABLED(PIDTEMP)
     float tmp6[] = DEFAULT_Kp;
     float tmp7[] = DEFAULT_Ki;
@@ -591,11 +604,6 @@ void Config_ResetDefault() {
   #endif
 
   volumetric_enabled = false;
-
-  for (short i = 0; i < EXTRUDERS; i++) {
-    filament_size[i] = DEFAULT_NOMINAL_FILAMENT_DIA;
-  }
-
   calculate_volumetric_multipliers();
 
   #if ENABLED(IDLE_OOZING_PREVENT)
@@ -710,8 +718,19 @@ void Config_ResetDefault() {
         ECHO_MV(" Y", hotend_offset[Y_AXIS][h]);
         ECHO_EMV(" Z", hotend_offset[Z_AXIS][h]);
       }
-    #endif //HOTENDS > 1
-    
+    #endif // HOTENDS > 1
+
+    #if HEATER_USES_AD595
+      if (!forReplay) {
+        ECHO_LM(DB, "Hotend AD595:");
+      }
+      for (int h = 0; h < EXTRUDERS; h++) {
+        ECHO_SMV(DB, "  M595 T", h);
+        ECHO_MV(" Offset", ad595_offset[h]);
+        ECHO_EMV(", Gain: ", ad595_gain[h]);
+      }
+    #endif // HEATER_USES_AD595
+
     #if MECH(DELTA)
       if (!forReplay) {
         ECHO_LM(DB, "Delta Geometry adjustment:");
@@ -888,13 +907,26 @@ void ConfigSD_ResetDefault() {
 }
 
 #if ENABLED(SDSUPPORT) && ENABLED(SD_SETTINGS)
+  static const char *cfgSD_KEY[] = { //Keep this in lexicographical order for better search performance(O(Nlog2(N)) insted of O(N*N)) (if you don't keep this sorted, the algorithm for find the key index won't work, keep attention.)
+    #if HAS(POWER_CONSUMPTION_SENSOR)
+      "PWR",
+    #endif
+      "TME",
+  };
+
+  enum cfgSD_ENUM {   //This need to be in the same order as cfgSD_KEY
+    #if HAS(POWER_CONSUMPTION_SENSOR)
+      SD_CFG_PWR,
+    #endif
+      SD_CFG_TME,
+      SD_CFG_END //Leave this always as the last
+    };
 
   void ConfigSD_StoreSettings() {
     if(!IS_SD_INSERTED || card.isFileOpen() || card.sdprinting) return;
     set_sd_dot();
-    delay(500);
     card.setroot(true);
-    card.openFile(CFG_SD_FILE, false, true, false);
+    card.openFile((char *)CFG_SD_FILE, false, true, false);
     char buff[CFG_SD_MAX_VALUE_LEN];
     #if HAS(POWER_CONSUMPTION_SENSOR)
       ltoa(power_consumption_hour,buff,10);
@@ -906,19 +938,17 @@ void ConfigSD_ResetDefault() {
     card.closeFile(false);
     card.setlast();
     config_last_update = millis();
-    delay(500);
     unset_sd_dot();
   }
 
   void ConfigSD_RetrieveSettings(bool addValue) {
     if(!IS_SD_INSERTED || card.isFileOpen() || card.sdprinting || !card.cardOK) return;
     set_sd_dot();
-    delay(500);
     char key[CFG_SD_MAX_KEY_LEN], value[CFG_SD_MAX_VALUE_LEN];
     int k_idx;
     int k_len, v_len;
     card.setroot(true);
-    card.openFile(CFG_SD_FILE, true, true, false);
+    card.openFile((char *)CFG_SD_FILE, true, true, false);
     while(true) {
       k_len = CFG_SD_MAX_KEY_LEN;
       v_len = CFG_SD_MAX_VALUE_LEN;
@@ -944,7 +974,6 @@ void ConfigSD_ResetDefault() {
     card.closeFile(false);
     card.setlast();
     config_readed = true;
-    delay(500);
     unset_sd_dot();
   }
 

@@ -61,7 +61,8 @@ enum DebugFlags {
   DEBUG_INFO          = BIT(1),
   DEBUG_ERRORS        = BIT(2),
   DEBUG_DRYRUN        = BIT(3),
-  DEBUG_COMMUNICATION = BIT(4)
+  DEBUG_COMMUNICATION = BIT(4),
+  DEBUG_DEBUG         = BIT(5)
 };
 
 void clamp_to_software_endstops(float target[3]);
@@ -71,6 +72,7 @@ extern uint8_t debugLevel;
 extern bool Running;
 inline bool IsRunning() { return  Running; }
 inline bool IsStopped() { return !Running; }
+extern bool Printing;
 
 bool enqueuecommand(const char *cmd); //put a single ASCII command at the end of the current buffer or return false when it is full
 void enqueuecommands_P(const char *cmd); //put one or many ASCII commands at the end of the current buffer, read from flash
@@ -79,7 +81,7 @@ void prepare_arc_move(char isclockwise);
 void clamp_to_software_endstops(float target[3]);
 
 extern millis_t previous_cmd_ms;
-inline void refresh_cmd_timeout();
+void refresh_cmd_timeout();
 
 #if ENABLED(FAST_PWM_FAN)
   void setPwmFrequency(uint8_t pin, int val);
@@ -101,6 +103,11 @@ extern float home_offset[3];
   extern float hotend_offset[3][HOTENDS];
 #endif // HOTENDS > 1
 
+#if HEATER_USES_AD595
+  extern float ad595_offset[HOTENDS];
+  extern float ad595_gain[HOTENDS];
+#endif
+
 #if ENABLED(NPR2)
   extern int old_color; // old color for system NPR2
 #endif
@@ -111,7 +118,6 @@ extern float home_offset[3];
   extern float tower_adj[6];
   extern float delta_radius;
   extern float delta_diagonal_rod;
-  extern float delta_segments_per_second;
 #elif ENABLED(Z_DUAL_ENDSTOPS)
   extern float z_endstop_adj;
 #endif
@@ -205,6 +211,10 @@ extern uint8_t active_driver;
 #if ENABLED(DIGIPOT_I2C)
   extern void digipot_i2c_set_current( int channel, float current );
   extern void digipot_i2c_init();
+#endif
+
+#if HAS(TEMP_0) || HAS(TEMP_BED) || ENABLED(HEATER_0_USES_MAX6675)
+  void print_heaterstates();
 #endif
 
 #if ENABLED(FIRMWARE_TEST)

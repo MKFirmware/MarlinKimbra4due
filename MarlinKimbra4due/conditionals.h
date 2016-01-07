@@ -146,23 +146,30 @@
    #define NEWPANEL
 #endif
 
+#if ENABLED(DOGLCD) // Change number of lines to match the DOG graphic display
+  #if DISABLED(LCD_WIDTH)
+    #define LCD_WIDTH 22
+  #endif
+  #if DISABLED(LCD_HEIGHT)
+    #define LCD_HEIGHT 5
+  #endif
+#endif
+
 #if ENABLED(ULTIPANEL)
   #define NEWPANEL  //enable this if you have a click-encoder panel
   #define ULTRA_LCD
-  #if ENABLED(DOGLCD) // Change number of lines to match the DOG graphic display
-    #define LCD_WIDTH 22
-    #define LCD_HEIGHT 5
-  #else
+  #if DISABLED(LCD_WIDTH)
     #define LCD_WIDTH 20
+  #endif
+  #if DISABLED(LCD_HEIGHT)
     #define LCD_HEIGHT 4
   #endif
 #else //no panel but just LCD
   #if ENABLED(ULTRA_LCD)
-    #if ENABLED(DOGLCD) // Change number of lines to match the 128x64 graphics display
-      #define LCD_WIDTH 22
-      #define LCD_HEIGHT 5
-    #else
+    #if DISABLED(LCD_WIDTH)
       #define LCD_WIDTH 16
+    #endif
+    #if DISABLED(LCD_HEIGHT)
       #define LCD_HEIGHT 2
     #endif
   #endif
@@ -215,13 +222,13 @@
 #endif
 
 #include "pins.h"
-#include "Configuration_Overall.h"
 
 /**
  * DONDOLO
  */
 #if ENABLED(DONDOLO)
   #undef SINGLENOZZLE
+  #undef DRIVER_EXTRUDERS
   #define DRIVER_EXTRUDERS 1
 #endif
 
@@ -229,9 +236,11 @@
  * SINGLENOZZLE
  */
 #if ENABLED(SINGLENOZZLE)
+  #undef HOTENDS
   #define HOTENDS 1
   #undef TEMP_SENSOR_1_AS_REDUNDANT
 #else
+  #undef HOTENDS
   #define HOTENDS EXTRUDERS
 #endif
 
@@ -239,6 +248,7 @@
  * DRIVER_EXTRUDERS
  */
 #if DISABLED(MKR4) && DISABLED(NPR2) && DISABLED(DONDOLO)
+  #undef DRIVER_EXTRUDERS
   #define DRIVER_EXTRUDERS EXTRUDERS // This defines the number of Driver extruder
 #endif
 
@@ -502,32 +512,32 @@
   #define BED_USES_THERMISTOR
 #endif
 
+#define HEATER_USES_AD595 (ENABLED(HEATER_0_USES_AD595) || ENABLED(HEATER_1_USES_AD595) || ENABLED(HEATER_2_USES_AD595) || ENABLED(HEATER_3_USES_AD595))
+
 /**
  * ARRAY_BY_EXTRUDERS based on EXTRUDERS
  */
 #if EXTRUDERS > 9
-  #define ARRAY_BY_EXTRUDER(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) { v1, v2, v3, v4, v5, v6, v7, v8, v9, v10 }
+  #define ARRAY_BY_EXTRUDERS(v1) { v1, v1, v1, v1, v1, v1, v1, v1, v1, v1 }
 #elif EXTRUDERS > 8
-  #define ARRAY_BY_EXTRUDER(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) { v1, v2, v3, v4, v5, v6, v7, v8, v9 }
+  #define ARRAY_BY_EXTRUDERS(v1) { v1, v1, v1, v1, v1, v1, v1, v1, v1 }
 #elif EXTRUDERS > 7
-  #define ARRAY_BY_EXTRUDER(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) { v1, v2, v3, v4, v5, v6, v7, v8 }
+  #define ARRAY_BY_EXTRUDERS(v1) { v1, v1, v1, v1, v1, v1, v1, v1 }
 #elif EXTRUDERS > 6
-  #define ARRAY_BY_EXTRUDER(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) { v1, v2, v3, v4, v5, v6, v7 }
+  #define ARRAY_BY_EXTRUDERS(v1) { v1, v1, v1, v1, v1, v1, v1 }
 #elif EXTRUDERS > 5
-  #define ARRAY_BY_EXTRUDER(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) { v1, v2, v3, v4, v5, v6 }
+  #define ARRAY_BY_EXTRUDERS(v1) { v1, v1, v1, v1, v1, v1 }
 #elif EXTRUDERS > 4
-  #define ARRAY_BY_EXTRUDER(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) { v1, v2, v3, v4, v5 }
+  #define ARRAY_BY_EXTRUDERS(v1) { v1, v1, v1, v1, v1 }
 #elif EXTRUDERS > 3
-  #define ARRAY_BY_EXTRUDER(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) { v1, v2, v3, v4 }
+  #define ARRAY_BY_EXTRUDERS(v1) { v1, v1, v1, v1 }
 #elif EXTRUDERS > 2
-  #define ARRAY_BY_EXTRUDER(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) { v1, v2, v3 }
+  #define ARRAY_BY_EXTRUDERS(v1) { v1, v1, v1 }
 #elif EXTRUDERS > 1
-  #define ARRAY_BY_EXTRUDER(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) { v1, v2 }
+  #define ARRAY_BY_EXTRUDERS(v1) { v1, v1 }
 #else
-  #define ARRAY_BY_EXTRUDER(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) { v1 }
+  #define ARRAY_BY_EXTRUDERS(v1) { v1 }
 #endif
-
-#define ARRAY_BY_EXTRUDERS(v1) ARRAY_BY_EXTRUDER(v1, v1, v1, v1, v1, v1, v1, v1, v1, v1)
 
 /**
  * ARRAY_BY_HOTENDS based on HOTENDS
@@ -698,6 +708,18 @@
  * Servos
  */
 #if HAS(SERVOS)
+  #ifndef X_ENDSTOP_SERVO_NR
+    #define X_ENDSTOP_SERVO_NR -1
+  #endif
+  #ifndef Y_ENDSTOP_SERVO_NR
+    #define Y_ENDSTOP_SERVO_NR -1
+  #endif
+  #ifndef Z_ENDSTOP_SERVO_NR
+    #define Z_ENDSTOP_SERVO_NR -1
+  #endif
+  #ifndef SERVO_DEACTIVATION_DELAY
+    #define SERVO_DEACTIVATION_DELAY 300
+  #endif
   #if X_ENDSTOP_SERVO_NR >= 0 || Y_ENDSTOP_SERVO_NR >= 0 || Z_ENDSTOP_SERVO_NR >= 0
     #define HAS_SERVO_ENDSTOPS true
     #define SERVO_ENDSTOP_IDS { X_ENDSTOP_SERVO_NR, Y_ENDSTOP_SERVO_NR, Z_ENDSTOP_SERVO_NR }
