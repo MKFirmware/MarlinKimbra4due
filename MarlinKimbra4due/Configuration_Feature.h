@@ -32,6 +32,7 @@
  * MOTION FEATURES:
  * - Software endstops
  * - Endstops only for homing
+ * - Abort on endstop hit feature
  * - R/C Servo
  * - Late Z axis
  * - Ahead slowdown
@@ -224,12 +225,6 @@
 #define DEFAULT_bedKp 10.00
 #define DEFAULT_bedKi .023
 #define DEFAULT_bedKd 305.4
-
-// 120v 250W silicone heater into 4mm borosilicate (MendelMax 1.5+)
-// from pidautotune
-//#define DEFAULT_bedKp 97.1
-//#define DEFAULT_bedKi 1.41
-//#define DEFAULT_bedKd 1675.16
 
 // FIND YOUR OWN: "M303 E-1 C8 S90" to run autotune on the bed at 90 degreesC for 8 cycles.
 
@@ -586,19 +581,38 @@
  **************************************************************************/
 #define SOFTWARE_MIN_ENDSTOPS true  // If true, axis won't move to coordinates less than HOME_POS.
 #define SOFTWARE_MAX_ENDSTOPS true  // If true, axis won't move to coordinates greater than the defined lengths below.
-/***********************************************************************/
+/**************************************************************************/
 
 
 /**************************************************************************
  *********************** Endstops only for homing *************************
+ **************************************************************************
+ *                                                                        *
+ * If defined the endstops will only be used for homing                   *
+ *                                                                        *
  **************************************************************************/
-#define ENDSTOPS_ONLY_FOR_HOMING // If defined the endstops will only be used for homing
-/***********************************************************************/
+#define ENDSTOPS_ONLY_FOR_HOMING
+/**************************************************************************/
 
 
-/***********************************************************************
- **************************** R/C Servo ********************************
- ***********************************************************************/
+/**************************************************************************
+ ******************** Abort on endstop hit feature ************************
+ **************************************************************************
+ *                                                                        *
+ * This option allows you to abort printing when any endstop is triggered.*
+ * This feature must be enabled with "M540 S1" or from the LCD menu or    *
+ * by define ABORT ON ENDSTOP HIT INIT true.                              *
+ * To have any effect, endstops must be enabled during SD printing.       *
+ * With ENDSTOPS ONLY FOR HOMING you must send "M120" to enable endstops. *
+ *                                                                        *
+ **************************************************************************/
+//#define ABORT_ON_ENDSTOP_HIT_FEATURE_ENABLED
+//#define ABORT_ON_ENDSTOP_HIT_INIT true
+
+
+/**************************************************************************
+ ****************************** R/C Servo *********************************
+ **************************************************************************/
 //#define ENABLE_SERVOS
 // Number of servos
 // If you select a configuration below, this will receive a default value and does not need to be set manually
@@ -627,7 +641,7 @@
 // 300ms is a good value but you can try less delay.
 // If the servo can't reach the requested position, increase it.
 #define SERVO_DEACTIVATION_DELAY 300
-/***********************************************************************/
+/**************************************************************************/
 
 
 /***********************************************************************
@@ -1032,18 +1046,10 @@
 // This allows hosts to request long names for files and folders with M33
 //#define LONG_FILENAME_HOST_SUPPORT
 
-// This option allows you to abort SD printing when any endstop is triggered.
-// This feature must be enabled with "M540 S1" or from the LCD menu.
-// To have any effect, endstops must be enabled during SD printing.
-// With ENDSTOPS_ONLY_FOR_HOMING you must send "M120" to enable endstops.
-//#define ABORT_ON_ENDSTOP_HIT_FEATURE_ENABLED
-
-//This enable the firmware to write some configuration that require frequent update, on the SD card
-//#define SD_SETTINGS                     //Uncomment to enable
-#define SD_CFG_SECONDS        300         //seconds between update
-#define CFG_SD_FILE           "INFO.CFG"  //name of the configuration file
-#define CFG_SD_MAX_KEY_LEN    3+1         //icrease this if you add key name longer than the actual value.
-#define CFG_SD_MAX_VALUE_LEN  12+1        //this should be enought for int, long and float if you need to retrive strings increase this carefully
+// This enable the firmware to write some configuration that require frequent update, on the SD card
+//#define SD_SETTINGS                     // Uncomment to enable
+#define SD_CFG_SECONDS        300         // seconds between update
+#define CFG_SD_FILE           "INFO.CFG"  // name of the configuration file
 /*****************************************************************************************/
 
 

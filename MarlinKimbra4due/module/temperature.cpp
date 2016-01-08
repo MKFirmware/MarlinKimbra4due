@@ -18,13 +18,14 @@
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "base.h"
-#include "Marlin_main.h"
+#include "../base.h"
+#include "../Marlin_main.h"
+
 #if ENABLED(AUTO_BED_LEVELING_FEATURE)
   #include "vector_3.h"
 #endif
 #include "ultralcd.h"
-#include "module/nextion_lcd.h"
+#include "nextion_lcd.h"
 #include "planner.h"
 #include "stepper_indirection.h"
 #if MB(ALLIGATOR)

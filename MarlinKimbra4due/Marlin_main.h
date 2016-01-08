@@ -83,6 +83,8 @@ void clamp_to_software_endstops(float target[3]);
 extern millis_t previous_cmd_ms;
 void refresh_cmd_timeout();
 
+extern void delay_ms(millis_t ms);
+
 #if ENABLED(FAST_PWM_FAN)
   void setPwmFrequency(uint8_t pin, int val);
 #endif
@@ -132,7 +134,9 @@ extern bool axis_known_position[3];
 extern float zprobe_zoffset;
 
 // Lifetime stats
-extern unsigned long printer_usage_seconds;  //this can old about 136 year before go overflow. If you belive that you can live more than this please contact me.
+extern unsigned long printer_usage_seconds;  // this can old about 136 year before go overflow. If you belive that you can live more than this please contact me.
+// Filament stats
+extern double printer_usage_filament;
 
 #if ENABLED(PREVENT_DANGEROUS_EXTRUDE)
   extern float extrude_min_temp;
@@ -234,7 +238,6 @@ extern void calculate_volumetric_multipliers();
   long code_value_long();
   bool code_seen(char );
 
-
   //
   // Utility functions used by M100 to get its work done.
   //
@@ -245,4 +248,5 @@ extern void calculate_volumetric_multipliers();
   int how_many_E5s_are_here( unsigned char *);
 
 #endif
+
 #endif //MARLIN_H

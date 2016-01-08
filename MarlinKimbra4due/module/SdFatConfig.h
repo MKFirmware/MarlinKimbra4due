@@ -63,20 +63,12 @@
  * FAT12 has not been well tested.
  */
 #define FAT12_SUPPORT 0
-
-#if ENABLED(ARDUINO_ARCH_AVR)
 //------------------------------------------------------------------------------
 /**
  * SPI init rate for SD initialization commands. Must be 5 (F_CPU/64)
  * or 6 (F_CPU/128).
  */
-#define SPI_SD_INIT_RATE 5
-
-#elif ENABLED(ARDUINO_ARCH_SAM)
-
 #define SPI_SD_INIT_RATE SPI_INIT_SPEED
-
-#endif
 //------------------------------------------------------------------------------
 /**
  * Set the SS pin high for hardware SPI.  If SS is chip select for another SPI
