@@ -1,9 +1,8 @@
-#include "base.h"
+#include "../base.h"
 
 #if ENABLED(USE_WATCHDOG)
 
 #include "watchdog.h"
-#include "ultralcd.h"
 
 // Initialize watchdog with a 4 sec interrupt time
 void watchdog_init() {

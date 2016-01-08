@@ -1,18 +1,18 @@
 #include "../base.h"
+#include "../Marlin_main.h"
+#include "../configuration_store.h"
 
 #if ENABLED(NEXTION)
-  #include "../Marlin_main.h"
-  #include "../cardreader.h"
-  #include "../temperature.h"
+  #include "cardreader.h"
+  #include "temperature.h"
 
   #if ENABLED(AUTO_BED_LEVELING_FEATURE)
-    #include "../vector_3.h"
+    #include "vector_3.h"
   #endif
 
-  #include "../planner.h"
-  #include "../stepper_indirection.h"
-  #include "../stepper.h"
-  #include "../configuration_store.h"
+  #include "planner.h"
+  #include "stepper_indirection.h"
+  #include "stepper.h"
   #include "nextion_lcd.h"
   #include "nextion_gfx.h"
   #include <Nextion.h>
@@ -570,7 +570,7 @@
     }
     else
       strcat(buffer, "---");
-    
+
     strcat(buffer, " Z");
     if (axis_known_position[Z_AXIS]) {
       valuetemp = ftostr32sp(current_position[Z_AXIS] + 0.00001);
