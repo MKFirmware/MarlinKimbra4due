@@ -25,138 +25,147 @@
 // **************************************************************************
 
 #ifndef _HAL_H
-#define _HAL_H
+  #define _HAL_H
 
-// --------------------------------------------------------------------------
-// Includes
-// --------------------------------------------------------------------------
+  #include <stdint.h>
+  #include "Arduino.h"
+  #include "fastio.h"
 
-#include <stdint.h>
+  // --------------------------------------------------------------------------
+  // Defines
+  // --------------------------------------------------------------------------
 
-#include "Arduino.h"
-#include "fastio.h"
+  #define analogInputToDigitalPin(IO) IO
+  #define FORCE_INLINE __attribute__((always_inline)) inline
 
-// --------------------------------------------------------------------------
-// Defines
-// --------------------------------------------------------------------------
+  #define     CRITICAL_SECTION_START	uint32_t primask=__get_PRIMASK(); __disable_irq();
+  #define     CRITICAL_SECTION_END    if (primask==0) __enable_irq();
 
-#define analogInputToDigitalPin(IO) IO
-#define FORCE_INLINE __attribute__((always_inline)) inline
+  // On AVR this is in math.h?
+  #define square(x) ((x)*(x))
 
-#define     CRITICAL_SECTION_START	uint32_t primask=__get_PRIMASK(); __disable_irq();
-#define     CRITICAL_SECTION_END    if (primask==0) __enable_irq();
+  #define strncpy_P(dest, src, num) strncpy((dest), (src), (num))
 
-// On AVR this is in math.h?
-#define square(x) ((x)*(x))
+  // --------------------------------------------------------------------------
+  // Types
+  // --------------------------------------------------------------------------
 
-#define strncpy_P(dest, src, num) strncpy((dest), (src), (num))
+  // --------------------------------------------------------------------------
+  // Public Variables
+  // --------------------------------------------------------------------------
 
-// --------------------------------------------------------------------------
-// Types
-// --------------------------------------------------------------------------
+  // reset reason set by bootloader
+  extern uint8_t MCUSR;
+  volatile static uint32_t debug_counter;
 
-// --------------------------------------------------------------------------
-// Public Variables
-// --------------------------------------------------------------------------
+  // --------------------------------------------------------------------------
+  // Public functions
+  // --------------------------------------------------------------------------
 
-// reset reason set by bootloader
-extern uint8_t MCUSR;
-volatile static uint32_t debug_counter;
+  #ifdef DUE_SOFTWARE_SPI
+    inline uint8_t spiTransfer(uint8_t b); // using Mode 0
+    inline void spiBegin();
+    inline void spiInit(uint8_t spiClock);
+    inline uint8_t spiReceive();
+    inline void spiReadBlock(uint8_t*buf, uint16_t nbyte);
+    inline void spiSend(uint8_t b);
+    inline void spiSend(const uint8_t* buf , size_t n) ;
+    inline void spiSendBlock(uint8_t token, const uint8_t* buf);
+  #else
+    // Hardware setup
+    void spiBegin();
+    void spiInit(uint8_t spiClock);
+    // Write single byte to SPI
+    void spiSend(byte b);
+    void spiSend(const uint8_t* buf, size_t n);
+    void spiSend(uint32_t chan, byte b);
+    void spiSend(uint32_t chan , const uint8_t* buf , size_t n);
+    // Read single byte from SPI
+    uint8_t spiReceive();
+    uint8_t spiReceive(uint32_t chan);
+    // Read from SPI into buffer
+    void spiReadBlock(uint8_t* buf, uint16_t nbyte);
+    // Write from buffer to SPI
+    void spiSendBlock(uint8_t token, const uint8_t* buf);
+  #endif
 
-// --------------------------------------------------------------------------
-// Public functions
-// --------------------------------------------------------------------------
+  // Disable interrupts
+  void cli(void);
 
-#ifndef DUE_SOFTWARE_SPI
-  // Hardware setup
-  void spiBegin();
-  void spiInit(uint8_t spiClock);
-  void spiSendByte(uint32_t chan, byte b);
-  void spiSend(uint32_t chan ,const uint8_t* buf , size_t n);
-#endif
+  // Enable interrupts
+  void sei(void);
 
-// Disable interrupts
-void cli(void);
+  static inline void _delay_ms(uint32_t msec) {
+    delay(msec);
+  }
 
-// Enable interrupts
-void sei(void);
+  static inline void _delay_us(uint32_t usec) {
+    uint32_t n = usec * (F_CPU / 3000000);
+    asm volatile(
+        "L2_%=_delayMicroseconds:"       "\n\t"
+        "subs   %0, #1"                 "\n\t"
+        "bge    L2_%=_delayMicroseconds" "\n"
+        : "+r" (n) :  
+    );
+  }
 
-static inline void _delay_ms(uint32_t msec) {
-	delay(msec);
-}
+  int freeMemory(void);
+  void eeprom_write_byte(unsigned char* pos, unsigned char value);
+  unsigned char eeprom_read_byte(unsigned char* pos);
 
-static inline void _delay_us(uint32_t usec) {
-  uint32_t n = usec * (F_CPU / 3000000);
-  asm volatile(
-      "L2_%=_delayMicroseconds:"       "\n\t"
-      "subs   %0, #1"                 "\n\t"
-      "bge    L2_%=_delayMicroseconds" "\n"
-      : "+r" (n) :  
-  );
-}
+  // timers
+  #define STEP_TIMER_NUM 2
+  #define STEP_TIMER_COUNTER TC0
+  #define STEP_TIMER_CHANNEL 2
+  #define STEP_TIMER_IRQN TC2_IRQn
+  #define HAL_STEP_TIMER_ISR 	void TC2_Handler()
 
-int freeMemory(void);
-void eeprom_write_byte(unsigned char *pos, unsigned char value);
-unsigned char eeprom_read_byte(unsigned char *pos);
+  #define TEMP_TIMER_NUM 3
+  #define TEMP_TIMER_COUNTER TC1
+  #define TEMP_TIMER_CHANNEL 0
+  #define TEMP_FREQUENCY 2000
 
+  #define TEMP_TIMER_IRQN TC3_IRQn
+  #define HAL_TEMP_TIMER_ISR 	void TC3_Handler()
 
-// timers
-#define STEP_TIMER_NUM 2
-#define STEP_TIMER_COUNTER TC0
-#define STEP_TIMER_CHANNEL 2
-#define STEP_TIMER_IRQN TC2_IRQn
-#define HAL_STEP_TIMER_ISR 	void TC2_Handler()
+  #define BEEPER_TIMER_NUM 4
+  #define BEEPER_TIMER_COUNTER TC1
+  #define BEEPER_TIMER_CHANNEL 1
+  #define BEEPER_TIMER_IRQN TC4_IRQn
+  #define HAL_BEEPER_TIMER_ISR  void TC4_Handler()
 
-#define TEMP_TIMER_NUM 3
-#define TEMP_TIMER_COUNTER TC1
-#define TEMP_TIMER_CHANNEL 0
-#define TEMP_FREQUENCY 2000
+  #define HAL_TIMER_RATE 		     (F_CPU/2)
+  #define TICKS_PER_NANOSECOND   (HAL_TIMER_RATE)/1000
 
-#define TEMP_TIMER_IRQN TC3_IRQn
-#define HAL_TEMP_TIMER_ISR 	void TC3_Handler()
+  #define ENABLE_STEPPER_DRIVER_INTERRUPT()	HAL_timer_enable_interrupt (STEP_TIMER_NUM)
+  #define DISABLE_STEPPER_DRIVER_INTERRUPT()	HAL_timer_disable_interrupt (STEP_TIMER_NUM)
 
-#define BEEPER_TIMER_NUM 4
-#define BEEPER_TIMER_COUNTER TC1
-#define BEEPER_TIMER_CHANNEL 1
-#define BEEPER_TIMER_IRQN TC4_IRQn
-#define HAL_BEEPER_TIMER_ISR  void TC4_Handler()
+  //
 
-#define HAL_TIMER_RATE 		     (F_CPU/2)
-#define TICKS_PER_NANOSECOND   (HAL_TIMER_RATE)/1000
+  void HAL_step_timer_start(void);
+  void HAL_temp_timer_start (uint8_t timer_num);
 
-#define ENABLE_STEPPER_DRIVER_INTERRUPT()	HAL_timer_enable_interrupt (STEP_TIMER_NUM)
-#define DISABLE_STEPPER_DRIVER_INTERRUPT()	HAL_timer_disable_interrupt (STEP_TIMER_NUM)
+  void HAL_timer_enable_interrupt (uint8_t timer_num);
+  void HAL_timer_disable_interrupt (uint8_t timer_num);
 
-//
+  inline
+  void HAL_timer_isr_status (Tc* tc, uint32_t channel) {
+    tc->TC_CHANNEL[channel].TC_SR; // clear status register
+  }
 
-void HAL_step_timer_start(void);
-void HAL_temp_timer_start (uint8_t timer_num);
+  int HAL_timer_get_count (uint8_t timer_num);
+  //
 
-void HAL_timer_enable_interrupt (uint8_t timer_num);
-void HAL_timer_disable_interrupt (uint8_t timer_num);
+  void tone(uint8_t pin, int frequency);
+  void noTone(uint8_t pin);
+  //void tone(uint8_t pin, int frequency, long duration);
 
-inline
-void HAL_timer_isr_status (Tc* tc, uint32_t channel) {
-  tc->TC_CHANNEL[channel].TC_SR; // clear status register
-}
+  uint16_t getAdcReading(adc_channel_num_t chan);
+  void startAdcConversion(adc_channel_num_t chan);
+  adc_channel_num_t pinToAdcChannel(int pin);
 
-int HAL_timer_get_count (uint8_t timer_num);
-//
-
-void tone(uint8_t pin, int frequency);
-void noTone(uint8_t pin);
-//void tone(uint8_t pin, int frequency, long duration);
-
-uint16_t getAdcReading(adc_channel_num_t chan);
-void startAdcConversion(adc_channel_num_t chan);
-adc_channel_num_t pinToAdcChannel(int pin);
-
-uint16_t getAdcFreerun(adc_channel_num_t chan, bool wait_for_conversion = false);
-uint16_t getAdcSuperSample(adc_channel_num_t chan);
-void stopAdcFreerun(adc_channel_num_t chan);
-
-// --------------------------------------------------------------------------
-//
-// --------------------------------------------------------------------------
+  uint16_t getAdcFreerun(adc_channel_num_t chan, bool wait_for_conversion = false);
+  uint16_t getAdcSuperSample(adc_channel_num_t chan);
+  void stopAdcFreerun(adc_channel_num_t chan);
 
 #endif // _HAL_H

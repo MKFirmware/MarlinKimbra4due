@@ -17,62 +17,11 @@
  * along with the Arduino Sd2Card Library.  If not, see
  * <http://www.gnu.org/licenses/>.
  */
+
 #include "../base.h"
 
 #if ENABLED(SDSUPPORT)
 #include "Sd2Card.h"
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// functions for hardware SPI
-//------------------------------------------------------------------------------
-
-#if ENABLED(ARDUINO_ARCH_SAM)
-
-#include <SPI.h>
-
-static void spiInit(void) {
-	SPI.end();
-	//todo: check these settings
-	SPI.begin();
-	SPI.setDataMode (SPI_MODE0);
-	SPI.setBitOrder(MSBFIRST);
-}
-
-static void spiSetSckRate (uint8_t spiRate) {
-	SPI.setClockDivider(spiRate);
-}
-
-static uint8_t spiRec() {
-    return SPI.transfer(0xFF);
-}
-
-static inline __attribute__((always_inline))
-void spiRead(uint8_t* buf, uint16_t nbyte) {
-
-	while (nbyte--)
-		*buf++ = spiRec();
-
-}
-
-static void spiSend(uint8_t b) {
-    SPI.transfer(b);
-}
-
-static inline __attribute__((always_inline))
-  void spiSendBlock(uint8_t token, const uint8_t* buf) {
-
-  spiSend (token);
-  for (uint16_t i = 0; i < 512; i += 2) {
-	spiSend (buf[i]);
-	spiSend (buf[i+1]);
-  }
-
-}
-
-#else
-#error Unsupported architecture
-#endif
 
 //------------------------------------------------------------------------------
 // send command and return error code.  Return zero for OK
@@ -96,10 +45,10 @@ uint8_t Sd2Card::cardCommand(uint8_t cmd, uint32_t arg) {
   spiSend(crc);
 
   // skip stuff byte for stop read
-  if (cmd == CMD12) spiRec();
+  if (cmd == CMD12) spiReceive();
 
   // wait for response
-  for (uint8_t i = 0; ((status_ = spiRec()) & 0X80) && i != 0XFF; i++) { /* Intentionally left empty */ }
+  for (uint8_t i = 0; ((status_ = spiReceive()) & 0X80) && i != 0XFF; i++) { /* Intentionally left empty */ }
   return status_;
 }
 //------------------------------------------------------------------------------
@@ -134,7 +83,6 @@ void Sd2Card::chipSelectHigh() {
 }
 //------------------------------------------------------------------------------
 void Sd2Card::chipSelectLow() {
-  setSckRate(spiRate_);
   digitalWrite(chipSelectPin_, LOW);
 }
 //------------------------------------------------------------------------------
@@ -199,9 +147,6 @@ bool Sd2Card::eraseSingleBlockEnable() {
 /**
  * Initialize an SD flash memory card.
  *
- * \param[in] sckRateID SPI clock rate selector. See setSckRate().
- * \param[in] chipSelectPin SD chip select pin number.
- *
  * \return The value one, true, is returned for success and
  * the value zero, false, is returned for failure.  The reason for failure
  * can be determined by calling errorCode() and errorData().
@@ -213,22 +158,7 @@ bool Sd2Card::init(uint8_t sckRateID, uint8_t chipSelectPin) {
   uint16_t t0 = (uint16_t)millis();
   uint32_t arg;
 
-  // set pin modes
-  pinMode(chipSelectPin_, OUTPUT);
-  chipSelectHigh();
-  pinMode(SPI_MISO_PIN, INPUT);
-  pinMode(SPI_MOSI_PIN, OUTPUT);
-  pinMode(SPI_SCK_PIN, OUTPUT);
-
-  // SS must be in output mode even it is not chip select
-  pinMode(SS_PIN, OUTPUT);
-  // set SS high - may be chip select for another SPI device
-#if SET_SPI_SS_HIGH
-  digitalWrite(SS_PIN, HIGH);
-#endif  // SET_SPI_SS_HIGH
-  spiInit();
-  // set SCK rate for initialization commands
-  setSckRate(SPI_SD_INIT_RATE);
+  spiBegin();
 
   // must supply min of 74 clock cycles with CS high.
   for (uint8_t i = 0; i < 10; i++) spiSend(0XFF);
@@ -245,7 +175,7 @@ bool Sd2Card::init(uint8_t sckRateID, uint8_t chipSelectPin) {
     type(SD_CARD_TYPE_SD1);
   } else {
     // only need last byte of r7 response
-    for (uint8_t i = 0; i < 4; i++) status_ = spiRec();
+    for (uint8_t i = 0; i < 4; i++) status_ = spiReceive();
     if (status_ != 0XAA) {
       error(SD_CARD_ERROR_CMD8);
       goto fail;
@@ -268,13 +198,13 @@ bool Sd2Card::init(uint8_t sckRateID, uint8_t chipSelectPin) {
       error(SD_CARD_ERROR_CMD58);
       goto fail;
     }
-    if ((spiRec() & 0XC0) == 0XC0) type(SD_CARD_TYPE_SDHC);
+    if ((spiReceive() & 0XC0) == 0XC0) type(SD_CARD_TYPE_SDHC);
     // discard rest of ocr - contains allowed voltage range
-    for (uint8_t i = 0; i < 3; i++) spiRec();
+    for (uint8_t i = 0; i < 3; i++) spiReceive();
   }
   chipSelectHigh();
 
-  return setSckRate(sckRateID);
+  return true;
 
  fail:
   chipSelectHigh();
@@ -387,7 +317,7 @@ static uint16_t CRC_CCITT(const uint8_t* data, size_t n) {
 bool Sd2Card::readData(uint8_t* dst, uint16_t count) {
   // wait for start block token
   uint16_t t0 = millis();
-  while ((status_ = spiRec()) == 0XFF) {
+  while ((status_ = spiReceive()) == 0XFF) {
     if (((uint16_t)millis() - t0) > SD_READ_TIMEOUT) {
       error(SD_CARD_ERROR_READ_TIMEOUT);
       goto fail;
@@ -398,13 +328,13 @@ bool Sd2Card::readData(uint8_t* dst, uint16_t count) {
     goto fail;
   }
   // transfer data
-  spiRead(dst, count);
+  spiReadBlock(dst, count);
 
 #if ENABLED(SD_CHECK_AND_RETRY)
   {
     uint16_t calcCrc = CRC_CCITT(dst, count);
-    uint16_t recvCrc = spiRec() << 8;
-    recvCrc |= spiRec();
+    uint16_t recvCrc = spiReceive() << 8;
+    recvCrc |= spiReceive();
     if (calcCrc != recvCrc)
     {
         error(SD_CARD_ERROR_CRC);
@@ -413,8 +343,8 @@ bool Sd2Card::readData(uint8_t* dst, uint16_t count) {
   }
 #else
   // discard CRC
-  spiRec();
-  spiRec();
+  spiReceive();
+  spiReceive();
 #endif
   chipSelectHigh();
   return true;
@@ -480,36 +410,12 @@ bool Sd2Card::readStop() {
   chipSelectHigh();
   return false;
 }
-//------------------------------------------------------------------------------
-/**
- * Set the SPI clock rate.
- *
- * \param[in] sckRateID A value in the range [0, 6].
- *
- * The SPI clock will be set to F_CPU/pow(2, 1 + sckRateID). The maximum
- * SPI rate is F_CPU/2 for \a sckRateID = 0 and the minimum rate is F_CPU/128
- * for \a scsRateID = 6.
- *
- * \return The value one, true, is returned for success and the value zero,
- * false, is returned for an invalid value of \a sckRateID.
- */
-bool Sd2Card::setSckRate(uint8_t sckRateID) {
 
-#if 0
-  if (sckRateID > 6) {
-    error(SD_CARD_ERROR_SCK_RATE);
-    return false;
-  }
-#endif
-  spiSetSckRate (sckRateID);
-  spiRate_ = sckRateID;
-  return true;
-}
 //------------------------------------------------------------------------------
 // wait for card to go not busy
 bool Sd2Card::waitNotBusy(uint16_t timeoutMillis) {
   uint16_t t0 = millis();
-  while (spiRec() != 0XFF) {
+  while (spiReceive() != 0XFF) {
     if (((uint16_t)millis() - t0) >= timeoutMillis) goto fail;
   }
   return true;
@@ -541,7 +447,7 @@ bool Sd2Card::writeBlock(uint32_t blockNumber, const uint8_t* src) {
     goto fail;
   }
   // response is r2 so get and check two bytes for nonzero
-  if (cardCommand(CMD13, 0) || spiRec()) {
+  if (cardCommand(CMD13, 0) || spiReceive()) {
     error(SD_CARD_ERROR_WRITE_PROGRAMMING);
     goto fail;
   }
@@ -579,7 +485,7 @@ bool Sd2Card::writeData(uint8_t token, const uint8_t* src) {
   spiSend(0xff);  // dummy crc
   spiSend(0xff);  // dummy crc
 
-  status_ = spiRec();
+  status_ = spiReceive();
   if ((status_ & DATA_RES_MASK) != DATA_RES_ACCEPTED) {
     error(SD_CARD_ERROR_WRITE);
     goto fail;

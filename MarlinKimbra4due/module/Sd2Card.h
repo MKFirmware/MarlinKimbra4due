@@ -114,22 +114,11 @@ uint8_t const SD_CARD_TYPE_SD1  = 1;
 uint8_t const SD_CARD_TYPE_SD2  = 2;
 /** High Capacity SD card */
 uint8_t const SD_CARD_TYPE_SDHC = 3;
-/**
- * define SOFTWARE_SPI to use bit-bang SPI
- */
-//------------------------------------------------------------------------------
-#if MEGA_SOFT_SPI && (defined(__AVR_ATmega1280__)||defined(__AVR_ATmega2560__))
-#define SOFTWARE_SPI
-#elif USE_SOFTWARE_SPI
-#define SOFTWARE_SPI
-#endif  // MEGA_SOFT_SPI
-//------------------------------------------------------------------------------
-// SPI pin definitions - do not edit here - change in SdFatConfig.h
-//
-#if DISABLED(SOFTWARE_SPI)
+
+#if DISABLED(DUE_SOFTWARE_SPI)
 // hardware pin defs
 /** The default chip select pin for the SD card is SS. */
-uint8_t const  SD_CHIP_SELECT_PIN = SS_PIN;
+uint8_t const  SD_CHIP_SELECT_PIN = SPI_PIN;
 // The following three pins must not be redefined for hardware SPI.
 /** SPI Master Out Slave In pin */
 uint8_t const  SPI_MOSI_PIN = MOSI_PIN;
@@ -141,13 +130,13 @@ uint8_t const  SPI_SCK_PIN = SCK_PIN;
 #else  // SOFTWARE_SPI
 
 /** SPI chip select pin */
-uint8_t const SD_CHIP_SELECT_PIN = SOFT_SPI_CS_PIN;
+uint8_t const SD_CHIP_SELECT_PIN = SDSS;
 /** SPI Master Out Slave In pin */
-uint8_t const SPI_MOSI_PIN = SOFT_SPI_MOSI_PIN;
+uint8_t const SPI_MOSI_PIN = 51;
 /** SPI Master In Slave Out pin */
-uint8_t const SPI_MISO_PIN = SOFT_SPI_MISO_PIN;
+uint8_t const SPI_MISO_PIN = 50;
 /** SPI Clock pin */
-uint8_t const SPI_SCK_PIN = SOFT_SPI_SCK_PIN;
+uint8_t const SPI_SCK_PIN = 52;
 #endif  // SOFTWARE_SPI
 //------------------------------------------------------------------------------
 /**
@@ -207,7 +196,7 @@ class Sd2Card {
   bool readData(uint8_t *dst);
   bool readStart(uint32_t blockNumber);
   bool readStop();
-  bool setSckRate(uint8_t sckRateID);
+
   /** Return the card type: SD V1, SD V2 or SDHC
    * \return 0 - SD V1, 1 - SD V2, or 3 - SDHC.
    */
