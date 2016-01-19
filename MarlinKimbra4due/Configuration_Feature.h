@@ -59,8 +59,9 @@
  * - Laser beam
  * ADVANCED MOTION FEATURES:
  * - Stepper auto deactivation
- * - Microstepping
+ * - Low speed stepper
  * - High speed stepper
+ * - Microstepping
  * - Motor's current
  * - I2C DIGIPOT
  * - Toshiba steppers
@@ -1266,17 +1267,16 @@
 
 
 /***********************************************************************
- *************************** Microstepping *****************************
+ ************************* Low speed stepper ***************************
  ***********************************************************************
  *                                                                     *
- * Microstep setting (Only functional when stepper driver              *
- * microstep pins are connected to MCU.                                *
+ * Use it if you have low speed stepper driver                         *
  *                                                                     *
- * Alligator Board support 16 or 32 only value                         *
+ * Uncomment STEPPER_HIGH_LOW to enable this feature                   *
  *                                                                     *
  ***********************************************************************/
-//#define USE_MICROSTEPS
-#define MICROSTEP_MODES {16, 16, 16, 16} // X Y Z E - [1,2,4,8,16,32]
+//#define STEPPER_HIGH_LOW
+#define STEPPER_HIGH_LOW_DELAY 1u  // Delay in microseconds
 /***********************************************************************/
 
 
@@ -1289,6 +1289,21 @@
  *                                                                     *
  ***********************************************************************/
 //#define ENABLE_HIGH_SPEED_STEPPING
+/***********************************************************************/
+
+
+/***********************************************************************
+ *************************** Microstepping *****************************
+ ***********************************************************************
+ *                                                                     *
+ * Microstep setting (Only functional when stepper driver              *
+ * microstep pins are connected to MCU.                                *
+ *                                                                     *
+ * Alligator Board support 16 or 32 only value                         *
+ *                                                                     *
+ ***********************************************************************/
+//#define USE_MICROSTEPS
+#define MICROSTEP_MODES {16, 16, 16, 16} // X Y Z E - [1,2,4,8,16,32]
 /***********************************************************************/
 
 
@@ -1481,8 +1496,8 @@
 #define BLOCK_BUFFER_SIZE 32 // maximize block buffer
 
 //The ASCII buffer for receiving from the serial:
-#define MAX_CMD_SIZE 96
-#define BUFSIZE       8
+#define MAX_CMD_SIZE  96
+#define BUFSIZE        8
 
 // Defines the number of memory slots for saving/restoring position (G60/G61)
 // The values should not be less than 1
