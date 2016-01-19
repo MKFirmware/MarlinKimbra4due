@@ -2514,7 +2514,7 @@ static void clean_up_after_endstop_move() {
         double xProbe = left_probe_bed_position + xGridSpacing * xCount;
 
         // Avoid probing the corners (outside the round or hexagon print surface) on a delta printer.
-        float distance_from_center = sqrt(xProbe*xProbe + yProbe*yProbe);
+        float distance_from_center = sqrt(xProbe * xProbe + yProbe * yProbe);
         if (distance_from_center > DELTA_PROBABLE_RADIUS) continue;
 
         bed_level[xCount][yCount] = probe_bed(xProbe, yProbe);
