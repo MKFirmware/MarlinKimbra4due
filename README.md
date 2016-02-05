@@ -11,7 +11,7 @@
 * High speed stepping of approx. 295.000 steps/s, if needed (maybe more with less DOUBLE_STEP_FREQUENCY?)
 
 ---
-# MarlinKimbra4due 3D Printer Firmware
+# MK4due 3D Printer Firmware
   * [Configuration & Compilation](/Documentation/Compilation.md)
   * Supported
     * [Features](/Documentation/Features.md)
