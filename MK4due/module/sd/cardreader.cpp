@@ -85,9 +85,8 @@ void CardReader::lsDive(const char* prepend, SdFile parent, const char* const ma
     else {
       char pn0 = p.name[0];
       if (pn0 == DIR_NAME_FREE) break;
-      if (pn0 == DIR_NAME_DELETED || pn0 == '.' || pn0 == '_') continue;
-      char lf0 = longFilename[0];
-      if (lf0 == '.' || lf0 == '_') continue;
+      if (pn0 == DIR_NAME_DELETED || pn0 == '.') continue;
+      if (longFilename[0] == '.') continue;
 
       if (!DIR_IS_FILE_OR_SUBDIR(&p)) continue;
 
@@ -167,7 +166,7 @@ void CardReader::ls()  {
       SdFile dir;
       if (!dir.open(diveDir, segment, O_READ)) {
         ECHO_E;
-        ECHO_SMV(ER, SERIAL_SD_CANT_OPEN_SUBDIR, segment);
+        ECHO_SMT(ER, SERIAL_SD_CANT_OPEN_SUBDIR, segment);
         break;
       }
 
@@ -327,8 +326,9 @@ void CardReader::openFile(char* name, bool read, bool replace_current/*=true*/, 
       }
     }
   }
-  else //relative path
+  else // relative path
     curDir = &workDir;
+
   if (read) {
     if (file.open(curDir, fname, O_READ)) {
       filesize = file.fileSize();
@@ -350,7 +350,7 @@ void CardReader::openFile(char* name, bool read, bool replace_current/*=true*/, 
     }
     else {
       saving = true;
-      ECHO_LMT(DB, SERIAL_SD_WRITE_TO_FILE, name);
+      ECHO_LMT(INFO, SERIAL_SD_WRITE_TO_FILE, name);
       if (lcd_status) lcd_setstatus(fname);
     }
   }
@@ -358,6 +358,7 @@ void CardReader::openFile(char* name, bool read, bool replace_current/*=true*/, 
 
 void CardReader::removeFile(char* name) {
   if (!cardOK) return;
+
   file.close();
   sdprinting = false;
 
@@ -431,7 +432,7 @@ void CardReader::write_command(char* buf) {
 }
 
 void CardReader::checkautostart(bool force) {
-  if (!force && (!autostart_stilltocheck || next_autostart_ms < millis()))
+  if (!force && (!autostart_stilltocheck || next_autostart_ms >= millis()))
     return;
 
   autostart_stilltocheck = false;

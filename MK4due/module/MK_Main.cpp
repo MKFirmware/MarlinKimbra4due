@@ -5621,32 +5621,18 @@ inline void gcode_M220() {
  * M221: Set extrusion percentage (M221 T0 S95)
  */
 inline void gcode_M221() {
-  if (code_seen('S')) {
-    int sval = code_value();
-    if (code_seen('T')) {
-      if (setTargetedExtruder(221)) return;
-      extruder_multiplier[target_extruder] = sval;
-    }
-    else {
-      extruder_multiplier[active_extruder] = sval;
-    }
-  }
+  if (setTargetedExtruder(221)) return;
+
+  if (code_seen('S')) extruder_multiplier[target_extruder] = code_value();
 }
 
 /**
  * M222: Set density extrusion percentage (M222 T0 S95)
  */
 inline void gcode_M222() {
-  if (code_seen('S')) {
-    int sval = code_value();
-    if (code_seen('T')) {
-      if (setTargetedExtruder(222)) return;
-      density_multiplier[target_extruder] = sval;
-    }
-    else {
-      density_multiplier[active_extruder] = sval;
-    }
-  }
+  if (setTargetedExtruder(222)) return;
+
+  if (code_seen('S')) density_multiplier[target_extruder] = code_value();
 }
 
 /**
