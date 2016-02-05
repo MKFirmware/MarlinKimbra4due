@@ -1,3 +1,9 @@
+### Version 4.2.5
+* Big Update
+* Rewrite Communication
+* Rewrite Servo
+* and more
+
 ### Version 4.2.4
 * Added Abort on endstop hit feature
 * Added Purge command G1 P<valor>
