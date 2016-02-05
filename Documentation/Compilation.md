@@ -6,7 +6,7 @@
    Use the "Download Zip" button on the right
   3. Some boards require special files and/or libraries from the Arduino directory. For Alligator Board remember copy Variants and board.txt
   4. Start the arduino IDE
-  5. 
+  5. Select File -> Preferences -> Compiler warning and select none
   6. Select Tools -> Board -> Arduino Due (Native USB port) or Alligator Board R2 3D printer controller (USB/MCU native)
   7. Select the correct serial port in Tools ->Serial Port
   8. Open MarlinKimbra4due.ino
