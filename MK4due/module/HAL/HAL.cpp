@@ -95,7 +95,7 @@ void HAL::resetHardware() {
 #ifdef DUE_SOFTWARE_SPI
   // bitbanging transfer
   // run at ~100KHz (necessary for init)
-  uint8_t spiTransfer(uint8_t b) { // using Mode 0
+  uint8_t HAL::spiTransfer(uint8_t b) { // using Mode 0
     for (int bits = 0; bits < 8; bits++) {
       if (b & 0x80) {
         WRITE(MOSI_PIN, HIGH);
@@ -117,7 +117,7 @@ void HAL::resetHardware() {
     return b;
   }
 
-  void spiBegin() {
+  void HAL::spiBegin() {
     SET_OUTPUT(SDSS);
     WRITE(SDSS, HIGH);
     SET_OUTPUT(SCK_PIN);
@@ -125,20 +125,20 @@ void HAL::resetHardware() {
     SET_OUTPUT(MOSI_PIN);
   }
 
-  void spiInit(uint8_t spiClock) {
+  void HAL::spiInit(uint8_t spiClock) {
     WRITE(SDSS, HIGH);
     WRITE(MOSI_PIN, HIGH);
     WRITE(SCK_PIN, LOW);
   }
 
-  uint8_t spiReceive() {
+  uint8_t HAL::spiReceive() {
     WRITE(SDSS, LOW);
     uint8_t b = spiTransfer(0xff);
     WRITE(SDSS, HIGH);
     return b;
   }
 
-  void spiReadBlock(uint8_t*buf, uint16_t nbyte) {
+  void HAL::spiReadBlock(uint8_t*buf, uint16_t nbyte) {
     if (nbyte == 0) return;
     WRITE(SDSS, LOW);
     for (int i = 0; i < nbyte; i++) {
@@ -147,13 +147,13 @@ void HAL::resetHardware() {
     WRITE(SDSS, HIGH);
   }
 
-  void spiSend(uint8_t b) {
+  void HAL::spiSend(uint8_t b) {
     WRITE(SDSS, LOW);
     uint8_t response = spiTransfer(b);
     WRITE(SDSS, HIGH);
   }
 
-  void spiSend(const uint8_t* buf , size_t n) {
+  void HAL::spiSend(const uint8_t* buf , size_t n) {
     uint8_t response;
     if (n == 0) return;
     WRITE(SDSS, LOW);
@@ -163,7 +163,7 @@ void HAL::resetHardware() {
     WRITE(SDSS, HIGH);
   }
 
-  void spiSendBlock(uint8_t token, const uint8_t* buf) {
+  void HAL::spiSendBlock(uint8_t token, const uint8_t* buf) {
     uint8_t response;
 
     WRITE(SDSS, LOW);
@@ -181,7 +181,7 @@ void HAL::resetHardware() {
   // hardware SPI
   // --------------------------------------------------------------------------
   bool spiInitMaded = false;
-  void spiBegin() {
+  void HAL::spiBegin() {
     if(spiInitMaded == false) {
       // Configre SPI pins
       PIO_Configure(
@@ -229,7 +229,7 @@ void HAL::resetHardware() {
     }
   }
 
-  void spiInit(uint8_t spiClock) {
+  void HAL::spiInit(uint8_t spiClock) {
     if(spiInitMaded == false) {
       if(spiClock > 4) spiClock = 1;
       #if MB(ALLIGATOR)
@@ -253,7 +253,7 @@ void HAL::resetHardware() {
   }
 
   // Write single byte to SPI
-  void spiSend(byte b) {
+  void HAL::spiSend(byte b) {
     // write byte with address and end transmission flag
     SPI0->SPI_TDR = (uint32_t)b | SPI_PCS(SPI_CHAN) | SPI_TDR_LASTXFER;
     // wait for transmit register empty
@@ -265,7 +265,7 @@ void HAL::resetHardware() {
     //delayMicroseconds(1);
   }
 
-  void spiSend(const uint8_t* buf, size_t n) {
+  void HAL::spiSend(const uint8_t* buf, size_t n) {
     if (n == 0) return;
     for (size_t i = 0; i < n - 1; i++) {
       SPI0->SPI_TDR = (uint32_t)buf[i] | SPI_PCS(SPI_CHAN);
@@ -277,7 +277,7 @@ void HAL::resetHardware() {
     spiSend(buf[n - 1]);
   }
 
-  void spiSend(uint32_t chan, byte b) {
+  void HAL::spiSend(uint32_t chan, byte b) {
     uint8_t dummy_read = 0;
     // wait for transmit register empty
     while ((SPI0->SPI_SR & SPI_SR_TDRE) == 0);
@@ -290,7 +290,7 @@ void HAL::resetHardware() {
       dummy_read = SPI0->SPI_RDR;
   }
 
-  void spiSend(uint32_t chan, const uint8_t* buf, size_t n) {
+  void HAL::spiSend(uint32_t chan, const uint8_t* buf, size_t n) {
     uint8_t dummy_read = 0;
     if (n == 0) return;
     for (int i = 0; i < n - 1; i++) {
@@ -304,7 +304,7 @@ void HAL::resetHardware() {
   }
 
   // Read single byte from SPI
-  uint8_t spiReceive() {
+  uint8_t HAL::spiReceive() {
     // write dummy byte with address and end transmission flag
     SPI0->SPI_TDR = 0x000000FF | SPI_PCS(SPI_CHAN) | SPI_TDR_LASTXFER;
     // wait for transmit register empty
@@ -317,7 +317,7 @@ void HAL::resetHardware() {
     return SPI0->SPI_RDR;
   }
 
-  uint8_t spiReceive(uint32_t chan) {
+  uint8_t HAL::spiReceive(uint32_t chan) {
     uint8_t spirec_tmp;
     // wait for transmit register empty
     while ((SPI0->SPI_SR & SPI_SR_TDRE) == 0);
@@ -334,7 +334,7 @@ void HAL::resetHardware() {
   }
 
   // Read from SPI into buffer
-  void spiReadBlock(uint8_t*buf, uint16_t nbyte) {
+  void HAL::spiReadBlock(uint8_t*buf, uint16_t nbyte) {
     if (nbyte-- == 0) return;
 
     for (int i = 0; i < nbyte; i++) {
@@ -348,7 +348,7 @@ void HAL::resetHardware() {
   }
 
   // Write from buffer to SPI
-  void spiSendBlock(uint8_t token, const uint8_t* buf) {
+  void HAL::spiSendBlock(uint8_t token, const uint8_t* buf) {
     SPI0->SPI_TDR = (uint32_t)token | SPI_PCS(SPI_CHAN);
     while ((SPI0->SPI_SR & SPI_SR_TDRE) == 0);
     //while ((SPI0->SPI_SR & SPI_SR_RDRF) == 0);
@@ -363,7 +363,7 @@ void HAL::resetHardware() {
     spiSend(buf[511]);
   }
 
-#endif // DISABLED(DUE_SOFTWARE_SPI)
+#endif // DISABLED(SOFTWARE_SPI)
 
 // --------------------------------------------------------------------------
 // eeprom
@@ -389,7 +389,7 @@ static void eeprom_init(void) {
     /*write enable*/
     eeprom_temp[0] = 6;//WREN
     digitalWrite( SPI_EEPROM1_CS, LOW );
-    spiSend(SPI_CHAN_EEPROM1, eeprom_temp , 1);
+    HAL::spiSend(SPI_CHAN_EEPROM1, eeprom_temp , 1);
     digitalWrite(SPI_EEPROM1_CS, HIGH);
     _delay_ms(1);
 
@@ -398,9 +398,9 @@ static void eeprom_init(void) {
     eeprom_temp[1] = ((pos>>8) & 0xFF);//addrH
     eeprom_temp[2] = (pos& 0xFF);//addrL
     digitalWrite(SPI_EEPROM1_CS, LOW);
-    spiSend(SPI_CHAN_EEPROM1, eeprom_temp, 3);        
+    HAL::spiSend(SPI_CHAN_EEPROM1, eeprom_temp, 3);        
 
-    spiSend(SPI_CHAN_EEPROM1 ,newvalue , 1);
+    HAL::spiSend(SPI_CHAN_EEPROM1 ,newvalue , 1);
     digitalWrite(SPI_EEPROM1_CS, HIGH);
     _delay_ms(7);   // wait for page write to complete
   }
@@ -418,9 +418,9 @@ static void eeprom_init(void) {
     eeprom_temp[2] = (pos& 0xFF);//addrL
     digitalWrite(SPI_EEPROM1_CS, HIGH);
     digitalWrite(SPI_EEPROM1_CS, LOW);
-    spiSend(SPI_CHAN_EEPROM1, eeprom_temp, 3);
+    HAL::spiSend(SPI_CHAN_EEPROM1, eeprom_temp, 3);
 
-    v = spiReceive(SPI_CHAN_EEPROM1); 
+    v = HAL::spiReceive(SPI_CHAN_EEPROM1); 
     digitalWrite(SPI_EEPROM1_CS, HIGH);
     return v;
   }
