@@ -32,47 +32,42 @@
   /**
    * Defines & Macros
    */
-  // Compiler warning on unused varable.
-  #define UNUSED(x) (void) (x)
-
-  // Macros for bit
-  #define BIT(b)                (1<<(b))
-  #define TEST(n, b)            (((n)&BIT(b))!=0)
-  #define SET_BIT(n, b, value)  (n) ^= ((-value)^(n)) & (BIT(b))
-
-  // Macros for maths shortcuts
-  #ifndef M_PI 
-    #define M_PI 3.1415926536
-  #endif
-  #define RADIANS(d) ((d)*M_PI/180.0)
-  #define DEGREES(r) ((r)*180.0/M_PI)
-  #define SIN_60 0.8660254037844386
-  #define COS_60 0.5
   #define square(x) ((x)*(x))
   #define strncpy_P(dest, src, num) strncpy((dest), (src), (num))
 
-  // Macros to support option testing
-  #define PIN_EXISTS(PN) (defined(PN##_PIN) && PN##_PIN >= 0)
-  #define HAS(FE) (HAS_##FE)
-  #define HASNT(FE) (!(HAS_##FE))
-
-  // Macros to contrain values
-  #define NOLESS(v,n) do{ if (v < n) v = n; }while(0)
-  #define NOMORE(v,n) do{ if (v > n) v = n; }while(0)
-  #define COUNT(a) (sizeof(a)/sizeof(*a))
-
   #define analogInputToDigitalPin(IO) IO
-  #define FORCE_INLINE __attribute__((always_inline)) inline
 
   #define CRITICAL_SECTION_START	uint32_t primask=__get_PRIMASK(); __disable_irq();
   #define CRITICAL_SECTION_END    if (primask==0) __enable_irq();
 
-  #if defined(ARDUINO) && ARDUINO >= 100
-    #include "Arduino.h"
-  #else
-    #include "WProgram.h"
-    #define COMPAT_PRE1
-  #endif
+  #define SPR0    0
+  #define SPR1    1
+
+  #define PACK    __attribute__ ((packed))
+
+  #define READ_VAR(pin) (g_APinDescription[pin].pPort->PIO_PDSR & g_APinDescription[pin].ulPin ? 1 : 0) // does return 0 or pin value
+  #define _READ(pin) (DIO ##  pin ## _PORT->PIO_PDSR & DIO ##  pin ## _PIN ? 1 : 0) // does return 0 or pin value
+  #define READ(pin) _READ(pin)
+
+  #define	WRITE_VAR(pin, v) do{if(v) {g_APinDescription[pin].pPort->PIO_SODR = g_APinDescription[pin].ulPin;} else {g_APinDescription[pin].pPort->PIO_CODR = g_APinDescription[pin].ulPin; }}while(0)
+  #define		_WRITE(port, v)			do { if (v) {DIO ##  port ## _PORT -> PIO_SODR = DIO ## port ## _PIN; } else {DIO ##  port ## _PORT->PIO_CODR = DIO ## port ## _PIN; }; } while (0)
+  #define WRITE(pin,v) _WRITE(pin,v)
+
+  #define	SET_INPUT(pin)  pmc_enable_periph_clk(g_APinDescription[pin].ulPeripheralId); \
+                          PIO_Configure(g_APinDescription[pin].pPort, PIO_INPUT, g_APinDescription[pin].ulPin, 0)
+  #define	SET_OUTPUT(pin) PIO_Configure(g_APinDescription[pin].pPort, PIO_OUTPUT_1, \
+                                        g_APinDescription[pin].ulPin, g_APinDescription[pin].ulPinConfiguration)
+
+  #define TOGGLE(pin) WRITE(pin,!READ(pin))
+  #define TOGGLE_VAR(pin) HAL::digitalWrite(pin,!HAL::digitalRead(pin))
+
+  // Write doesn't work for pullups
+  #define   PULLUP(IO, v)   { pinMode(IO, (v!=LOW ? INPUT_PULLUP : INPUT)); }
+
+  #undef LOW
+  #define LOW         0
+  #undef HIGH
+  #define HIGH        1
 
   /**
    * Types
@@ -125,39 +120,56 @@
 
       virtual ~HAL();
 
+      #ifdef DUE_SOFTWARE_SPI
+        uint8_t spiTransfer(uint8_t b); // using Mode 0
+        static void spiBegin();
+        static void spiInit(uint8_t spiClock);
+        static uint8_t spiReceive();
+        static void spiReadBlock(uint8_t*buf, uint16_t nbyte);
+        static void spiSend(uint8_t b);
+        static void spiSend(const uint8_t* buf , size_t n) ;
+        static void spiSendBlock(uint8_t token, const uint8_t* buf);
+      #else
+        // Hardware setup
+        static void spiBegin();
+        static void spiInit(uint8_t spiClock);
+        // Write single byte to SPI
+        static void spiSend(byte b);
+        static void spiSend(const uint8_t* buf, size_t n);
+        static void spiSend(uint32_t chan, byte b);
+        static void spiSend(uint32_t chan , const uint8_t* buf , size_t n);
+        // Read single byte from SPI
+        static uint8_t spiReceive();
+        static uint8_t spiReceive(uint32_t chan);
+        // Read from SPI into buffer
+        static void spiReadBlock(uint8_t* buf, uint16_t nbyte);
+        // Write from buffer to SPI
+        static void spiSendBlock(uint8_t token, const uint8_t* buf);
+      #endif
+
+      static inline void digitalWrite(uint8_t pin, uint8_t value) {
+        WRITE_VAR(pin, value);
+      }
+      static inline uint8_t digitalRead(uint8_t pin) {
+        return READ_VAR(pin);
+      }
+      static inline void pinMode(uint8_t pin, uint8_t mode) {
+        if (mode == INPUT) {
+          SET_INPUT(pin);
+        }
+        else SET_OUTPUT(pin);
+      }
+
+      static inline unsigned long timeInMilliseconds() {
+        return millis();
+      }
+
       static void showStartReason();
       static int getFreeRam();
       static void resetHardware();
     protected:
     private:
   };
-
-  #ifdef DUE_SOFTWARE_SPI
-    inline uint8_t spiTransfer(uint8_t b); // using Mode 0
-    inline void spiBegin();
-    inline void spiInit(uint8_t spiClock);
-    inline uint8_t spiReceive();
-    inline void spiReadBlock(uint8_t*buf, uint16_t nbyte);
-    inline void spiSend(uint8_t b);
-    inline void spiSend(const uint8_t* buf , size_t n) ;
-    inline void spiSendBlock(uint8_t token, const uint8_t* buf);
-  #else
-    // Hardware setup
-    void spiBegin();
-    void spiInit(uint8_t spiClock);
-    // Write single byte to SPI
-    void spiSend(byte b);
-    void spiSend(const uint8_t* buf, size_t n);
-    void spiSend(uint32_t chan, byte b);
-    void spiSend(uint32_t chan , const uint8_t* buf , size_t n);
-    // Read single byte from SPI
-    uint8_t spiReceive();
-    uint8_t spiReceive(uint32_t chan);
-    // Read from SPI into buffer
-    void spiReadBlock(uint8_t* buf, uint16_t nbyte);
-    // Write from buffer to SPI
-    void spiSendBlock(uint8_t token, const uint8_t* buf);
-  #endif
 
   // Disable interrupts
   void cli(void);
@@ -222,11 +234,10 @@
   }
 
   int HAL_timer_get_count (uint8_t timer_num);
-  //
 
   void tone(uint8_t pin, int frequency);
   void noTone(uint8_t pin);
-  //void tone(uint8_t pin, int frequency, long duration);
+  // void tone(uint8_t pin, int frequency, long duration);
 
   uint16_t getAdcReading(adc_channel_num_t chan);
   void startAdcConversion(adc_channel_num_t chan);

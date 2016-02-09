@@ -27,7 +27,7 @@
     digitalWrite( SPI_EEPROM2_CS , HIGH );
     digitalWrite( SPI_FLASH_CS , HIGH );
     digitalWrite( SDSS , HIGH );
-    spiBegin();
+    HAL::spiBegin();
 
     //init onboard DAC
     delayMicroseconds(2U);
@@ -37,7 +37,7 @@
     delayMicroseconds(2U);
     digitalWrite( DAC0_SYNC , LOW );
 
-    spiSend(SPI_CHAN_DAC,externalDac_buf , 2);
+    HAL::spiSend(SPI_CHAN_DAC,externalDac_buf , 2);
     digitalWrite( DAC0_SYNC , HIGH );
 
     #if DRIVER_EXTRUDERS > 1
@@ -49,7 +49,7 @@
       delayMicroseconds(2U);
       digitalWrite( DAC1_SYNC , LOW );
 
-      spiSend(SPI_CHAN_DAC,externalDac_buf , 2);
+      HAL::spiSend(SPI_CHAN_DAC,externalDac_buf , 2);
       digitalWrite( DAC1_SYNC , HIGH );
     #endif
 
@@ -100,7 +100,7 @@
     }
 
     delayMicroseconds(2U);
-    spiSend(SPI_CHAN_DAC,externalDac_buf , 2);
+    HAL::spiSend(SPI_CHAN_DAC,externalDac_buf , 2);
 
     return;
   }
