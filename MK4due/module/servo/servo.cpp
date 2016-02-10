@@ -241,7 +241,7 @@ void Servo::write(int value)
 
     value = map(value, 0, 180, SERVO_MIN(), SERVO_MAX());
   }
-  writeMicroseconds(value);
+  this->writeMicroseconds(value);
 }
 
 void Servo::writeMicroseconds(int value)
