@@ -5683,15 +5683,7 @@ inline void gcode_M226() {
       if (code_seen('S')) {
         servo_position = code_value_short();
         if (servo_index >= 0 && servo_index < NUM_SERVOS && servo_index != DONDOLO_SERVO_INDEX) {
-          Servo *srv = &servo[servo_index];
-          #if HAS(SERVO_ENDSTOPS)
-            srv->attach(0);
-          #endif
-            srv->write(servo_position);
-          #if HAS(SERVO_ENDSTOPS)
-            delay_ms(SERVO_DEACTIVATION_DELAY);
-            srv->detach();
-          #endif
+          servo[servo_index].move(servo_position);
         }
         else if(servo_index == DONDOLO_SERVO_INDEX) {
           Servo *srv = &servo[servo_index];
@@ -5709,15 +5701,7 @@ inline void gcode_M226() {
       if (code_seen('S')) {
         servo_position = code_value_short();
         if (servo_index >= 0 && servo_index < NUM_SERVOS) {
-          Servo *srv = &servo[servo_index];
-          #if HAS(SERVO_ENDSTOPS)
-            srv->attach(0);
-          #endif
-          srv->write(servo_position);
-          #if HAS(SERVO_ENDSTOPS)
-            delay_ms(SERVO_DEACTIVATION_DELAY);
-            srv->detach();
-          #endif
+          servo[servo_index].move(servo_position);
         }
         else {
           ECHO_SM(ER, "Servo ");
@@ -5741,7 +5725,7 @@ inline void gcode_M226() {
     uint16_t beepS = code_seen('S') ? code_value_short() : 100;
     uint32_t beepP = code_seen('P') ? code_value_long() : 1000;
     if (beepP > 5000) beepP = 5000; // limit to 5 seconds
-    buzz(beepP, beepS);
+    buzz(beepS, beepP);
   }
 
 #endif // HAS(BUZZER)
