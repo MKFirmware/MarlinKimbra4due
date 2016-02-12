@@ -573,7 +573,7 @@ int HAL_timer_get_count (uint8_t timer_num) {
 // Due have no tone, this is from Repetier 0.92.3
 static uint32_t tone_pin;
 
-void tone(uint8_t pin, int frequency) {
+void tone(uint8_t pin, int frequency, long duration) {
   // set up timer counter 1 channel 0 to generate interrupts for
   // toggling output pin.  
   
@@ -598,6 +598,8 @@ void tone(uint8_t pin, int frequency) {
   tc->TC_CHANNEL[channel].TC_IER=TC_IER_CPCS;
   tc->TC_CHANNEL[channel].TC_IDR=~TC_IER_CPCS;
   NVIC_EnableIRQ((IRQn_Type)irq);
+  delay(duration);
+  noTone(pin);
 }
 
 void noTone(uint8_t pin) {
