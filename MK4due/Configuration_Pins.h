@@ -69,10 +69,10 @@
 #define FAN_PIN         ORIG_FAN_PIN
 
 // PS ON pin
-#define PS_ON_PIN       ORIG_PS_ON_PIN
+#define PS_ON_PIN        ORIG_PS_ON_PIN
 
 // BEEPER pin
-#define BEEPER_PIN      ORIG_BEEPER_PIN
+#define BEEPER_PIN       ORIG_BEEPER_PIN
 
 //============================================================================
 
