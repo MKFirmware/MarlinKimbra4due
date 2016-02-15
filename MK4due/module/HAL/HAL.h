@@ -121,7 +121,7 @@
       virtual ~HAL();
 
       #ifdef DUE_SOFTWARE_SPI
-        uint8_t spiTransfer(uint8_t b); // using Mode 0
+        static uint8_t spiTransfer(uint8_t b); // using Mode 0
         static void spiBegin();
         static void spiInit(uint8_t spiClock);
         static uint8_t spiReceive();
