@@ -61,6 +61,9 @@
   #define TOGGLE(pin) WRITE(pin,!READ(pin))
   #define TOGGLE_VAR(pin) HAL::digitalWrite(pin,!HAL::digitalRead(pin))
 
+  // Shorthand
+  #define OUT_WRITE(IO, v)  { SET_OUTPUT(IO); WRITE(IO, v); }
+
   // Write doesn't work for pullups
   #define   PULLUP(IO, v)   { pinMode(IO, (v!=LOW ? INPUT_PULLUP : INPUT)); }
 
