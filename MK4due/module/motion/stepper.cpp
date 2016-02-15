@@ -57,11 +57,11 @@ volatile static unsigned long step_events_completed; // The number of step event
 #if ENABLED(ADVANCE)
   static long advance_rate, advance, final_advance = 0;
   static long old_advance = 0;
-  static long e_steps[4];
+  static long e_steps[6];
 #endif
 
 static long acceleration_time, deceleration_time;
-//static unsigned long accelerate_until, decelerate_after, acceleration_rate, initial_rate, final_rate, nominal_rate;
+// static unsigned long accelerate_until, decelerate_after, acceleration_rate, initial_rate, final_rate, nominal_rate;
 static unsigned long acc_step_rate; // needed for deceleration start point
 static char step_loops;
 static unsigned long OCR1A_nominal;
@@ -90,10 +90,14 @@ static volatile char endstop_hit_bits = 0; // use X_MIN, Y_MIN, Z_MIN and Z_PROB
   int motor_current_setting[3] = DEFAULT_PWM_MOTOR_CURRENT;
 #endif
 
+#if ENABLED(COLOR_MIXING_EXTRUDER)
+  static long counter_m[DRIVER_EXTRUDERS];
+#endif
+
 static bool check_endstops = true;
 
-volatile long count_position[NUM_AXIS] = { 0 };
-volatile signed char count_direction[NUM_AXIS] = { 1, 1, 1, 1 };
+volatile long count_position[NUM_AXIS] = { 0 }; // Positions of stepper motors, in step units
+volatile signed char count_direction[NUM_AXIS] = { 1 };
 
 
 //===========================================================================
@@ -222,14 +226,7 @@ void checkHitEndstops() {
   }
 }
 
-void enable_endstops(bool check) {
-  if (debugLevel & DEBUG_DEBUG) {
-    ECHO_SM(DB, "setup_for_endstop_move > enable_endstops");
-    if (check) ECHO_EM("(true)");
-    else ECHO_EM("(false)");
-  }
-  check_endstops = check;
-}
+void enable_endstops(bool check) { check_endstops = check; }
 
 // Check endstops
 inline void update_endstops() {
@@ -540,7 +537,13 @@ FORCE_INLINE void trapezoid_generator_reset() {
     advance = current_block->initial_advance;
     final_advance = current_block->final_advance;
     // Do E steps + advance steps
-    e_steps[current_block->active_driver] += ((advance >>8) - old_advance);
+    #if ENABLED(COLOR_MIXING_EXTRUDER)
+      // Move mixing steppers proportionally
+      for (int8_t j = 0; j < DRIVER_EXTRUDERS; j++)
+        e_steps[j] += ((advance >> 8) - old_advance) * current_block->mix_steps[j] / current_block->step_event_count;
+    #else
+      e_steps[current_block->active_driver] += ((advance >> 8) - old_advance);
+    #endif
     old_advance = advance >>8;
   #endif
   deceleration_time = 0;
@@ -569,7 +572,7 @@ HAL_STEP_TIMER_ISR {
       if ((cleaning_buffer_counter == 1) && (SD_FINISHED_STEPPERRELEASE)) enqueuecommands_P(PSTR(SD_FINISHED_RELEASECOMMAND));
     #endif
     cleaning_buffer_counter--;
-    HAL_timer_stepper_count(HAL_TIMER_RATE / 200); //5ms wait
+    HAL_timer_stepper_count(HAL_TIMER_RATE / 200); // 5ms wait
     return;
   }
 
@@ -580,8 +583,15 @@ HAL_STEP_TIMER_ISR {
     if (current_block) {
       current_block->busy = true;
       trapezoid_generator_reset();
-      counter_x = -(current_block->step_event_count >> 1);
-      counter_y = counter_z = counter_e = counter_x;
+
+      // Initialize Bresenham counters to 1/2 the ceiling
+      long new_count = -(current_block->step_event_count >> 1);
+      counter_x = counter_y = counter_z = counter_e = new_count;
+
+      #if ENABLED(COLOR_MIXING_EXTRUDER)
+        for (int8_t e = 0; e < DRIVER_EXTRUDERS; e++) counter_m[e] = new_count;
+      #endif
+
       step_events_completed = 0;
 
       #if ENABLED(Z_LATE_ENABLE)
@@ -627,33 +637,76 @@ HAL_STEP_TIMER_ISR {
           counter_e += current_block->steps[E_AXIS];
           if (counter_e > 0) {
             counter_e -= current_block->step_event_count;
-            e_steps[current_block->active_driver] += TEST(out_bits, E_AXIS) ? -1 : 1;
+            #if DISABLED(COLOR_MIXING_EXTRUDER)
+              // Don't step E for mixing extruder
+              e_steps[current_block->active_driver] += TEST(out_bits, E_AXIS) ? -1 : 1;
+            #endif;
           }
+          #if ENABLED(COLOR_MIXING_EXTRUDER)
+            long dir = TEST(out_bits, E_AXIS) ? -1 : 1;
+            for (uint8_t j = 0; j < DRIVER_EXTRUDERS; j++) {
+              counter_m[j] += current_block->mix_steps[j];
+              if (counter_m[j] > 0) {
+                counter_m[j] -= current_block->step_event_count;
+                e_steps[j] += dir;
+              }
+            }
+          #endif // !COLOR_MIXING_EXTRUDER
         #endif //ADVANCE
 
-        STEP_START(x,X);
-        STEP_START(y,Y);
-        STEP_START(z,Z);
-        #ifndef ADVANCE
-          STEP_START(e,E);
+        STEP_START(x, X);
+        STEP_START(y, Y);
+        STEP_START(z, Z);
+        #if DISABLED(ADVANCE)
+          #if ENABLED(COLOR_MIXING_EXTRUDER)
+            counter_e += current_block->steps[E_AXIS];
+            for (uint8_t j = 0; j < DRIVER_EXTRUDERS; j++) {
+              counter_m[j] += current_block->mix_steps[j];
+              if (counter_m[j] > 0) En_STEP_WRITE(j, !INVERT_E_STEP_PIN);
+            }
+          #else
+            STEP_START(e, E);
+          #endif
         #endif
 
         STEP_END(x, X);
         STEP_END(y, Y);
         STEP_END(z, Z);
         #if DISABLED(ADVANCE)
-          STEP_END(e, E);
+          #if ENABLED(MIXING_EXTRUDER_FEATURE)
+            // Always count the single E axis
+            if (counter_e > 0) {
+              counter_e -= current_block->step_event_count;
+              count_position[E_AXIS] += count_direction[E_AXIS];
+            }
+            for (int8_t j = 0; j < DRIVER_EXTRUDERS; j++) {
+              if (counter_m[j] > 0) {
+                counter_m[j] -= current_block->step_event_count;
+                En_STEP_WRITE(j, INVERT_E_STEP_PIN);
+              }
+            }
+          #else
+            STEP_END(e, E);
+          #endif
         #endif
 
         step_events_completed++;
         if (step_events_completed >= current_block->step_event_count) break;
       }
     #else
-      STEP_START(x,X);
-      STEP_START(y,Y);
-      STEP_START(z,Z);
+      STEP_START(x, X);
+      STEP_START(y, Y);
+      STEP_START(z, Z);
       #if DISABLED(ADVANCE)
-        STEP_START(e,E);
+        #if ENABLED(COLOR_MIXING_EXTRUDER)
+          counter_e += current_block->steps[E_AXIS];
+          for (uint8_t j = 0; j < DRIVER_EXTRUDERS; j++) {
+            counter_m[j] += current_block->mix_steps[j];
+            if (counter_m[j] > 0) En_STEP_WRITE(j, !INVERT_E_STEP_PIN);
+          }
+        #else
+          STEP_START(e, E);
+        #endif
       #endif
       step_events_completed++;
     #endif
@@ -720,8 +773,22 @@ HAL_STEP_TIMER_ISR {
       STEP_END(x, X);
       STEP_END(y, Y);
       STEP_END(z, Z);
-      #ifndef ADVANCE
-        STEP_END(e, E);
+      #if DISABLED(ADVANCE)
+        #if ENABLED(MIXING_EXTRUDER_FEATURE)
+          // Always count the single E axis
+          if (counter_e > 0) {
+            counter_e -= current_block->step_event_count;
+            count_position[E_AXIS] += count_direction[E_AXIS];
+          }
+          for (int8_t j = 0; j < DRIVER_EXTRUDERS; j++) {
+            if (counter_m[j] > 0) {
+              counter_m[j] -= current_block->step_event_count;
+              En_STEP_WRITE(j, INVERT_E_STEP_PIN);
+            }
+          }
+        #else
+          STEP_END(e, E);
+        #endif
       #endif
     #endif
 
@@ -816,6 +883,36 @@ HAL_STEP_TIMER_ISR {
           }
         }
       #endif
+      #if DRIVER_EXTRUDERS > 4
+        if (e_steps[4] != 0) {
+          E4_STEP_WRITE(INVERT_E_STEP_PIN);
+          if (e_steps[4] < 0) {
+            E4_DIR_WRITE(INVERT_E4_DIR);
+            e_steps[4]++;
+            E4_STEP_WRITE(!INVERT_E_STEP_PIN);
+          }
+          else if (e_steps[4] > 0) {
+            E4_DIR_WRITE(!INVERT_E4_DIR);
+            e_steps[4]--;
+            E4_STEP_WRITE(!INVERT_E_STEP_PIN);
+          }
+        }
+      #endif
+      #if DRIVER_EXTRUDERS > 5
+        if (e_steps[5] != 0) {
+          E5_STEP_WRITE(INVERT_E_STEP_PIN);
+          if (e_steps[5] < 0) {
+            E5_DIR_WRITE(INVERT_E5_DIR);
+            e_steps[5]++;
+            E5_STEP_WRITE(!INVERT_E_STEP_PIN);
+          }
+          else if (e_steps[5] > 0) {
+            E5_DIR_WRITE(!INVERT_E5_DIR);
+            e_steps[5]--;
+            E5_STEP_WRITE(!INVERT_E_STEP_PIN);
+          }
+        }
+      #endif
     }
   }
 #endif // ADVANCE
@@ -864,6 +961,12 @@ void st_init() {
   #if HAS(E3_DIR)
     E3_DIR_INIT;
   #endif
+  #if HAS(E4_DIR)
+    E4_DIR_INIT;
+  #endif
+  #if HAS(E5_DIR)
+    E5_DIR_INIT;
+  #endif
 
   //Initialize Enable Pins - steppers default to disabled.
 
@@ -909,6 +1012,14 @@ void st_init() {
     E3_ENABLE_INIT;
     if (!E_ENABLE_ON) E3_ENABLE_WRITE(HIGH);
   #endif
+  #if HAS(E4_ENABLE)
+    E4_ENABLE_INIT;
+    if (!E_ENABLE_ON) E4_ENABLE_WRITE(HIGH);
+  #endif
+  #if HAS(E5_ENABLE)
+    E5_ENABLE_INIT;
+    if (!E_ENABLE_ON) E5_ENABLE_WRITE(HIGH);
+  #endif
 
   //Choice E0-E1 or E0-E2 or E1-E3 pin
   #if ENABLED(MKR4) && HAS(E0E1)
@@ -919,6 +1030,12 @@ void st_init() {
   #endif
   #if ENABLED(MKR4) && HAS(E0E3)
     OUT_WRITE_RELE(E0E3_CHOICE_PIN, LOW);
+  #endif
+  #if ENABLED(MKR4) && HAS(E0E4)
+    OUT_WRITE_RELE(E0E4_CHOICE_PIN, LOW);
+  #endif
+  #if ENABLED(MKR4) && HAS(E0E5)
+    OUT_WRITE_RELE(E0E5_CHOICE_PIN, LOW);
   #endif
   #if ENABLED(MKR4) && HAS(E1E3)
     OUT_WRITE_RELE(E1E3_CHOICE_PIN, LOW);
@@ -1039,6 +1156,12 @@ void st_init() {
   #endif
   #if HAS(E3_STEP)
     E_AXIS_INIT(3);
+  #endif
+  #if HAS(E4_STEP)
+    E_AXIS_INIT(4);
+  #endif
+  #if HAS(E5_STEP)
+    E_AXIS_INIT(5);
   #endif
 
   HAL_step_timer_start();
