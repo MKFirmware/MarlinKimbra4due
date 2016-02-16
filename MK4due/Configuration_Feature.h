@@ -1077,7 +1077,7 @@
  
 #define SHOW_BOOTSCREEN
 #define STRING_SPLASH_LINE1 "v" SHORT_BUILD_VERSION       // will be shown during bootup in line 1
-//#define STRING_SPLASH_LINE2 STRING_DISTRIBUTION_DATE    // will be shown during bootup in line 2
+#define STRING_SPLASH_LINE2 STRING_DISTRIBUTION_DATE      // will be shown during bootup in line 2
 #define SPLASH_SCREEN_DURATION 5000                       // SPLASH SCREEN duration in millisecond
 
 //#define LCD_SCREEN_ROT_90    //Rotate screen orientation for graphics display by 90 degree clockwise
