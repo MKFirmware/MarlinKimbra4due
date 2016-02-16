@@ -482,26 +482,7 @@ void set_stepper_direction(bool onlye) {
     }
   }
 
-  #if DISABLED(ADVANCE) && ENABLED(DONDOLO)
-    if (TEST(out_bits, E_AXIS)) {
-      switch(active_extruder) {
-        case 0:
-          REV_E_DIR(); break;
-        case 1:
-          NORM_E_DIR(); break;
-      }
-      count_direction[E_AXIS] = -1;
-    }
-    else {
-      switch(active_extruder) {
-        case 0:
-          NORM_E_DIR(); break;
-        case 1:
-          REV_E_DIR(); break;
-      }
-      count_direction[E_AXIS] = 1;
-    }
-  #elif DISABLED(ADVANCE)
+  #if DISABLED(ADVANCE)
     if (TEST(out_bits, E_AXIS)) {
       REV_E_DIR();
       count_direction[E_AXIS] = -1;
@@ -589,7 +570,7 @@ HAL_STEP_TIMER_ISR {
       counter_x = counter_y = counter_z = counter_e = new_count;
 
       #if ENABLED(COLOR_MIXING_EXTRUDER)
-        for (int8_t e = 0; e < DRIVER_EXTRUDERS; e++) counter_m[e] = new_count;
+        for (int8_t i = 0; i < DRIVER_EXTRUDERS; i++) counter_m[i] = new_count;
       #endif
 
       step_events_completed = 0;
@@ -597,7 +578,7 @@ HAL_STEP_TIMER_ISR {
       #if ENABLED(Z_LATE_ENABLE)
         if (current_block->steps[Z_AXIS] > 0) {
           enable_z();
-          HAL_timer_set_count (STEP_TIMER_COUNTER, STEP_TIMER_CHANNEL, HAL_TIMER_RATE / 1000); //1ms wait
+          HAL_timer_set_count (STEP_TIMER_COUNTER, STEP_TIMER_CHANNEL, HAL_TIMER_RATE / 1000); // 1ms wait
           return;
         }
       #endif
@@ -644,7 +625,7 @@ HAL_STEP_TIMER_ISR {
           }
           #if ENABLED(COLOR_MIXING_EXTRUDER)
             long dir = TEST(out_bits, E_AXIS) ? -1 : 1;
-            for (uint8_t j = 0; j < DRIVER_EXTRUDERS; j++) {
+            for (int8_t j = 0; j < DRIVER_EXTRUDERS; j++) {
               counter_m[j] += current_block->mix_steps[j];
               if (counter_m[j] > 0) {
                 counter_m[j] -= current_block->step_event_count;
@@ -660,9 +641,13 @@ HAL_STEP_TIMER_ISR {
         #if DISABLED(ADVANCE)
           #if ENABLED(COLOR_MIXING_EXTRUDER)
             counter_e += current_block->steps[E_AXIS];
-            for (uint8_t j = 0; j < DRIVER_EXTRUDERS; j++) {
-              counter_m[j] += current_block->mix_steps[j];
-              if (counter_m[j] > 0) En_STEP_WRITE(j, !INVERT_E_STEP_PIN);
+            if (counter_e > 0) {
+              for (int8_t j = 0; j < DRIVER_EXTRUDERS; j++) {
+                counter_m[j] += current_block->mix_steps[j];
+                if (counter_m[j] > 0) En_STEP_WRITE(j, !INVERT_E_STEP_PIN);
+              }
+              counter_e -= current_block->step_event_count;
+              count_position[E_AXIS] += count_direction[E_AXIS];
             }
           #else
             STEP_START(e, E);
@@ -673,12 +658,7 @@ HAL_STEP_TIMER_ISR {
         STEP_END(y, Y);
         STEP_END(z, Z);
         #if DISABLED(ADVANCE)
-          #if ENABLED(MIXING_EXTRUDER_FEATURE)
-            // Always count the single E axis
-            if (counter_e > 0) {
-              counter_e -= current_block->step_event_count;
-              count_position[E_AXIS] += count_direction[E_AXIS];
-            }
+          #if ENABLED(COLOR_MIXING_EXTRUDER)
             for (int8_t j = 0; j < DRIVER_EXTRUDERS; j++) {
               if (counter_m[j] > 0) {
                 counter_m[j] -= current_block->step_event_count;
@@ -700,9 +680,13 @@ HAL_STEP_TIMER_ISR {
       #if DISABLED(ADVANCE)
         #if ENABLED(COLOR_MIXING_EXTRUDER)
           counter_e += current_block->steps[E_AXIS];
-          for (uint8_t j = 0; j < DRIVER_EXTRUDERS; j++) {
-            counter_m[j] += current_block->mix_steps[j];
-            if (counter_m[j] > 0) En_STEP_WRITE(j, !INVERT_E_STEP_PIN);
+          if (counter_e > 0) {
+            for (int8_t j = 0; j < DRIVER_EXTRUDERS; j++) {
+              counter_m[j] += current_block->mix_steps[j];
+              if (counter_m[j] > 0) En_STEP_WRITE(j, !INVERT_E_STEP_PIN);
+            }
+            counter_e -= current_block->step_event_count;
+            count_position[E_AXIS] += count_direction[E_AXIS];
           }
         #else
           STEP_START(e, E);
@@ -774,12 +758,7 @@ HAL_STEP_TIMER_ISR {
       STEP_END(y, Y);
       STEP_END(z, Z);
       #if DISABLED(ADVANCE)
-        #if ENABLED(MIXING_EXTRUDER_FEATURE)
-          // Always count the single E axis
-          if (counter_e > 0) {
-            counter_e -= current_block->step_event_count;
-            count_position[E_AXIS] += count_direction[E_AXIS];
-          }
+        #if ENABLED(COLOR_MIXING_EXTRUDER)
           for (int8_t j = 0; j < DRIVER_EXTRUDERS; j++) {
             if (counter_m[j] > 0) {
               counter_m[j] -= current_block->step_event_count;
