@@ -13,7 +13,7 @@ static char serial_answer;
 
 void FirmwareTest() {
   ECHO_EM("---------- FIRMWARE TEST --------------");
-  ECHO_EM("--------- by MarlinKimbra -------------");
+  ECHO_EM("--------------- MK --------------------");
   ECHO_EV(MSG_FWTEST_01);
   ECHO_EV(MSG_FWTEST_02);
   ECHO_EV(MSG_FWTEST_YES_NO);
