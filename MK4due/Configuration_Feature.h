@@ -405,12 +405,16 @@
  ***********************************************************************
  *                                                                     *
  * Extends G0/G1 with mixing factors ABCDHI for up to 6 steppers.      *
- * Adds a new code, M223, to set the current mix factors.              *
+ * Adds a new code, M165, to set the current mix factors.              *
+ * Optional support for Repetier Host M163, M164, and virtual tools.   *
  * Extends the stepping routines to move multiple steppers in          *
  * proportion to the mix.                                              *
  *                                                                     *
  ***********************************************************************/
 //#define COLOR_MIXING_EXTRUDER
+
+// Use the Virtual Tool method with M163 and M164
+#define MIXING_VIRTUAL_TOOLS 16
 /***********************************************************************/
 
 
