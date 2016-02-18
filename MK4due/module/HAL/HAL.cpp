@@ -598,7 +598,7 @@ void tone(uint8_t pin, int frequency, long duration) {
   tc->TC_CHANNEL[channel].TC_IER=TC_IER_CPCS;
   tc->TC_CHANNEL[channel].TC_IDR=~TC_IER_CPCS;
   NVIC_EnableIRQ((IRQn_Type)irq);
-  delay(duration);
+  delay(2 * frequency * duration / 1000);
   noTone(pin);
 }
 
@@ -615,11 +615,11 @@ void noTone(uint8_t pin) {
 
 // IRQ handler for tone generator
 HAL_BEEPER_TIMER_ISR {
-    static bool toggle;
+  static bool toggle;
 
-    HAL_timer_isr_status(BEEPER_TIMER_COUNTER, BEEPER_TIMER_CHANNEL);
-    WRITE_VAR(tone_pin, toggle);
-    toggle = !toggle;
+  HAL_timer_isr_status(BEEPER_TIMER_COUNTER, BEEPER_TIMER_CHANNEL);
+  WRITE_VAR(tone_pin, toggle);
+  toggle = !toggle;
 }
 
 // --------------------------------------------------------------------------
