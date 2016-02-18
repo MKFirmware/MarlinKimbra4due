@@ -238,7 +238,7 @@
 
   int HAL_timer_get_count (uint8_t timer_num);
 
-  void tone(uint8_t pin, int frequency, long duration);
+  void tone(uint8_t pin, int frequency, unsigned long duration);
   void noTone(uint8_t pin);
   // void tone(uint8_t pin, int frequency, long duration);
 
