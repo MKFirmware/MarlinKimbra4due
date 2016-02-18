@@ -22,14 +22,14 @@
 static void ST7920_SWSPI_SND_8BIT(uint8_t val) {
   uint8_t i;
   for (i = 0; i < 8; i++) {
-    digitalWrite(ST7920_CLK_PIN,0);
-    digitalWrite(ST7920_DAT_PIN,val&0x80); 
+    digitalWrite(ST7920_CLK_PIN, 0);
+    digitalWrite(ST7920_DAT_PIN, val&0x80); 
     val<<=1;
     digitalWrite(ST7920_CLK_PIN,1);
   }
 }
 
-#define ST7920_CS()              {digitalWrite(ST7920_CS_PIN,1);u8g_10MicroDelay();}
+#define ST7920_CS()              {digitalWrite(ST7920_CS_PIN, 1); u8g_10MicroDelay();}
 #define ST7920_NCS()             {digitalWrite(ST7920_CS_PIN,0);}
 #define ST7920_SET_CMD()         {ST7920_SWSPI_SND_8BIT(0xf8);u8g_10MicroDelay();}
 #define ST7920_SET_DAT()         {ST7920_SWSPI_SND_8BIT(0xfa);u8g_10MicroDelay();}
