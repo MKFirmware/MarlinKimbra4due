@@ -1230,9 +1230,9 @@ void disable_all_heaters() {
     max6675_temp = 0;
 
     #ifdef PRR
-      PRR &= ~BIT(PRSPI);
+      BITCLR(PRR, PRSPI);
     #elif defined(PRR0)
-      PRR0 &= ~BIT(PRSPI);
+      BITCLR(PRR0, PRSPI);
     #endif
 
     SPCR = BIT(MSTR) | BIT(SPE) | BIT(SPR0);
@@ -1246,13 +1246,13 @@ void disable_all_heaters() {
 
     // read MSB
     SPDR = 0;
-    for (; (SPSR & BIT(SPIF)) == 0;);
+    for (; !TEST(SPSR, SPIF););
     max6675_temp = SPDR;
     max6675_temp <<= 8;
 
     // read LSB
     SPDR = 0;
-    for (; (SPSR & BIT(SPIF)) == 0;);
+    for (; !TEST(SPSR, SPIF););
     max6675_temp |= SPDR;
 
     // disable TT_MAX6675
@@ -1298,8 +1298,8 @@ enum TempState {
 HAL_TEMP_TIMER_ISR {
   //these variables are only accesible from the ISR, but static, so they don't lose their value
   static unsigned char temp_count = 0;
-  static unsigned long raw_temp_value[4] = { 0 };
-  static unsigned long raw_temp_bed_value = 0;
+  static uint32_t raw_temp_value[4] = { 0 };
+  static uint32_t raw_temp_bed_value = 0;
   static TempState temp_state = StartupDelay;
   static unsigned char pwm_count = BIT(SOFT_PWM_SCALE);
   static int max_temp[5] = { 0 };
