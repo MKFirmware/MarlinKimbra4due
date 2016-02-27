@@ -98,7 +98,8 @@
  *
  *  M???  S               IDLE_OOZING_enabled
  *
- *
+ * ALLIGATOR:
+ *  M906  XYZ T0-4 E      Motor current
  *
  */
 
@@ -256,6 +257,10 @@ void Config_StoreSettings() {
     EEPROM_WRITE_VAR(i, IDLE_OOZING_enabled);
   #endif
 
+  #if MB(ALLIGATOR)
+    EEPROM_WRITE_VAR(i, motor_current);
+  #endif
+
   char ver2[4] = EEPROM_VERSION;
   int j = EEPROM_OFFSET;
   EEPROM_WRITE_VAR(j, ver2); // validate data
@@ -406,6 +411,10 @@ void Config_RetrieveSettings() {
       EEPROM_READ_VAR(i, IDLE_OOZING_enabled);
     #endif
 
+    #if MB(ALLIGATOR)
+      EEPROM_READ_VAR(i, motor_current);
+    #endif
+
     // Call updatePID (similar to when we have processed M301)
     updatePID();
 
@@ -446,6 +455,10 @@ void Config_ResetDefault() {
     float tmp10[] = {0};
     float tmp11[] = {0};
     float tmp12[] = {0};
+  #endif
+
+  #if MB(ALLIGATOR)
+    float tmp13[] = MOTOR_CURRENT;
   #endif
 
   for (int8_t i = 0; i < 3 + EXTRUDERS; i++) {
@@ -494,6 +507,13 @@ void Config_ResetDefault() {
           hotend_offset[Z_AXIS][i] = 0;
       #endif // HOTENDS > 1
     }
+    #if MB(ALLIGATOR)
+      max_i = sizeof(tmp13) / sizeof(*tmp13);
+      if(i < max_i)
+        motor_current[i] = tmp13[i];
+      else
+        motor_current[i] = tmp13[max_i - 1];
+    #endif
   }
 
   #if MECH(SCARA)
@@ -857,6 +877,22 @@ void Config_ResetDefault() {
         ECHO_LM(CFG, "Filament settings: Disabled");
       }
     }
+
+    #if MB(ALLIGATOR)
+      if (!forReplay) {
+        ECHO_LM(CFG, "Current:");
+      }
+      ECHO_SMV(CFG, "  M906 X", motor_current[X_AXIS]);
+      ECHO_MV(" Y", motor_current[Y_AXIS]);
+      ECHO_MV(" Z", motor_current[Z_AXIS]);
+      ECHO_EMV(" E", motor_current[E_AXIS]);
+      #if DRIVER_EXTRUDERS > 1
+        for (short i = 1; i < DRIVER_EXTRUDERS; i++) {
+          ECHO_SMV(CFG, "  M906 T", i);
+          ECHO_EMV(" E", motor_current[E_AXIS + i]);
+        }
+      #endif // DRIVER_EXTRUDERS > 1
+    #endif // ALLIGATOR
 
     ConfigSD_PrintSettings(forReplay);
 
