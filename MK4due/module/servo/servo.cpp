@@ -234,7 +234,7 @@ void Servo::writeMicroseconds(int value) {
     value = usToTicks(value);  // convert to ticks after compensating for interrupt overhead
 
     CRITICAL_SECTION_START;
-    servo_info[channel].ticks = value;
+    servos[channel].ticks = value;
     CRITICAL_SECTION_END;
   }
 }

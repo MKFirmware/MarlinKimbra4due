@@ -433,7 +433,7 @@ bool enqueuecommand(const char* cmd) {
     // Init Expansion Port Voltage logic Selector
     SET_OUTPUT(EXP_VOLTAGE_LEVEL_PIN);
     WRITE(EXP_VOLTAGE_LEVEL_PIN, UI_VOLTAGE_LEVEL);
-    ExternalDac::begin(); // initialize ExternalDac
+    ExternalDac::begin(); // Initialize ExternalDac
     #if HAS(BUZZER)
       buzz(10,10);
     #endif

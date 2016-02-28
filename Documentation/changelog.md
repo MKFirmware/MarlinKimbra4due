@@ -7,6 +7,7 @@
 
 ### Version 4.2.5
 * Big Update
+* Add HAL for 8 bit version
 * Rewrite Communication
 * Rewrite Servo
 * Add Color Mixing Extruder

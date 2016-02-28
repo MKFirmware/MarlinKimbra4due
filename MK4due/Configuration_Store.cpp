@@ -787,15 +787,15 @@ void Config_ResetDefault() {
       if (!forReplay) {
         ECHO_LM(CFG, "Material heatup parameters:");
       }
-      ECHO_SMV(CFG, "  M145 M0 H", plaPreheatHotendTemp);
+      ECHO_SMV(CFG, "  M145 S0 H", plaPreheatHotendTemp);
       ECHO_MV(" B", plaPreheatHPBTemp);
       ECHO_MV(" F", plaPreheatFanSpeed);
       ECHO_EM(" (Material PLA)");
-      ECHO_SMV(CFG, "  M145 M1 H", absPreheatHotendTemp);
+      ECHO_SMV(CFG, "  M145 S1 H", absPreheatHotendTemp);
       ECHO_MV(" B", absPreheatHPBTemp);
       ECHO_MV(" F", absPreheatFanSpeed);
       ECHO_EM(" (Material ABS)");
-      ECHO_SMV(CFG, "  M145 M2 H", gumPreheatHotendTemp);
+      ECHO_SMV(CFG, "  M145 S2 H", gumPreheatHotendTemp);
       ECHO_MV(" B", gumPreheatHPBTemp);
       ECHO_MV(" F", gumPreheatFanSpeed);
       ECHO_EM(" (Material GUM)");
@@ -806,7 +806,7 @@ void Config_ResetDefault() {
         ECHO_LM(CFG, "PID settings:");
       }
       #if ENABLED(PIDTEMP)
-        for (int8_t h = 0; h < HOTENDS; h++) {
+        for (uint8_t h = 0; h < HOTENDS; h++) {
           ECHO_SMV(CFG, "  M301 H", h);
           ECHO_MV(" P", PID_PARAM(Kp, h));
           ECHO_MV(" I", unscalePID_i(PID_PARAM(Ki, h)));
@@ -887,7 +887,7 @@ void Config_ResetDefault() {
       ECHO_MV(" Z", motor_current[Z_AXIS]);
       ECHO_EMV(" E", motor_current[E_AXIS]);
       #if DRIVER_EXTRUDERS > 1
-        for (short i = 1; i < DRIVER_EXTRUDERS; i++) {
+        for (uint8_t i = 1; i < DRIVER_EXTRUDERS; i++) {
           ECHO_SMV(CFG, "  M906 T", i);
           ECHO_EMV(" E", motor_current[E_AXIS + i]);
         }

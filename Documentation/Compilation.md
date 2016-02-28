@@ -3,7 +3,7 @@
   1. Install the LATES non-beta arduino software IDE/toolset: http://www.arduino.cc/en/Main/Software and download board SAM 1.6.6!
   2. Download the MarlinKimbra4due firmware
    https://github.com/MagoKimbra/MarlinKimbra4due
-   Use the "Download Zip" button on the right
+   Use the "Download Zip" button on the right.
   3. Some boards require special files and/or libraries from the Arduino directory.
   For Alligator Board add this link in Arduino IDE File -> Preferences -> Additional Boards Manager URLs: http://www.chew-z.it/download/alligator/package_Alligator_r2_index.json
   4. Start the arduino IDE
