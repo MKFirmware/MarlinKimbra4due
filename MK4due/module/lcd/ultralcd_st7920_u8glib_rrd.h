@@ -30,7 +30,7 @@ static void ST7920_SWSPI_SND_8BIT(uint8_t val) {
 }
 
 #define ST7920_CS()              {digitalWrite(ST7920_CS_PIN, 1); u8g_10MicroDelay();}
-#define ST7920_NCS()             {digitalWrite(ST7920_CS_PIN,0);}
+#define ST7920_NCS()             {digitalWrite(ST7920_CS_PIN, 0);}
 #define ST7920_SET_CMD()         {ST7920_SWSPI_SND_8BIT(0xf8);u8g_10MicroDelay();}
 #define ST7920_SET_DAT()         {ST7920_SWSPI_SND_8BIT(0xfa);u8g_10MicroDelay();}
 #define ST7920_WRITE_BYTE(a)     {ST7920_SWSPI_SND_8BIT((uint8_t)((a)&0xf0u));ST7920_SWSPI_SND_8BIT((uint8_t)((a)<<4u));u8g_10MicroDelay();}
@@ -105,7 +105,7 @@ u8g_dev_t u8g_dev_st7920_128x64_rrd_sw_spi = {u8g_dev_rrd_st7920_128x64_fn, &u8g
 
 class U8GLIB_ST7920_128X64_RRD : public U8GLIB {
  public:
-  U8GLIB_ST7920_128X64_RRD(int dummy) : U8GLIB(&u8g_dev_st7920_128x64_rrd_sw_spi) {}
+  U8GLIB_ST7920_128X64_RRD(uint8_t dummy) : U8GLIB(&u8g_dev_st7920_128x64_rrd_sw_spi) {}
 };
 
 
