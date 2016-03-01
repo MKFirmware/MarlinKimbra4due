@@ -1211,61 +1211,22 @@ void disable_all_heaters() {
 }
 
 #if ENABLED(HEATER_0_USES_MAX6675)
-  #define MAX6675_HEAT_INTERVAL 250u
-  static millis_t next_max6675_ms = 0;
-  int max6675_temp = 2000;
-
   static int read_max6675() {
+    static millis_t last_max6675_read = 0;
+    static int16_t max6675_temp = 0;
 
-    millis_t ms = millis();
-
-    if (ms < next_max6675_ms)
-      return max6675_temp;
-
-    next_max6675_ms = ms + MAX6675_HEAT_INTERVAL;
-
-    max6675_temp = 0;
-
-    #ifdef PRR
-      BITCLR(PRR, PRSPI);
-    #elif defined(PRR0)
-      BITCLR(PRR0, PRSPI);
-    #endif
-
-    SPCR = BIT(MSTR) | BIT(SPE) | BIT(SPR0);
-
-    // enable TT_MAX6675
-    WRITE(MAX6675_SS, 0);
-
-    // ensure 100ns delay - a bit extra is fine
-    asm("nop"); // 50ns on 20Mhz, 62.5ns on 16Mhz
-    asm("nop"); // 50ns on 20Mhz, 62.5ns on 16Mhz
-
-    // read MSB
-    SPDR = 0;
-    for (; !TEST(SPSR, SPIF););
-    max6675_temp = SPDR;
-    max6675_temp <<= 8;
-
-    // read LSB
-    SPDR = 0;
-    for (; !TEST(SPSR, SPIF););
-    max6675_temp |= SPDR;
-
-    // disable TT_MAX6675
-    WRITE(MAX6675_SS, 1);
-
-    if (max6675_temp & 4) {
-      // thermocouple open
-      max6675_temp = 4000;
+    if (HAL::timeInMilliseconds() - last_max6675_read > 230) {
+      HAL::spiInit(2);
+      HAL::digitalWrite(MAX6675_SS, 0);  // enable TT_MAX6675
+      _delay_us(1);    // ensure 100ns delay - a bit extra is fine
+      max6675_temp = HAL::spiReceive(0);
+      max6675_temp <<= 8;
+      max6675_temp |= HAL::spiReceive(0);
+      HAL::digitalWrite(MAX6675_SS, 1);  // disable TT_MAX6675
+      last_max6675_read = HAL::timeInMilliseconds();
     }
-    else {
-      max6675_temp = max6675_temp >> 3;
-    }
-
-    return max6675_temp;
+    return max6675_temp & 4 ? 2000 : max6675_temp >> 3; // thermocouple open?
   }
-
 #endif // HEATER_0_USES_MAX6675
 
 /**
