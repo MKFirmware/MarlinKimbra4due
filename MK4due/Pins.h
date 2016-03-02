@@ -2472,8 +2472,8 @@
 #define ORIG_HEATER_BED_PIN    8
 
 #define ORIG_TEMP_0_PIN        9  // Due analog pin #
-#define ORIG_TEMP_1_PIN        8  // Due analog pin #
-#define ORIG_TEMP_BED_PIN     10  // Due analog pin #
+#define ORIG_TEMP_1_PIN       10  // Due analog pin #
+#define ORIG_TEMP_BED_PIN     11  // Due analog pin #
 
 #define ORIG_E0_STEP_PIN      26
 #define ORIG_E0_DIR_PIN       28
