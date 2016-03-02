@@ -2391,21 +2391,21 @@
 #define ORIG_HEATER_1_PIN       10
 #define ORIG_HEATER_2_PIN       11
 
-#define ORIG_TEMP_BED_PIN        7   // ANALOG NUMBERING
+#define ORIG_TEMP_BED_PIN        0   // ANALOG NUMBERING
 
-#define ORIG_TEMP_0_PIN          6   // ANALOG NUMBERING
-#define ORIG_TEMP_1_PIN          5   // 2    // ANALOG NUMBERING
-#define ORIG_TEMP_2_PIN          4   // 3     // ANALOG NUMBERING
-#define ORIG_TEMP_3_PIN          3   // ANALOG NUMBERING
+#define ORIG_TEMP_0_PIN          1   // ANALOG NUMBERING
+#define ORIG_TEMP_1_PIN          2   // ANALOG NUMBERING
+#define ORIG_TEMP_2_PIN          3   // ANALOG NUMBERING
+#define ORIG_TEMP_3_PIN          4   // ANALOG NUMBERING
 
 #if NUM_SERVOS > 0
-  #define SERVO0_PIN            11
+  #define SERVO0_PIN             7
   #if NUM_SERVOS > 1
     #define SERVO1_PIN           6
     #if NUM_SERVOS > 2
       #define SERVO2_PIN         5
       #if NUM_SERVOS > 3
-        #define SERVO3_PIN       4
+        #define SERVO3_PIN       3
       #endif
     #endif
   #endif
