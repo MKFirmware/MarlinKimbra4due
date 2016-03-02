@@ -2286,11 +2286,6 @@
     #define BTN_EN2         52
     #define BTN_ENC         48
 
-    #if UI_VOLTAGE_LEVEL != 1
-      #undef UI_VOLTAGE_LEVEL
-      #define UI_VOLTAGE_LEVEL  1
-    #endif
-
   #elif ENABLED(SSD1306_OLED_I2C_CONTROLLER)
     #define BTN_EN1         50
     #define BTN_EN2         52
