@@ -230,6 +230,15 @@
 #include "../Pins.h"
 
 /**
+ * FAN
+ */
+#ifdef __SAM3X8E__
+  #ifdef FAST_PWM_FAN
+    #undef FAST_PWM_FAN
+  #endif
+#endif
+    
+/**
  * DONDOLO
  */
 #if ENABLED(DONDOLO)
