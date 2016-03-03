@@ -375,9 +375,6 @@
     #if DISABLED(D_FILAMENT)
       #error DEPENDENCY ERROR: Missing setting D_FILAMENT
     #endif
-    #if DISABLED(STEPS_MM_E)
-      #error DEPENDENCY ERROR: Missing setting STEPS_MM_E
-    #endif
   #endif
 
   #if ENABLED(FILAMENTCHANGEENABLE)

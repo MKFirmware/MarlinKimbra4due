@@ -747,6 +747,7 @@ HAL_STEP_TIMER_ISR {
       // step_rate to timer interval
       timer = calc_timer(step_rate);
       deceleration_time += timer;
+
       #if ENABLED(ADVANCE)
         advance -= advance_rate * step_loops;
         NOLESS(advance, final_advance);

@@ -24,11 +24,11 @@
           HAL::delayMilliseconds(1 + duration);
         #endif
       #else
-        delay(duration);
+        HAL::delayMilliseconds(duration);
       #endif
     }
     else {
-      delay(duration);
+      HAL::delayMilliseconds(duration);
     }
   }
 #endif
