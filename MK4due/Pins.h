@@ -2323,6 +2323,10 @@
 #if MB(RAMPS_FD_V1) || MB(RAMPS_FD_V2)
 #define KNOWN_BOARD
 
+#ifndef __SAM3X8E__
+  #error Oops!  Make sure you have 'Arduino Due' selected from the 'Tools -> Boards' menu.
+#endif
+
 #if MB(RAMPS_FD_V1)
   #define RAMPS_FD_V1
   #define INVERTED_HEATER_PINS
@@ -2443,6 +2447,10 @@
 ****************************************************************************************/
 #if MB(SMART_RAMPS)
 #define KNOWN_BOARD
+
+#ifndef __SAM3X8E__
+  #error Oops!  Make sure you have 'Arduino Due' selected from the 'Tools -> Boards' menu.
+#endif
 
 #define ORIG_X_STEP_PIN       54
 #define ORIG_X_DIR_PIN        55
