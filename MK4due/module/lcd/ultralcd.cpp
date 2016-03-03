@@ -1695,7 +1695,7 @@ void lcd_quick_feedback() {
     #if DISABLED(LCD_FEEDBACK_FREQUENCY_DURATION_MS)
       #define LCD_FEEDBACK_FREQUENCY_DURATION_MS 2
     #endif
-    delay(LCD_FEEDBACK_FREQUENCY_DURATION_MS);
+    HAL::delayMilliseconds(LCD_FEEDBACK_FREQUENCY_DURATION_MS);
   #endif
 }
 
@@ -2481,7 +2481,7 @@ char* ftostr52(const float& x) {
         {
           LCD_Printpos(0, 0); lcd_printPGM(PSTR(MSG_MBL_6));
           LCD_Printpos(0, 1); lcd_printPGM(PSTR("                  "));
-          delay(5000);
+          HAL::delayMilliseconds(5000);
           enqueuecommands_P(PSTR("G28"));
           lcd_goto_menu(lcd_prepare_menu);
         }

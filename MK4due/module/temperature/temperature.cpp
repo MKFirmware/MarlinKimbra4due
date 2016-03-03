@@ -1035,7 +1035,7 @@ void tp_init() {
   HAL_timer_enable_interrupt (TEMP_TIMER_NUM);
 
   // Wait for temperature measurement to settle
-  delay(250);
+  HAL::delayMilliseconds(250);
 
   #define TEMP_MIN_ROUTINE(NR) \
     minttemp[NR] = HEATER_ ## NR ## _MINTEMP; \
@@ -1211,14 +1211,15 @@ void disable_all_heaters() {
 }
 
 #if ENABLED(HEATER_0_USES_MAX6675)
+  static millis_t last_max6675_read = 0;
+  static int16_t max6675_temp = 0;
+
   static int read_max6675() {
-    static millis_t last_max6675_read = 0;
-    static int16_t max6675_temp = 0;
 
     if (HAL::timeInMilliseconds() - last_max6675_read > 230) {
       HAL::spiInit(2);
       HAL::digitalWrite(MAX6675_SS, 0);  // enable TT_MAX6675
-      _delay_us(1);    // ensure 100ns delay - a bit extra is fine
+      HAL::delayMicroseconds(1);    // ensure 100ns delay - a bit extra is fine
       max6675_temp = HAL::spiReceive(0);
       max6675_temp <<= 8;
       max6675_temp |= HAL::spiReceive(0);

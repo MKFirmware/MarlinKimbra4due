@@ -714,17 +714,17 @@ HAL_STEP_TIMER_ISR {
       acc_step_rate += current_block->initial_rate;
 
       // upper limit
-      if (acc_step_rate > current_block->nominal_rate)
-        acc_step_rate = current_block->nominal_rate;
+      NOMORE(acc_step_rate, current_block->nominal_rate);
 
       // step_rate to timer interval
       timer = calc_timer(acc_step_rate);
       acceleration_time += timer;
+
       #if ENABLED(ADVANCE)
-        for (uint8_t i = 0; i < step_loops; i++) {
-          advance += advance_rate;
-        }
-        // if (advance > current_block->advance) advance = current_block->advance;
+
+        advance += advance_rate * step_loops;
+        //NOLESS(advance, current_block->advance);
+
         // Do E steps + advance steps
         e_steps[current_block->active_driver] += ((advance >> 8) - old_advance);
         old_advance = advance >> 8;
@@ -742,20 +742,19 @@ HAL_STEP_TIMER_ISR {
       }
 
       // lower limit
-      if (step_rate < current_block->final_rate)
-        step_rate = current_block->final_rate;
+      NOLESS(step_rate, current_block->final_rate);
 
       // step_rate to timer interval
       timer = calc_timer(step_rate);
       deceleration_time += timer;
       #if ENABLED(ADVANCE)
-        for (uint8_t i = 0; i < step_loops; i++) {
-          advance -= advance_rate;
-        }
-        if (advance < final_advance) advance = final_advance;
+        advance -= advance_rate * step_loops;
+        NOLESS(advance, final_advance);
+
         // Do E steps + advance steps
-        e_steps[current_block->active_driver] += ((advance >> 8) - old_advance);
-        old_advance = advance >> 8;
+        uint32_t advance_whole = advance >> 8;
+        e_steps[current_block->active_driver] += advance_whole - old_advance;
+        old_advance = advance_whole;
       #endif //ADVANCE
     }
     else {
@@ -1243,7 +1242,7 @@ void quickStop() {
           X_STEP_WRITE(!INVERT_X_STEP_PIN);
           Y_STEP_WRITE(!INVERT_Y_STEP_PIN);
           Z_STEP_WRITE(!INVERT_Z_STEP_PIN);
-          _delay_us(1U);
+          HAL::delayMicroseconds(1U);
           X_STEP_WRITE(INVERT_X_STEP_PIN);
           Y_STEP_WRITE(INVERT_Y_STEP_PIN);
           Z_STEP_WRITE(INVERT_Z_STEP_PIN);
@@ -1269,7 +1268,7 @@ void digitalPotWrite(int address, int value) {
     SPI.transfer(address); //  send in the address and value via SPI:
     SPI.transfer(value);
     digitalWrite(DIGIPOTSS_PIN, HIGH); // take the SS pin high to de-select the chip:
-    //delay(10);
+    //HAL::delayMilliseconds(10);
   #else
     UNUSED(address);
     UNUSED(value);

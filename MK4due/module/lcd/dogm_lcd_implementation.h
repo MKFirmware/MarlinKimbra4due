@@ -254,7 +254,7 @@ static void lcd_implementation_init() {
     } while (u8g.nextPage());
 
     if (show_bootscreen) {
-      delay(SPLASH_SCREEN_DURATION);
+      HAL::delayMilliseconds(SPLASH_SCREEN_DURATION);
       show_bootscreen = false;
     }
   #endif
