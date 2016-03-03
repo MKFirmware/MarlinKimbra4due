@@ -252,7 +252,7 @@
     if (this->attach(0) >= 0) {
       this->write(value);
       #if ENABLED(DEACTIVATE_SERVOS_AFTER_MOVE)
-        delay(SERVO_DEACTIVATION_DELAY);
+        HAL::delayMilliseconds(SERVO_DEACTIVATION_DELAY);
         this->detach();
       #endif
     }

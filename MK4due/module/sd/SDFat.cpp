@@ -3094,7 +3094,7 @@ uint8_t Sd2Card::cardCommand(uint8_t cmd, uint32_t arg) {
   spiSend(cmd == CMD0 ? 0X95 : 0X87);
 #endif  // USE_SD_CRC
   // additional delay for CMD0
-  if (cmd == CMD0) delay(100);
+  if (cmd == CMD0) HAL::delayMilliseconds(100);
   // skip stuff byte for stop read
   if (cmd == CMD12) spiRec();
 

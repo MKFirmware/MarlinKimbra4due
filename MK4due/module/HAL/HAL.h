@@ -163,6 +163,23 @@
         else SET_OUTPUT(pin);
       }
 
+      static FORCE_INLINE void delayMicroseconds(uint32_t usec) { // usec += 3;
+        uint32_t n = usec * (F_CPU / 3000000);
+        asm volatile(
+          "L2_%=_delayMicroseconds:"       "\n\t"
+          "subs   %0, #1"                 "\n\t"
+          "bge    L2_%=_delayMicroseconds" "\n"
+          : "+r" (n) :
+        );
+      }
+      static inline void delayMilliseconds(unsigned int delayMs) {
+        unsigned int del;
+        while (delayMs > 0) {
+          del = delayMs > 100 ? 100 : delayMs;
+          delay(del);
+          delayMs -= del;
+        }
+      }
       static inline unsigned long timeInMilliseconds() {
         return millis();
       }
@@ -170,6 +187,7 @@
       static void showStartReason();
       static int getFreeRam();
       static void resetHardware();
+
     protected:
     private:
   };
@@ -179,20 +197,6 @@
 
   // Enable interrupts
   void sei(void);
-
-  static inline void _delay_ms(uint32_t msec) {
-    delay(msec);
-  }
-
-  static inline void _delay_us(uint32_t usec) {
-    uint32_t n = usec * (F_CPU / 3000000);
-    asm volatile(
-        "L2_%=_delayMicroseconds:"       "\n\t"
-        "subs   %0, #1"                 "\n\t"
-        "bge    L2_%=_delayMicroseconds" "\n"
-        : "+r" (n) :  
-    );
-  }
 
   int freeMemory(void);
   void eeprom_write_byte(unsigned char* pos, unsigned char value);
