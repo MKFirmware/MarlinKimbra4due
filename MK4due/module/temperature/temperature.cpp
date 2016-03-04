@@ -187,7 +187,7 @@ static void updateTemperaturesFromRawValues();
 #endif
 
 #if ENABLED(HEATER_0_USES_MAX6675)
-  static int read_max6675();
+  static int16_t read_max6675();
 #endif
 
 //===========================================================================
@@ -764,7 +764,7 @@ static float analog2temp(int raw, uint8_t h) {
     }
 
   #if ENABLED(HEATER_0_USES_MAX6675)
-    if (h == 0) return 0.25 * raw;
+    if (h == 0) return (float)raw / 4.0;
   #endif
 
   if (heater_ttbl_map[h] != NULL) {
@@ -993,9 +993,12 @@ void tp_init() {
   #if ENABLED(HEATER_0_USES_MAX6675)
 
     #if DISABLED(SDSUPPORT)
-      OUT_WRITE(SCK_PIN, LOW);
-      OUT_WRITE(MOSI_PIN, HIGH);
-      OUT_WRITE(MISO_PIN, HIGH);
+      WRITE(SCK_PIN, 0);
+      SET_OUTPUT(SCK_PIN);
+      WRITE(MOSI_PIN, 1);
+      SET_OUTPUT(MOSI_PIN);
+      WRITE(MISO_PIN, 1);
+      SET_INPUT(MISO_PIN);
     #endif
 
     OUT_WRITE(MAX6675_SS, HIGH);
@@ -1214,7 +1217,7 @@ void disable_all_heaters() {
   static millis_t last_max6675_read = 0;
   static int16_t max6675_temp = 0;
 
-  static int read_max6675() {
+  int16_t read_max6675() {
 
     if (HAL::timeInMilliseconds() - last_max6675_read > 230) {
       HAL::spiInit(2);
