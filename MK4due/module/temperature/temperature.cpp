@@ -1218,17 +1218,15 @@ void disable_all_heaters() {
   static int16_t max6675_temp = 0;
 
   int16_t read_max6675() {
-
-    if (HAL::timeInMilliseconds() - last_max6675_read > 230) {
+      HAL::spiBegin();
       HAL::spiInit(2);
       HAL::digitalWrite(MAX6675_SS, 0);  // enable TT_MAX6675
-      HAL::delayMicroseconds(1);    // ensure 100ns delay - a bit extra is fine
-      max6675_temp = HAL::spiReceive(0);
+      HAL::delayMilliseconds(230); // wait 230ms till result in register
+      HAL::delayMicroseconds(1); // ensure 100ns delay - a bit extra is fine
+      max6675_temp = HAL::spiReceive();
       max6675_temp <<= 8;
-      max6675_temp |= HAL::spiReceive(0);
-      HAL::digitalWrite(MAX6675_SS, 1);  // disable TT_MAX6675
-      last_max6675_read = HAL::timeInMilliseconds();
-    }
+      max6675_temp |= HAL::spiReceive();
+      HAL::digitalWrite(MAX6675_SS, 1); // disable TT_MAX6675
     return max6675_temp & 4 ? 2000 : max6675_temp >> 3; // thermocouple open?
   }
 #endif // HEATER_0_USES_MAX6675
