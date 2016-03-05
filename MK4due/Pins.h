@@ -3909,137 +3909,78 @@
 * ULTRATRONICS
 *****************************************************************************************/
 #if MB(ULTRATRONICS)
-#define KNOWN_BOARD
+  #define KNOWN_BOARD
 
-#ifndef __SAM3X8E__
-  #error Oops!  Make sure you have 'Arduino Due' selected from the 'Tools -> Boards' menu.
-#endif
-
-// X AXIS
-#define ORIG_X_STEP_PIN       35  
-#define ORIG_X_DIR_PIN        34  
-#define ORIG_X_ENABLE_PIN     37  
-#define ORIG_X_MIN_PIN        -1  
-#define ORIG_X_MAX_PIN        -1  
-#define X_MS1_PIN             -1  
-
-// Y AXIS
-#define ORIG_Y_STEP_PIN       22  
-#define ORIG_Y_DIR_PIN        23  
-#define ORIG_Y_ENABLE_PIN     9  
-#define ORIG_Y_MIN_PIN        -1  
-#define ORIG_Y_MAX_PIN        -1  
-#define Y_MS1_PIN             -1  
-
-// Z AXIS
-#define ORIG_Z_STEP_PIN       25  
-#define ORIG_Z_DIR_PIN        26  
-#define ORIG_Z_ENABLE_PIN     24  
-#define ORIG_Z_MIN_PIN        -1  
-#define ORIG_Z_MAX_PIN        -1  
-#define Z_MS1_PIN             -1  
-
-// E0 AXIS
-#define ORIG_E0_STEP_PIN      47  
-#define ORIG_E0_DIR_PIN       46  
-#define ORIG_E0_ENABLE_PIN    48  
-#define E0_MS1_PIN            -1  
-
-// E1 AXIS
-#define ORIG_E1_STEP_PIN      44  
-#define ORIG_E1_DIR_PIN       36  
-#define ORIG_E1_ENABLE_PIN    45  
-
-// E2 AXIS
-#define ORIG_E2_STEP_PIN      42 
-#define ORIG_E2_DIR_PIN       41 
-#define ORIG_E2_ENABLE_PIN    43 
-
-// E3 AXIS
-#define ORIG_E3_STEP_PIN      39 
-#define ORIG_E3_DIR_PIN       38 
-#define ORIG_E3_ENABLE_PIN    40 
-
-#define MOTOR_FAULT_PIN       -1 
-
-#define SDPOWER               -1
-#define SDSS                  -1 
-#define SD_DETECT_PIN         -1 
-#define LED_PIN               -1
-
-#define ORIG_FAN_PIN          -1 
-#define FAN2_PIN              -1 
-
-#define ORIG_PS_ON_PIN        -1
-#define KILL_PIN              -1
-#define SUICIDE_PIN           -1 //PIN that has to be turned on right after start, to keep power flowing.
-
-// Note that on the Due pin A0 on the board is channel 2 on the ARM chip
-#define ORIG_HEATER_BED_PIN   69 
-#define ORIG_HEATER_0_PIN     68 
-#define ORIG_HEATER_1_PIN      8 
-#define ORIG_HEATER_2_PIN      9 
-#define ORIG_HEATER_3_PIN     97 
-
-#define ORIG_TEMP_BED_PIN      0 
-#define ORIG_TEMP_0_PIN        1 
-#define ORIG_TEMP_1_PIN       52 
-#define ORIG_TEMP_2_PIN       51 
-#define ORIG_TEMP_3_PIN       50 
-
-#define LED_RED_PIN           40 
-#define LED_GREEN_PIN         41 
-#define CASE_LIGHTS_PIN       36 
-
-#define EXP_VOLTAGE_LEVEL_PIN 65
-
-#define DAC0_SYNC             53 
-#define DAC1_SYNC              6 
-
-//64K SPI EEPROM
-#define SPI_CHAN_EEPROM1       2
-#define SPI_EEPROM1_CS        25 
-
-//2K SPI EEPROM
-#define SPI_EEPROM2_CS        26 
-
-//** FLASH SPI**/
-//32Mb
-#define SPI_FLASH_CS          23 
-
-/** Display **/
-
-// GLCD on expansion port
-#if ENABLED(REPRAP_DISCOUNT_FULL_GRAPHIC_SMART_CONTROLLER)
-
-  #define LCD_PINS_RS         18
-  #define LCD_PINS_ENABLE     15
-  #define LCD_PINS_D4         19
-  #define BEEPER_PIN          64
-
-  #define BTN_EN1             14
-  #define BTN_EN2             16
-  #define BTN_ENC             17
-  
-  #if UI_VOLTAGE_LEVEL != 1
-    #undef UI_VOLTAGE_LEVEL
-    #define UI_VOLTAGE_LEVEL  1
+  #ifndef __SAM3X8E__
+    #error Oops!  Make sure you have 'Arduino Due' selected from the 'Tools -> Boards' menu.
   #endif
-     
-#endif //REPRAP_DISCOUNT_FULL_GRAPHIC_SMART_CONTROLLER
 
-#if NUM_SERVOS > 0
-  #define SERVO0_PIN          -1
-  #if NUM_SERVOS > 1
-    #define SERVO1_PIN        -1
-    #if NUM_SERVOS > 2
-      #define SERVO2_PIN      -1
-      #if NUM_SERVOS > 3
-        #define SERVO3_PIN    -1
-      #endif
-    #endif
-  #endif
-#endif
+  // X AXIS
+  #define ORIG_X_STEP_PIN       35
+  #define ORIG_X_DIR_PIN        34
+  #define ORIG_X_ENABLE_PIN     37
+  #define ORIG_X_MIN_PIN        31
+  #define ORIG_X_MAX_PIN        30
+
+  // Y AXIS
+  #define ORIG_Y_STEP_PIN       22
+  #define ORIG_Y_DIR_PIN        23
+  #define ORIG_Y_ENABLE_PIN     33
+  #define ORIG_Y_MIN_PIN        12
+  #define ORIG_Y_MAX_PIN        11
+
+  // Z AXIS
+  #define ORIG_Z_STEP_PIN       25
+  #define ORIG_Z_DIR_PIN        26
+  #define ORIG_Z_ENABLE_PIN     24
+  #define ORIG_Z_MIN_PIN        29
+  #define ORIG_Z_MAX_PIN        28
+
+  // E0 AXIS
+  #define ORIG_E0_STEP_PIN      47
+  #define ORIG_E0_DIR_PIN       46
+  #define ORIG_E0_ENABLE_PIN    48
+
+  // E1 AXIS
+  #define ORIG_E1_STEP_PIN      44
+  #define ORIG_E1_DIR_PIN       36
+  #define ORIG_E1_ENABLE_PIN    45
+
+  // E2 AXIS
+  #define ORIG_E2_STEP_PIN      42
+  #define ORIG_E2_DIR_PIN       41
+  #define ORIG_E2_ENABLE_PIN    43
+
+  // E3 AXIS
+  #define ORIG_E3_STEP_PIN      39
+  #define ORIG_E3_DIR_PIN       38
+  #define ORIG_E3_ENABLE_PIN    40
+
+  #define SDPOWER               -1
+  #define SDSS                  59
+  #define SD_DETECT_PIN         60
+  #define LED_PIN               -1
+
+  #define ORIG_FAN_PIN           6
+  #define FAN2_PIN               5
+
+  #define ORIG_PS_ON_PIN        32
+  #define KILL_PIN              -1
+  #define SUICIDE_PIN           -1
+
+  #define ORIG_HEATER_BED_PIN    2
+  #define ORIG_HEATER_0_PIN      3
+  #define ORIG_HEATER_1_PIN      7
+  #define ORIG_HEATER_2_PIN      8
+  #define ORIG_HEATER_3_PIN      9
+
+  #define ORIG_TEMP_BED_PIN      0  // ANALOG NUMBERING
+  #define ORIG_TEMP_0_PIN        1  // ANALOG NUMBERING
+  #define ORIG_TEMP_1_PIN        2  // ANALOG NUMBERING
+  #define ORIG_TEMP_2_PIN        3  // ANALOG NUMBERING
+  #define ORIG_TEMP_3_PIN        4  // ANALOG NUMBERING
+
+  #define ORIG_BEEPER_PIN       27
 
 #endif // ULTRATRONICS
 /****************************************************************************************/
@@ -5349,7 +5290,7 @@ DaveX plan for Teensylu/printrboard-type pinouts (ref teensylu & sprinter) for a
   #define MISO_PIN            12
   #define SCK_PIN             10
 #elif defined (__SAM3X8E__)
-  #if (SDSS == 4) || (SDSS == 10) || (SDSS == 52) || (SDSS == 77)
+  #if (SDSS == 4) || (SDSS == 10) || (SDSS == 52)|| (SDSS == 59) || (SDSS == 77)
     #if (SDSS == 4)
       #define SPI_PIN         87
       #define SPI_CHAN        1
@@ -5359,6 +5300,9 @@ DaveX plan for Teensylu/printrboard-type pinouts (ref teensylu & sprinter) for a
     #elif (SDSS == 52) 
       #define SPI_PIN         86
       #define SPI_CHAN        2
+    #elif (SDSS == 59) 
+      #define SPI_PIN         59
+      #define SPI_CHAN        1
     #else
       #define SPI_PIN         77
       #define SPI_CHAN        0
