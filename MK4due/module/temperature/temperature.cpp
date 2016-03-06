@@ -1217,7 +1217,7 @@ void disable_all_heaters() {
   static millis_t last_max6675_read = 0;
   static int16_t max6675_temp = 0;
 
-  int16_t read_max6675() {
+  static int16_t read_max6675() {
     if (HAL::timeInMilliseconds() - last_max6675_read > 230) {
       HAL::spiBegin();
       HAL::spiInit(2);
