@@ -943,8 +943,8 @@ static void updateTemperaturesFromRawValues() {
 void tp_init() {
   #if MB(RUMBA) && ((TEMP_SENSOR_0==-1)||(TEMP_SENSOR_1==-1)||(TEMP_SENSOR_2==-1)||(TEMP_SENSOR_BED==-1))
     // disable RUMBA JTAG in case the thermocouple extension is plugged on top of JTAG connector
-    MCUCR = BIT(JTD);
-    MCUCR = BIT(JTD);
+    MCUCR = _BV(JTD);
+    MCUCR = _BV(JTD);
   #endif
 
   // Finish init of mult hotends arrays
@@ -1218,15 +1218,15 @@ void disable_all_heaters() {
   static int16_t max6675_temp = 0;
 
   int16_t read_max6675() {
+
     if (HAL::timeInMilliseconds() - last_max6675_read > 230) {
-      HAL::spiBegin();
       HAL::spiInit(2);
-      HAL::digitalWrite(MAX6675_SS, 0);   // enable TT_MAX6675
-      HAL::delayMicroseconds(1);          // ensure 100ns delay - a bit extra is fine
-      max6675_temp = HAL::spiReceive();   // read higher byte
+      HAL::digitalWrite(MAX6675_SS, 0);  // enable TT_MAX6675
+      HAL::delayMicroseconds(1);    // ensure 100ns delay - a bit extra is fine
+      max6675_temp = HAL::spiReceive(0);
       max6675_temp <<= 8;
-      max6675_temp |= HAL::spiReceive();  //read lower byte
-      HAL::digitalWrite(MAX6675_SS, 1);   // disable TT_MAX6675
+      max6675_temp |= HAL::spiReceive(0);
+      HAL::digitalWrite(MAX6675_SS, 1);  // disable TT_MAX6675
       last_max6675_read = HAL::timeInMilliseconds();
     }
     return max6675_temp & 4 ? 2000 : max6675_temp >> 3; // thermocouple open?
@@ -1263,7 +1263,7 @@ HAL_TEMP_TIMER_ISR {
   static uint32_t raw_temp_value[4] = { 0 };
   static uint32_t raw_temp_bed_value = 0;
   static TempState temp_state = StartupDelay;
-  static unsigned char pwm_count = BIT(SOFT_PWM_SCALE);
+  static unsigned char pwm_count = _BV(SOFT_PWM_SCALE);
   static int max_temp[5] = { 0 };
   static int min_temp[5] = { 123000 };
   static int temp_read = 0;
@@ -1405,7 +1405,7 @@ HAL_TEMP_TIMER_ISR {
       #endif
     #endif
 
-    pwm_count += BIT(SOFT_PWM_SCALE);
+    pwm_count += _BV(SOFT_PWM_SCALE);
     pwm_count &= 0x7f;
 
   #else // SLOW_PWM_HEATERS
@@ -1525,7 +1525,7 @@ HAL_TEMP_TIMER_ISR {
       #endif
     #endif // FAN_SOFT_PWM
 
-    pwm_count += BIT(SOFT_PWM_SCALE);
+    pwm_count += _BV(SOFT_PWM_SCALE);
     pwm_count &= 0x7f;
 
     // increment slow_pwm_count only every 64 pwm_count circa 65.5ms
