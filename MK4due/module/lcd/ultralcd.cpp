@@ -838,7 +838,7 @@ static void lcd_prepare_menu() {
   // Level Bed
   //
   #if ENABLED(AUTO_BED_LEVELING_FEATURE)
-    if (axis_known_position & (BIT(X_AXIS)|BIT(Y_AXIS)) == (BIT(X_AXIS)|BIT(Y_AXIS)))
+    if (axis_known_position & (_BV(X_AXIS)|_BV(Y_AXIS)) == (_BV(X_AXIS)|_BV(Y_AXIS)))
       MENU_ITEM(gcode, MSG_LEVEL_BED, PSTR("G29"));
   #elif !MECH(DELTA) && DISABLED(Z_SAFE_HOMING) && Z_HOME_DIR < 0
     MENU_ITEM(submenu, MSG_MBL_SETTING, config_lcd_level_bed);
