@@ -1,8 +1,9 @@
 /***************************************************************
  *
- * Externa DAC for Alligator Board
+ * External DAC for Alligator Board
  *
  ****************************************************************/
+
 #include "../../base.h"
 
 #if MB(ALLIGATOR)
@@ -14,43 +15,43 @@
   }
 
   void ExternalDac::begin() {
-    uint8_t externalDac_buf[2] = {0x20,0x00};//all off
+    uint8_t externalDac_buf[2] = {0x20, 0x00};  // all off
 
     // All SPI chip-select HIGH
     pinMode (DAC0_SYNC, OUTPUT);
-    digitalWrite( DAC0_SYNC , HIGH );
+    digitalWrite(DAC0_SYNC, HIGH);
     #if DRIVER_EXTRUDERS > 1
       pinMode (DAC1_SYNC, OUTPUT);
-      digitalWrite( DAC1_SYNC , HIGH );
+      digitalWrite(DAC1_SYNC, HIGH);
     #endif
-    digitalWrite( SPI_EEPROM1_CS , HIGH );
-    digitalWrite( SPI_EEPROM2_CS , HIGH );
-    digitalWrite( SPI_FLASH_CS , HIGH );
-    digitalWrite( SDSS , HIGH );
+    digitalWrite(SPI_EEPROM1_CS, HIGH);
+    digitalWrite(SPI_EEPROM2_CS, HIGH);
+    digitalWrite(SPI_FLASH_CS, HIGH);
+    digitalWrite(SDSS, HIGH);
     HAL::spiBegin();
 
     //init onboard DAC
-    delayMicroseconds(2U);
-    digitalWrite( DAC0_SYNC , LOW );
-    delayMicroseconds(2U);
-    digitalWrite( DAC0_SYNC , HIGH );
-    delayMicroseconds(2U);
-    digitalWrite( DAC0_SYNC , LOW );
+    HAL::delayMicroseconds(2U);
+    digitalWrite(DAC0_SYNC, LOW);
+    HAL::delayMicroseconds(2U);
+    digitalWrite(DAC0_SYNC, HIGH);
+    HAL::delayMicroseconds(2U);
+    digitalWrite(DAC0_SYNC, LOW);
 
-    HAL::spiSend(SPI_CHAN_DAC,externalDac_buf , 2);
-    digitalWrite( DAC0_SYNC , HIGH );
+    HAL::spiSend(SPI_CHAN_DAC, externalDac_buf , 2);
+    digitalWrite(DAC0_SYNC, HIGH);
 
     #if DRIVER_EXTRUDERS > 1
       //init Piggy DAC
-      delayMicroseconds(2U);
-      digitalWrite( DAC1_SYNC , LOW );
-      delayMicroseconds(2U);
-      digitalWrite( DAC1_SYNC , HIGH );
-      delayMicroseconds(2U);
-      digitalWrite( DAC1_SYNC , LOW );
+      HAL::delayMicroseconds(2U);
+      digitalWrite(DAC1_SYNC, LOW);
+      HAL::delayMicroseconds(2U);
+      digitalWrite(DAC1_SYNC, HIGH);
+      HAL::delayMicroseconds(2U);
+      digitalWrite(DAC1_SYNC, LOW);
 
-      HAL::spiSend(SPI_CHAN_DAC,externalDac_buf , 2);
-      digitalWrite( DAC1_SYNC , HIGH );
+      HAL::spiSend(SPI_CHAN_DAC, externalDac_buf, 2);
+      digitalWrite(DAC1_SYNC, HIGH);
     #endif
 
     return;
@@ -61,7 +62,7 @@
       return;
     if(value > 255) value = 255;
 
-    uint8_t externalDac_buf[2] = {0x10,0x00};
+    uint8_t externalDac_buf[2] = {0x10, 0x00};
 
     if(channel > 3)
       externalDac_buf[0] |= (7 - channel << 6);
@@ -72,35 +73,33 @@
     externalDac_buf[1] |= (value<<4);
     
     // All SPI chip-select HIGH
-    digitalWrite( DAC0_SYNC , HIGH );
+    digitalWrite(DAC0_SYNC, HIGH);
     #if DRIVER_EXTRUDERS > 1
-      digitalWrite( DAC1_SYNC , HIGH );
+      digitalWrite(DAC1_SYNC, HIGH);
     #endif
-    digitalWrite( SPI_EEPROM1_CS , HIGH );
-    digitalWrite( SPI_EEPROM2_CS , HIGH );
-    digitalWrite( SPI_FLASH_CS , HIGH );
-    digitalWrite( SDSS , HIGH );
+    digitalWrite(SPI_EEPROM1_CS, HIGH);
+    digitalWrite(SPI_EEPROM2_CS, HIGH);
+    digitalWrite(SPI_FLASH_CS, HIGH);
+    digitalWrite(SDSS, HIGH);
 
     if(channel > 3) { // DAC Piggy E1,E2,E3
-
-      digitalWrite(DAC1_SYNC , LOW);
-      delayMicroseconds(2U);
-      digitalWrite(DAC1_SYNC , HIGH);
-      delayMicroseconds(2U);
-      digitalWrite(DAC1_SYNC , LOW);
+      digitalWrite(DAC1_SYNC, LOW);
+      HAL::delayMicroseconds(2U);
+      digitalWrite(DAC1_SYNC, HIGH);
+      HAL::delayMicroseconds(2U);
+      digitalWrite(DAC1_SYNC, LOW);
     }
 
     else { // DAC onboard X,Y,Z,E0
-
       digitalWrite(DAC0_SYNC , LOW);
-      delayMicroseconds(2U);
+      HAL::delayMicroseconds(2U);
       digitalWrite(DAC0_SYNC , HIGH);
-      delayMicroseconds(2U);
+      HAL::delayMicroseconds(2U);
       digitalWrite(DAC0_SYNC , LOW);
     }
 
-    delayMicroseconds(2U);
-    HAL::spiSend(SPI_CHAN_DAC,externalDac_buf , 2);
+    HAL::delayMicroseconds(2U);
+    HAL::spiSend(SPI_CHAN_DAC, externalDac_buf, 2);
 
     return;
   }
