@@ -731,15 +731,14 @@ HAL_STEP_TIMER_ISR {
     else if (step_events_completed > (unsigned long)current_block->decelerate_after) {
       MultiU32X32toH32(step_rate, deceleration_time, current_block->acceleration_rate);
 
-      if (step_rate > acc_step_rate) { // Check step_rate stays positive
-        step_rate = current_block->final_rate;
+      if (step_rate <= acc_step_rate) {
+        step_rate = acc_step_rate - step_rate; // Decelerate from acceleration end point.
+        // lower limit
+        NOLESS(step_rate, current_block->final_rate);
       }
       else {
-        step_rate = acc_step_rate - step_rate; // Decelerate from acceleration end point.
+        step_rate = current_block->final_rate;
       }
-
-      // lower limit
-      NOLESS(step_rate, current_block->final_rate);
 
       // step_rate to timer interval
       timer = calc_timer(step_rate);
