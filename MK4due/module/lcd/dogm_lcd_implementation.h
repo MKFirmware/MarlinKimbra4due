@@ -321,9 +321,9 @@ static void lcd_implementation_status_screen() {
 
           u8g.setPrintPos(90,47);
 
-          if (end_time > (60 * 23))
+          if (end_time > 1380 || end_time == 0)
             u8g.print('E--:--');
-          else if (end_time >= 0) {
+          else if (end_time > 0) {
             u8g.print('E');
             u8g.print(itostr2(end_time / 60));
             u8g.print(':');
