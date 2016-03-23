@@ -2,7 +2,7 @@
   #define NEXTIONLCD_H
 
   #if ENABLED(NEXTION)
-    #define LCD_UPDATE_INTERVAL 3000
+    #define LCD_UPDATE_INTERVAL 4000
 
     void ExitPopCallback(void *ptr);
     void setpagePopCallback(void *ptr);
