@@ -19,6 +19,10 @@
  *
  * Description:          *** HAL for Arduino Due ***
  *
+ * Contributors:
+ * Copyright (c) 2014 Bob Cousins bobcousins42@googlemail.com
+ *                    Nico Tonnhofer wurstnase.reprap@gmail.com
+ *
  * ARDUINO_ARCH_SAM
  */
 
