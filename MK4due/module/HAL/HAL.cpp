@@ -1,27 +1,30 @@
-/*
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
-
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
-// **************************************************************************
-//
-// Description:          *** HAL for Arduino Due ***
-//
-// **************************************************************************
-
-// --------------------------------------------------------------------------
-// Includes
-// --------------------------------------------------------------------------
+/**
+ * This is the main Hardware Abstraction Layer (HAL).
+ * To make the firmware work with different processors and toolchains,
+ * all hardware related code should be packed into the hal files.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *
+ * Description:          *** HAL for Arduino Due ***
+ *
+ * Contributors:
+ * Copyright (c) 2014 Bob Cousins bobcousins42@googlemail.com
+ *                    Nico Tonnhofer wurstnase.reprap@gmail.com
+ *
+ * ARDUINO_ARCH_SAM
+ */
 
 #include "../../base.h"
 #include "HAL.h"
