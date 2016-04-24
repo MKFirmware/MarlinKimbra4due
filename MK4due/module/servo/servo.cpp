@@ -88,7 +88,7 @@
       if( SERVO_INDEX(timer,Channel[timer]) < ServoCount && Channel[timer] < SERVOS_PER_TIMER) {
           tc->TC_CHANNEL[channel].TC_RA = tc->TC_CHANNEL[channel].TC_CV + SERVO(timer,Channel[timer]).ticks;
           if(SERVO(timer,Channel[timer]).Pin.isActive == true) {    // check if activated
-              digitalWrite( SERVO(timer,Channel[timer]).Pin.nbr,HIGH); // its an active channel so pulse it high
+              digitalWrite(SERVO(timer,Channel[timer]).Pin.nbr,HIGH); // its an active channel so pulse it high
           }
       }
       else {
