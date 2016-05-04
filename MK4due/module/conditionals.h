@@ -539,7 +539,9 @@
   /**
    * Temp Sensor defines
    */
-  #if TEMP_SENSOR_0 == -2
+  #if TEMP_SENSOR_0 == -3
+    #define HEATER_0_USES_MAX31855
+  #elif TEMP_SENSOR_0 == -2
     #define HEATER_0_USES_MAX6675
   #elif TEMP_SENSOR_0 == -1
     #define HEATER_0_USES_AD595
@@ -551,7 +553,9 @@
     #define HEATER_0_USES_THERMISTOR
   #endif
 
-  #if TEMP_SENSOR_1 == -1
+  #if TEMP_SENSOR_1 == -3
+    #define HEATER_1_USES_MAX31855
+  #elif TEMP_SENSOR_1 == -1
     #define HEATER_1_USES_AD595
   #elif TEMP_SENSOR_1 == 0
     #undef HEATER_1_MINTEMP
@@ -561,7 +565,9 @@
     #define HEATER_1_USES_THERMISTOR
   #endif
 
-  #if TEMP_SENSOR_2 == -1
+  #if TEMP_SENSOR_2 == -3
+    #define HEATER_2_USES_MAX31855
+  #elif TEMP_SENSOR_2 == -1
     #define HEATER_2_USES_AD595
   #elif TEMP_SENSOR_2 == 0
     #undef HEATER_2_MINTEMP
@@ -571,7 +577,9 @@
     #define HEATER_2_USES_THERMISTOR
   #endif
 
-  #if TEMP_SENSOR_3 == -1
+  #if TEMP_SENSOR_3 == -3
+    #define HEATER_3_USES_MAX31855
+  #elif TEMP_SENSOR_3 == -1
     #define HEATER_3_USES_AD595
   #elif TEMP_SENSOR_3 == 0
     #undef HEATER_3_MINTEMP
@@ -592,6 +600,7 @@
   #endif
 
   #define HEATER_USES_AD595 (ENABLED(HEATER_0_USES_AD595) || ENABLED(HEATER_1_USES_AD595) || ENABLED(HEATER_2_USES_AD595) || ENABLED(HEATER_3_USES_AD595))
+  #define HEATER_USES_MAX31855 (ENABLED(HEATER_0_USES_MAX31855) || ENABLED(HEATER_1_USES_MAX31855) || ENABLED(HEATER_2_USES_MAX31855) || ENABLED(HEATER_3_USES_MAX31855))
 
   /**
    * Flags for PID handling

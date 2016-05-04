@@ -212,6 +212,11 @@ static void updateTemperaturesFromRawValues();
   static int16_t read_max6675();
 #endif
 
+#if ENABLED(HEATER_USES_MAX31855)
+  static int16_t read_max31855(int temp_sensor,int pin_cs);
+#endif
+
+
 //===========================================================================
 //================================ Functions ================================
 //===========================================================================
@@ -693,7 +698,7 @@ void manage_heater() {
 
   updateTemperaturesFromRawValues();
 
-  #if ENABLED(HEATER_0_USES_MAX6675)
+  #if ENABLED(HEATER_0_USES_MAX6675) || ENABLED(HEATER_0_USES_MAX31855)
     float ct = current_temperature[0];
     if (ct > min(HEATER_0_MAXTEMP, 1023)) max_temp_error(0);
     if (ct < max(HEATER_0_MINTEMP, 0.01)) min_temp_error(0);
@@ -818,6 +823,19 @@ static float analog2temp(int raw, uint8_t h) {
       kill(PSTR(MSG_KILLED));
       return 0.0;
     }
+    
+  #if ENABLED(HEATER_0_USES_MAX31855)
+    if (h == 0) return 0.25 * raw;
+  #endif  
+  #if ENABLED(HEATER_1_USES_MAX31855)
+    if (h == 1) return 0.25 * raw;
+  #endif  
+  #if ENABLED(HEATER_2_USES_MAX31855)
+    if (h == 2) return 0.25 * raw;
+  #endif  
+  #if ENABLED(HEATER_3_USES_MAX31855)
+    if (h == 3) return 0.25 * raw;
+  #endif  
 
   #if ENABLED(HEATER_0_USES_MAX6675)
     if (h == 0) return (float)raw / 4.0;
@@ -899,6 +917,23 @@ static void updateTemperaturesFromRawValues() {
   #if ENABLED(HEATER_0_USES_MAX6675)
     current_temperature_raw[0] = read_max6675();
   #endif
+  
+  #if ENABLED(HEATER_0_USES_MAX31855)
+    current_temperature_raw[0] = read_max31855(0,MAX31855_SS0);
+  #endif
+  
+  #if ENABLED(HEATER_1_USES_MAX31855)
+    current_temperature_raw[1] = read_max31855(1,MAX31855_SS1);
+  #endif
+  
+  #if ENABLED(HEATER_2_USES_MAX31855)
+    current_temperature_raw[2] = read_max31855(2,MAX31855_SS2);
+  #endif
+  
+  #if ENABLED(HEATER_3_USES_MAX31855)
+    current_temperature_raw[3] = read_max31855(3,MAX31855_SS3);
+  #endif
+  
   for (uint8_t h = 0; h < HOTENDS; h++) {
     current_temperature[h] = analog2temp(current_temperature_raw[h], h);
   }
@@ -1059,7 +1094,7 @@ void tp_init() {
     SET_OUTPUT(EXTRUDER_3_AUTO_FAN_PIN);
   #endif
 
-  #if ENABLED(HEATER_0_USES_MAX6675)
+  #if ENABLED(HEATER_0_USES_MAX6675) || ENABLED(HEATER_USES_MAX31855)
 
     #if DISABLED(SDSUPPORT)
       WRITE(SCK_PIN, 0);
@@ -1070,9 +1105,10 @@ void tp_init() {
       SET_INPUT(MISO_PIN);
     #endif
 
-    OUT_WRITE(MAX6675_SS, HIGH);
-
-  #endif // HEATER_0_USES_MAX6675
+    #if ENABLED(HEATER_0_USES_MAX6675)
+      OUT_WRITE(MAX6675_SS, HIGH);
+    #endif // HEATER_0_USES_MAX6675
+  #endif // HEATER_0_USES_MAX6675 || HEATER_USES_MAX31855
 
   // Set analog inputs
   
@@ -1302,6 +1338,56 @@ void disable_all_heaters() {
     return max6675_temp & 4 ? 2000 : max6675_temp >> 3; // thermocouple open?
   }
 #endif // HEATER_0_USES_MAX6675
+
+
+#if ENABLED(HEATER_USES_MAX31855) 
+  
+  #define MAX31855_HEAT_INTERVAL 250u  
+  static millis_t next_max31855_ms[4] = {0,0,0,0};
+  int max31855_temp[4] = {2000,2000,2000,2000};
+  
+  
+  static int16_t read_max31855(int temp_sensor,int pin_cs) {
+    uint32_t value = 0;
+    millis_t ms = HAL::timeInMilliseconds();
+    
+    if ((ms < next_max31855_ms[temp_sensor]) && (next_max31855_ms[temp_sensor]!=0))
+      return max31855_temp[temp_sensor];
+      
+    next_max31855_ms[temp_sensor] = ms + MAX31855_HEAT_INTERVAL;
+    
+    HAL::spiBegin();
+    HAL::spiInit(2);
+    HAL::digitalWrite(pin_cs, 0);  // enable CS pin
+    HAL::delayMicroseconds(1);    // ensure 100ns delay - a bit extra is fine
+
+    union bytes_to_uint32 {
+      uint8_t bytes[4];
+      uint32_t integer;
+    } buffer;
+    
+    for (int i=3;i>=0;i--) {
+      buffer.bytes[i] = HAL::spiReceive();
+    }
+    value = buffer.integer;
+
+    HAL::digitalWrite(pin_cs, 1);  // disable CS pin
+
+
+    if (value & 0x7) {
+      return max31855_temp[temp_sensor];
+    }
+    else if(value & 0x80000000) {
+      value = 0xFFFFC000 | ((value >> 18) & 0x00003FFFF);
+    }
+    else {
+      value >>= 18;
+    }
+
+    max31855_temp[temp_sensor]=value;
+    return value;
+  }
+#endif //HEATER_USES_MAX31855
 
 /**
  * Stages in the ISR loop
@@ -1763,14 +1849,14 @@ HAL_TEMP_TIMER_ISR {
   if(temp_count >= OVERSAMPLENR + 2) { // 14 * 16 * 1/(16000000/64/256)  = 164ms.
     if (!temp_meas_ready) { //Only update the raw values if they have been read. Else we could be updating them during reading.
       unsigned long sum = 0;
-      #ifndef HEATER_0_USES_MAX6675
+      #if DISABLED(HEATER_0_USES_MAX6675) && DISABLED(HEATER_0_USES_MAX31855)
         SET_CURRENT_TEMP_RAW(0);
       #endif
-      #if HOTENDS > 1
+      #if HOTENDS > 1 && DISABLED(HEATER_1_USES_MAX31855)
         SET_CURRENT_TEMP_RAW(1);
-        #if HOTENDS > 2
+        #if HOTENDS > 2 && DISABLED(HEATER_2_USES_MAX31855)
           SET_CURRENT_TEMP_RAW(2);
-          #if HOTENDS > 3
+          #if HOTENDS > 3 && DISABLED(HEATER_3_USES_MAX31855)
             SET_CURRENT_TEMP_RAW(3);
           #endif
         #endif
@@ -1804,7 +1890,7 @@ HAL_TEMP_TIMER_ISR {
       raw_powconsumption_value = 0;
     #endif
 
-    #if HAS(TEMP_0) && DISABLED(HEATER_0_USES_MAX6675)
+    #if HAS(TEMP_0) && DISABLED(HEATER_0_USES_MAX6675) && DISABLED(HEATER_0_USES_MAX31855)
       #if HEATER_0_RAW_LO_TEMP > HEATER_0_RAW_HI_TEMP
         #define GE0 <=
       #else
@@ -1814,7 +1900,7 @@ HAL_TEMP_TIMER_ISR {
       if (minttemp_raw[0] GE0 current_temperature_raw[0]) min_temp_error(0);
     #endif
 
-    #if HAS(TEMP_1) && HOTENDS > 1
+    #if HAS(TEMP_1) && HOTENDS > 1  && DISABLED(HEATER_1_USES_MAX31855)
       #if HEATER_1_RAW_LO_TEMP > HEATER_1_RAW_HI_TEMP
         #define GE1 <=
       #else
@@ -1824,7 +1910,7 @@ HAL_TEMP_TIMER_ISR {
       if (minttemp_raw[1] GE1 current_temperature_raw[1]) min_temp_error(1);
     #endif // TEMP_SENSOR_1
 
-    #if HAS(TEMP_2) && HOTENDS > 2
+    #if HAS(TEMP_2) && HOTENDS > 2  && DISABLED(HEATER_2_USES_MAX31855)
       #if HEATER_2_RAW_LO_TEMP > HEATER_2_RAW_HI_TEMP
         #define GE2 <=
       #else
@@ -1834,7 +1920,7 @@ HAL_TEMP_TIMER_ISR {
       if (minttemp_raw[2] GE2 current_temperature_raw[2]) min_temp_error(2);
     #endif // TEMP_SENSOR_2
 
-    #if HAS(TEMP_3) && HOTENDS > 3
+    #if HAS(TEMP_3) && HOTENDS > 3  && DISABLED(HEATER_3_USES_MAX31855)
       #if HEATER_3_RAW_LO_TEMP > HEATER_3_RAW_HI_TEMP
         #define GE3 <=
       #else

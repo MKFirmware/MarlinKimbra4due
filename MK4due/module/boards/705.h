@@ -53,7 +53,7 @@
 #define SDPOWER               -1
 #define SDSS                  59
 #define SD_DETECT_PIN         60
-#define LED_PIN               -1
+#define LED_PIN               13
 
 #define ORIG_FAN_PIN           6
 #define ORIG_FAN2_PIN          5
@@ -64,8 +64,8 @@
 
 #define ORIG_HEATER_BED_PIN    2
 #define ORIG_HEATER_0_PIN      3
-#define ORIG_HEATER_1_PIN      7
-#define ORIG_HEATER_2_PIN      8
+#define ORIG_HEATER_1_PIN      8
+#define ORIG_HEATER_2_PIN      7
 #define ORIG_HEATER_3_PIN      9
 
 #define ORIG_TEMP_BED_PIN      0  // ANALOG NUMBERING
@@ -74,4 +74,13 @@
 #define ORIG_TEMP_2_PIN        3  // ANALOG NUMBERING
 #define ORIG_TEMP_3_PIN        4  // ANALOG NUMBERING
 
+#define MAX31855_SS0          65
+#define MAX31855_SS1          52
+#define MAX31855_SS2          50
+#define MAX31855_SS3          51
+
+#define ENC424_SS             61 
+
 #define ORIG_BEEPER_PIN       27
+
+
