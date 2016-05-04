@@ -1,3 +1,37 @@
+### Version 4.2.8
+* Add board folder with files of various board containing the pins
+* Add End time on Graphics display when SD print
+* Add M35 for upload firmware to Nextion from SD
+* Rewrite macros
+* Fix M109 so it won't wait for cooling
+* Clear code
+* Bug fix
+
+### Version 4.2.7
+* Add M906 Set motor Currents for ALLIGATOR board
+* Add M408 JSON OUTPUT
+* Add Cartesian Correction Hysteresis and Zwooble
+* Bug fix
+
+### Version 4.2.6
+* Bug Fix
+
+### Version 4.2.5
+* Big Update
+* Add HAL for 8 bit version
+* Rewrite Communication
+* Rewrite Servo
+* Add Color Mixing Extruder
+
+### Version 4.2.4
+* Added Abort on endstop hit feature
+* Added Purge command G1 P<valor>
+* Added M222 T<extruder> S<factor in percent> set density extrude factor percentage for purge
+
+### Version 4.2.3
+* Added Filament tot printed in stats
+* Overall rewrite
+
 ### Version 4.2.2
 * Added the possibility to invert the logic for lcd buttons.
 * Language files bugfix.

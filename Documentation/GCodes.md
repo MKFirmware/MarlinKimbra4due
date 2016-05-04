@@ -3,7 +3,7 @@
 ## G Codes
 
 *  G0  -> G1
-*  G1  - Coordinated Movement X Y Z E F(feedrate)
+*  G1  - Coordinated Movement X Y Z E F(feedrate) P(Purge)
 *  G2  - CW ARC
 *  G3  - CCW ARC
 *  G4  - Dwell S[seconds] or P[milliseconds], delay in Second or Millisecond
@@ -11,7 +11,7 @@
 *  G11 - retract recover filament according to settings of M208
 *  G28 - X0 Y0 Z0 Home all Axis. G28 M for bed manual setting with LCD.
 *  G29 - Detailed Z-Probe, probes the bed at 3 points or grid.  You must be at the home position for this to work correctly.
-   G29 Fyyy Lxxx Rxxx Byyy for customer grid.
+       - G29 Fyyy Lxxx Rxxx Byyy for customer grid.
 *  G30 - Single Z Probe, probes bed at current XY location. Bed Probe and Delta geometry Autocalibration G30 A
 *  G31 - Dock Z Probe sled (if enabled)
 *  G32 - Undock Z Probe sled (if enabled)
@@ -42,7 +42,8 @@
 *  M29  - Stop SD write
 *  M30  - Delete file from SD (M30 filename.g)
 *  M31  - Output time since last M109 or SD card start to serial
-*  M32  - Select file and start SD print (Can be used when printing from SD card)
+*  M32  - Make directory
+*  M35  - Upload Firmware to Nextion from SD
 *  M42  - Change pin status via gcode Use M42 Px Sy to set pin x to value y, when omitting Px the onboard led will be used.
 *  M49  - Z probe repetability test
 *  M80  - Turn on Power Supply
@@ -52,11 +53,17 @@
 *  M84  - Disable steppers until next move, or use S[seconds] to specify an inactivity timeout, after which the steppers will be disabled.  S0 to disable the timeout.
 *  M85  - Set inactivity shutdown timer with parameter S[seconds]. To disable set zero (default)
 *  M92  - Set axis_steps_per_unit - same syntax as G92
+*  M96  - Print ZWobble value
+*  M97  - Set ZWobble parameter M97 A<Amplitude_in_mm> W<period_in_mm> P<phase_in_degrees>
+*  M98  - Print Hysteresis value
+*  M99  - Set Hysteresis parameter M99 X<in mm> Y<in mm> Z<in mm> E<in mm>
+*  M100 - Watch Free Memory (For Debugging Only)
 *  M104 - Set extruder target temp
 *  M105 - Read current temp
 *  M106 - Fan on
 *  M107 - Fan off
-*  M109 - S[xxx] Wait for extruder current temp to reach target temp. Waits only when heating - R[xxx] Wait for extruder current temp to reach target temp. Waits when heating and cooling
+*  M109 - S[xxx] Wait for extruder current temp to reach target temp. Waits only when heating
+        - R[xxx] Wait for extruder current temp to reach target temp. Waits when heating and cooling
 *  M111 - Debug Dryrun Repetier
 *  M112 - Emergency stop
 *  M114 - Output current position to serial port, (V)erbose for user
@@ -71,7 +78,13 @@
 *  M128 - EtoP Open (BariCUDA EtoP = electricity to air pressure transducer by jmil)
 *  M129 - EtoP Closed (BariCUDA EtoP = electricity to air pressure transducer by jmil)
 *  M140 - Set bed target temp
-*  M190 - S[xxx] Wait for bed current temp to reach target temp. Waits only when heating - R[xxx] Wait for bed current temp to reach target temp. Waits when heating and cooling
+*  M145 - Set the heatup state H<hotend> B<bed> F<fan speed> for S<material> (0=PLA, 1=ABS)
+*  M150 - Set BlinkM Color Output R: Red<0-255> U(!): Green<0-255> B: Blue<0-255> over i2c, G for green does not work.
+*  M163 - Set a single proportion for a mixing extruder. Requires COLOR_MIXING_EXTRUDER.
+*  M164 - Save the mix as a virtual extruder. Requires COLOR_MIXING_EXTRUDER and MIXING_VIRTUAL_TOOLS.
+*  M165 - Set the proportions for a mixing extruder. Use parameters ABCDHI to set the mixing factors. Requires COLOR_MIXING_EXTRUDER.
+*  M190 - S[xxx] Wait for bed current temp to reach target temp. Waits only when heating
+        - R[xxx] Wait for bed current temp to reach target temp. Waits when heating and cooling
 *  M200 - D[millimeters]- set filament diameter and set E axis units to cubic millimeters (use S0 to set back to millimeters).
 *  M201 - Set max acceleration in units/s^2 for print moves (M201 X1000 Y1000 Z1000 E0 S1000 E1 S1000 E2 S1000 E3 S1000) in mm/sec^2
 *  M203 - Set maximum feedrate that your machine can sustain (M203 X200 Y200 Z300 E0 S1000 E1 S1000 E2 S1000 E3 S1000) in mm/sec
@@ -83,13 +96,14 @@
 *  M209 - S[1=true/0=false] enable automatic retract detect if the slicer did not support G10/11: every normal extrude-only move will be classified as retract depending on the direction.
 *  M218 - set hotend offset (in mm): T[extruder_number] X[offset_on_X] Y[offset_on_Y]
 *  M220 - S[factor in percent] - set speed factor override percentage
-*  M221 - S[factor in percent] - set extrude factor override percentage
+*  M221 - T<extruder> S<factor in percent> - set extrude factor override percentage
+*  M222 - T<extruder> S<factor in percent> - set density extrude factor percentage for purge
 *  M240 - Trigger a camera to take a photograph
 *  M280 - Position an RC Servo P[index] S[angle/microseconds], ommit S to report back current angle
 *  M300 - Play beep sound S[frequency Hz] P[duration ms]
 *  M301 - Set PID parameters P I and D
 *  M302 - Allow cold extrudes
-*  M303 - PID relay autotune S<temperature> sets the target temperature (default target temperature = 150C). H<hotend> C<cycles>
+*  M303 - PID relay autotune S<temperature> sets the target temperature (default target temperature = 150C). H<hotend> C<cycles> U<Apply result>
 *  M304 - Set bed PID parameters P I and D
 *  M350 - Set microstepping mode.
 *  M351 - Toggle MS1 MS2 pins directly.
@@ -100,6 +114,7 @@
 *  M405 - Turn on Filament Sensor extrusion control.  Optional D[delay in cm] to set delay in centimeters between sensor and extruder
 *  M406 - Turn off Filament Sensor extrusion control
 *  M407 - Displays measured filament diameter
+*  M408 - Report JSON-style response
 *  M410 - Quickstop. Abort all the planned moves
 *  M428 - Set the home_offset logically based on the current_position
 *  M500 - stores paramters in EEPROM
@@ -111,6 +126,7 @@
 *  M600 - Pause for filament change X[pos] Y[pos] Z[relative lift] E[initial retract] L[later retract distance for removal]
 *  M605 - Set dual x-carriage movement mode: Smode [ X<duplication x-offset> Rduplication temp offset ]
 *  M666 - Set z probe offset or Endstop and delta geometry adjustment. M666 L for list command
+*  M906 - Set motor currents XYZ T0-4 E
 *  M907 - Set digital trimpot motor current using axis codes.
 *  M908 - Control digital trimpot directly.
 *  M928 - Start SD logging (M928 filename.g) - ended by M29
