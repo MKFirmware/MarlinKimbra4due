@@ -25,6 +25,9 @@
 // Valid values are 0-3 for Serial, Serial1, Serial2, Serial3 and -1 for SerialUSB
 #define SERIAL_PORT 0
 
+// Wait for Serial port to be available, before starting. When connected from the PC you may not see errors otherwise
+// #define SERIAL_PORT_WAIT 
+
 // This determines the communication speed of the printer
 // 2400,9600,19200,38400,57600,115200,250000
 #define BAUDRATE 115200

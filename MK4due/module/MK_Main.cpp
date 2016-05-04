@@ -658,6 +658,11 @@ void setup() {
   #endif
 
   SERIAL_INIT(BAUDRATE);
+  
+  #if ENABLED(SERIAL_PORT_WAIT)
+    while (!MKSERIAL);
+  #endif
+  
   ECHO_EM(START);
   HAL::showStartReason();
   ECHO_EM(BUILD_VERSION);
