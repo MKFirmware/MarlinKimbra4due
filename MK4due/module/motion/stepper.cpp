@@ -12,16 +12,35 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 /**
- * stepper.cpp - stepper motor driver: executes motion plans using stepper motors
+ * stepper.cpp - A singleton object to execute motion plans using stepper motors
+ *
+ * Derived from Grbl
+ * Copyright (c) 2009-2011 Simen Svale Skogsrud
+ *
+ * Grbl is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Grbl is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
  * The timer calculations of this module informed by the 'RepRap cartesian firmware' by Zack Smith
  * and Philipp Tiefenbacher.
  */
@@ -45,8 +64,13 @@ block_t* current_block;  // A pointer to the block currently being traced
 //static makes it impossible to be called from outside of this file by extern.!
 
 // Variables used by The Stepper Driver Interrupt
-static unsigned char out_bits = 0;        // The next stepping-bits to be output
-static unsigned int cleaning_buffer_counter;
+static unsigned char last_direction_bits = 0;  // The next stepping-bits to be output
+static unsigned int cleaning_buffer_counter = 0;
+
+//
+// The direction of a single motor
+//
+FORCE_INLINE bool motor_direction(AxisEnum axis) { return TEST(last_direction_bits, axis); }
 
 #if ENABLED(Z_DUAL_ENDSTOPS)
   static bool performing_homing = false,
@@ -62,6 +86,12 @@ volatile static unsigned long step_events_completed; // The number of step event
   static long advance_rate, advance, final_advance = 0;
   static long old_advance = 0;
   static long e_steps[6];
+#elif ENABLED(ADVANCE_LPC)
+  int extruder_advance_k = ADVANCE_LPC_K;
+  volatile int e_steps[EXTRUDERS];
+  static int final_estep_rate;
+  static int current_estep_rate[EXTRUDERS]; // Actual extruder speed [steps/s]
+  static int current_adv_steps[EXTRUDERS];
 #endif
 
 static long acceleration_time, deceleration_time;
@@ -295,9 +325,9 @@ inline void update_endstops() {
     // Head direction in -X axis for CoreXY and CoreXZ bots.
     // If Delta1 == -Delta2, the movement is only in Y or Z axis
     if ((current_block->steps[A_AXIS] != current_block->steps[CORE_AXIS_2]) || (TEST(out_bits, A_AXIS) == TEST(out_bits, CORE_AXIS_2))) {
-      if (TEST(out_bits, X_HEAD))
+      if (motor_direction(X_HEAD))
   #else
-    if (TEST(out_bits, X_AXIS))   // stepping along -X axis (regular Cartesian bot)
+    if (motor_direction(X_AXIS))   // stepping along -X axis (regular Cartesian bot)
   #endif
       { // -direction
         #if ENABLED(DUAL_X_CARRIAGE)
@@ -329,9 +359,9 @@ inline void update_endstops() {
     // Head direction in -Y axis for CoreXY bots.
     // If DeltaX == DeltaY, the movement is only in X axis
     if ((current_block->steps[A_AXIS] != current_block->steps[B_AXIS]) || (TEST(out_bits, A_AXIS) != TEST(out_bits, B_AXIS))) {
-      if (TEST(out_bits, Y_HEAD))
+      if (motor_direction(Y_HEAD))
   #else
-      if (TEST(out_bits, Y_AXIS))   // -direction
+      if (motor_direction(Y_AXIS))   // -direction
   #endif
       { // -direction
         #if HAS(Y_MIN)
@@ -351,9 +381,9 @@ inline void update_endstops() {
     // Head direction in -Z axis for CoreXZ bots.
     // If DeltaX == DeltaZ, the movement is only in X axis
     if ((current_block->steps[A_AXIS] != current_block->steps[C_AXIS]) || (TEST(out_bits, A_AXIS) != TEST(out_bits, C_AXIS))) {
-      if (TEST(out_bits, Z_HEAD))
+      if (motor_direction(Z_HEAD))
   #else
-      if (TEST(out_bits, Z_AXIS))
+      if (motor_direction(Z_AXIS))
   #endif
       { // z -direction
         #if HAS(Z_MIN)
@@ -446,6 +476,9 @@ inline void update_endstops() {
 void st_wake_up() {
   //  TCNT1 = 0;
   ENABLE_STEPPER_DRIVER_INTERRUPT();
+  #if ENABLED(ADVANCE) || ENABLED(ADVANCE_LPC)
+    ENABLE_ADVANCE_EXTRUDER_INTERRUPT();
+  #endif
 }
 
 FORCE_INLINE unsigned long calc_timer(unsigned long step_rate) {
@@ -482,7 +515,7 @@ FORCE_INLINE unsigned long calc_timer(unsigned long step_rate) {
 void set_stepper_direction(bool onlye) {
 
   #define SET_STEP_DIR(AXIS) \
-    if (TEST(out_bits, AXIS ##_AXIS)) { \
+    if (motor_direction(AXIS ##_AXIS)) { \
       AXIS ##_APPLY_DIR(INVERT_## AXIS ##_DIR, false); \
       count_direction[AXIS ##_AXIS] = -1; \
     } \
@@ -498,7 +531,7 @@ void set_stepper_direction(bool onlye) {
   }
 
   #if DISABLED(ADVANCE)
-    if (TEST(out_bits, E_AXIS)) {
+    if (motor_direction(E_AXIS)) {
       REV_E_DIR();
       count_direction[E_AXIS] = -1;
     }
@@ -524,8 +557,11 @@ void HAL_timer_stepper_count(uint32_t count) {
 
 FORCE_INLINE void trapezoid_generator_reset() {
 
-  if (current_block->direction_bits != out_bits) {
-    out_bits = current_block->direction_bits;
+  static int8_t last_driver = -1;
+
+  if (current_block->direction_bits != last_direction_bits || current_block->active_driver != last_driver) {
+    last_direction_bits = current_block->direction_bits;
+    last_driver = current_block->active_driver;
     set_stepper_direction();
   }
 
@@ -544,6 +580,13 @@ FORCE_INLINE void trapezoid_generator_reset() {
   acc_step_rate = current_block->initial_rate;
   acceleration_time = calc_timer(acc_step_rate);
   //HAL_timer_stepper_count(acceleration_time);
+
+  #if ENABLED(ADVANCE_LPC)
+    if (current_block->use_advance_lead) {
+      current_estep_rate[current_block->active_driver] = ((unsigned long)acc_step_rate * current_block->e_speed_multiplier8) >> 8;
+      final_estep_rate = (current_block->nominal_rate * current_block->e_speed_multiplier8) >> 8;
+    }
+  #endif
 }
 
 // "The Stepper Driver Interrupt" - This timer interrupt is the workhorse.
@@ -551,9 +594,7 @@ FORCE_INLINE void trapezoid_generator_reset() {
 
 HAL_STEP_TIMER_ISR {
 
-  //STEP_TIMER_COUNTER->TC_CHANNEL[STEP_TIMER_CHANNEL].TC_SR;
   stepperChannel->TC_SR;
-  //stepperChannel->TC_RC = 1000000;
 
   if (cleaning_buffer_counter) {
     current_block = NULL;
@@ -642,11 +683,11 @@ HAL_STEP_TIMER_ISR {
             counter_E -= current_block->step_event_count;
             #if DISABLED(COLOR_MIXING_EXTRUDER)
               // Don't step E for mixing extruder
-              e_steps[current_block->active_driver] += TEST(out_bits, E_AXIS) ? -1 : 1;
+              e_steps[current_block->active_driver] += motor_direction(E_AXIS) ? -1 : 1;
             #endif;
           }
           #if ENABLED(COLOR_MIXING_EXTRUDER)
-            long dir = TEST(out_bits, E_AXIS) ? -1 : 1;
+            long dir = motor_direction(E_AXIS) ? -1 : 1;
             for (uint8_t j = 0; j < DRIVER_EXTRUDERS; j++) {
               counter_m[j] += current_block->steps[E_AXIS];
               if (counter_m[j] > 0) {
@@ -655,12 +696,26 @@ HAL_STEP_TIMER_ISR {
               }
             }
           #endif // !COLOR_MIXING_EXTRUDER
-        #endif //ADVANCE
+        #elif ENABLED(ADVANCE_LPC) // ADVANCE_LPC
+          counter_E += current_block->steps[E_AXIS];
+          if (counter_E > 0) {
+            counter_E -= current_block->step_event_count;
+            count_position[E_AXIS] += count_direction[E_AXIS];
+            e_steps[current_block->active_driver] += motor_direction(E_AXIS) ? -1 : 1;
+          }
+
+          if (current_block->use_advance_lead) {
+            int delta_adv_steps; // Maybe a char would be enough?
+            delta_adv_steps = (((long)extruder_advance_k * current_estep_rate[current_block->active_driver]) >> 9) - current_adv_steps[current_block->active_driver];
+            e_steps[current_block->active_driver] += delta_adv_steps;
+            current_adv_steps[current_block->active_driver] += delta_adv_steps;
+          }
+        #endif
 
         STEP_START(X);
         STEP_START(Y);
         STEP_START(Z);
-        #if DISABLED(ADVANCE)
+        #if DISABLED(ADVANCE) && DISABLED(ADVANCE_LPC)
           STEP_START(E);
           #if ENABLED(COLOR_MIXING_EXTRUDER)
             STEP_START_MIXING;
@@ -670,7 +725,7 @@ HAL_STEP_TIMER_ISR {
         STEP_END(X);
         STEP_END(Y);
         STEP_END(Z);
-        #if DISABLED(ADVANCE)
+        #if DISABLED(ADVANCE) && DISABLED(ADVANCE_LPC)
           STEP_END(E);
           #if ENABLED(COLOR_MIXING_EXTRUDER)
             STEP_END_MIXING;
@@ -680,11 +735,48 @@ HAL_STEP_TIMER_ISR {
         step_events_completed++;
         if (step_events_completed >= current_block->step_event_count) break;
       }
+
     #else
+
+      #if ENABLED(ADVANCE)
+          counter_E += current_block->steps[E_AXIS];
+          if (counter_E > 0) {
+            counter_E -= current_block->step_event_count;
+            #if DISABLED(COLOR_MIXING_EXTRUDER)
+              // Don't step E for mixing extruder
+              e_steps[current_block->active_driver] += motor_direction(E_AXIS) ? -1 : 1;
+            #endif;
+          }
+          #if ENABLED(COLOR_MIXING_EXTRUDER)
+            long dir = motor_direction(E_AXIS) ? -1 : 1;
+            for (uint8_t j = 0; j < DRIVER_EXTRUDERS; j++) {
+              counter_m[j] += current_block->steps[E_AXIS];
+              if (counter_m[j] > 0) {
+                counter_m[j] -= current_block->mix_event_count[j];
+                e_steps[j] += dir;
+              }
+            }
+          #endif // !COLOR_MIXING_EXTRUDER
+        #elif ENABLED(ADVANCE_LPC) // ADVANCE_LPC
+          counter_E += current_block->steps[E_AXIS];
+          if (counter_E > 0) {
+            counter_E -= current_block->step_event_count;
+            count_position[E_AXIS] += count_direction[E_AXIS];
+            e_steps[current_block->active_driver] += motor_direction(E_AXIS) ? -1 : 1;
+          }
+
+          if (current_block->use_advance_lead) {
+            int delta_adv_steps; // Maybe a char would be enough?
+            delta_adv_steps = (((long)extruder_advance_k * current_estep_rate[current_block->active_driver]) >> 9) - current_adv_steps[current_block->active_driver];
+            e_steps[current_block->active_driver] += delta_adv_steps;
+            current_adv_steps[current_block->active_driver] += delta_adv_steps;
+          }
+        #endif
+
       STEP_START(X);
       STEP_START(Y);
       STEP_START(Z);
-      #if DISABLED(ADVANCE)
+      #if DISABLED(ADVANCE) && DISABLED(ADVANCE_LPC)
         STEP_START(E);
         #if ENABLED(COLOR_MIXING_EXTRUDER)
           STEP_START_MIXING;
@@ -694,8 +786,7 @@ HAL_STEP_TIMER_ISR {
     #endif
 
     // Calculate new timer value
-    unsigned long timer;
-    unsigned long step_rate;
+    unsigned long timer, step_rate;
     if (step_events_completed <= (unsigned long)current_block->accelerate_until) {
 
       MultiU32X32toH32(acc_step_rate, acceleration_time, current_block->acceleration_rate);
@@ -723,8 +814,11 @@ HAL_STEP_TIMER_ISR {
         #endif
 
         old_advance = advance >> 8;
+      #elif ENABLED(ADVANCE_LPC) // ADVANCE_LPC
+        if (current_block->use_advance_lead)
+          current_estep_rate[current_block->active_driver] = ((unsigned long)acc_step_rate * current_block->e_speed_multiplier8) >> 8;
+      #endif
 
-      #endif // ADVANCE
     }
     else if (step_events_completed > (unsigned long)current_block->decelerate_after) {
       MultiU32X32toH32(step_rate, deceleration_time, current_block->acceleration_rate);
@@ -757,9 +851,16 @@ HAL_STEP_TIMER_ISR {
         #endif
 
         old_advance = advance_whole;
-      #endif //ADVANCE
+      #elif ENABLED(ADVANCE_LPC) // ADVANCE_LPC
+        if (current_block->use_advance_lead)
+          current_estep_rate[current_block->active_driver] = ((unsigned long)step_rate * current_block->e_speed_multiplier8) >> 8;
+      #endif
     }
     else {
+      #if ENABLED(ADVANCE_LPC)
+        if (current_block->use_advance_lead)
+          current_estep_rate[current_block->active_driver] = final_estep_rate;
+      #endif
       timer = OCR1A_nominal;
       // ensure we're running at the correct step rate, even if we just came off an acceleration
       step_loops = step_loops_nominal;
@@ -768,7 +869,7 @@ HAL_STEP_TIMER_ISR {
       STEP_END(X);
       STEP_END(Y);
       STEP_END(Z);
-      #if DISABLED(ADVANCE)
+      #if DISABLED(ADVANCE) && DISABLED(ADVANCE_LPC)
         STEP_END(E);
         #if ENABLED(COLOR_MIXING_EXTRUDER)
           STEP_END_MIXING;
@@ -786,13 +887,13 @@ HAL_STEP_TIMER_ISR {
   }
 }
 
-#if ENABLED(ADVANCE)
-  unsigned char old_OCR0A;
-  // Timer interrupt for E. e_steps is set in the main routine;
-  // Timer 0 is shared with millies
-  ISR(TIMER0_COMPA_vect) {
-    old_OCR0A += 52; // ~10kHz interrupt (250000 / 26 = 9615kHz)
-    OCR0A = old_OCR0A;
+#if ENABLED(ADVANCE) || ENABLED(ADVANCE_LPC)
+
+  TcChannel *extruderChannel = (ADVANCE_EXTRUDER_TIMER_COUNTER->TC_CHANNEL + ADVANCE_EXTRUDER_TIMER_CHANNEL);
+
+  HAL_ADVANCE_EXTRUDER_TIMER_ISR {
+
+    extruderChannel->TC_SR;
 
     #define STEP_E_ONCE(INDEX) \
       if (e_steps[INDEX] != 0) { \
@@ -805,30 +906,29 @@ HAL_STEP_TIMER_ISR {
           E## INDEX ##_DIR_WRITE(!INVERT_E## INDEX ##_DIR); \
           e_steps[INDEX]--; \
         } \
+        HAL::delayMicroseconds(1); \
         E## INDEX ##_STEP_WRITE(!INVERT_E_STEP_PIN); \
       }
 
-    // Step all E steppers that have steps, up to 4 steps per interrupt
-    for (uint8_t i = 0; i < 4; i++) {
-      STEP_E_ONCE(0);
-      #if DRIVER_EXTRUDERS > 1
-        STEP_E_ONCE(1);
-        #if DRIVER_EXTRUDERS > 2
-          STEP_E_ONCE(2);
-          #if DRIVER_EXTRUDERS > 3
-            STEP_E_ONCE(3);
-            #if DRIVER_EXTRUDERS > 4
-              STEP_E_ONCE(4);
-              #if DRIVER_EXTRUDERS > 5
-                STEP_E_ONCE(5);
-              #endif // DRIVER_EXTRUDERS > 5
-            #endif // DRIVER_EXTRUDERS > 4
-          #endif // DRIVER_EXTRUDERS > 3
-        #endif // DRIVER_EXTRUDERS > 2
-      #endif // DRIVER_EXTRUDERS > 1
-    }
+    // Step all E steppers that have steps
+    STEP_E_ONCE(0);
+    #if EXTRUDERS > 1
+      STEP_E_ONCE(1);
+      #if EXTRUDERS > 2
+        STEP_E_ONCE(2);
+        #if EXTRUDERS > 3
+          STEP_E_ONCE(3);
+          #if EXTRUDERS > 4
+            STEP_E_ONCE(4);
+            #if EXTRUDERS > 5
+              STEP_E_ONCE(5);
+            #endif
+          #endif
+        #endif
+      #endif
+    #endif
   }
-#endif // ADVANCE
+#endif
 
 void st_init() {
   digipot_init(); //Initialize Digipot Motor Current
@@ -1080,6 +1180,21 @@ void st_init() {
   HAL_step_timer_start();
   ENABLE_STEPPER_DRIVER_INTERRUPT();
 
+  #if ENABLED(ADVANCE) || ENABLED(ADVANCE_LPC)
+    #if ENABLED(ADVANCE)
+      e_steps[0] = e_steps[1] = e_steps[2] = e_steps[3] = e_steps[4] = e_steps[5] = 0;
+    #elif ENABLED(ADVANCE_LPC)
+      for (uint8_t i = 0; i < EXTRUDERS; i++) {
+        e_steps[i] = 0;
+        current_adv_steps[i] = 0;
+      }
+    #endif
+
+    HAL_advance_extruder_timer_start();
+    ENABLE_ADVANCE_EXTRUDER_INTERRUPT();
+
+  #endif // ADVANCE or ADVANCE_LPC
+
   enable_endstops(true); // Start with endstops active. After homing they can be disabled
   sei();
 
@@ -1200,6 +1315,9 @@ void quickStop() {
   while (blocks_queued()) plan_discard_current_block();
   current_block = NULL;
   ENABLE_STEPPER_DRIVER_INTERRUPT();
+  #if ENABLED(ADVANCE) || ENABLED(ADVANCE_LPC)
+    ENABLE_ADVANCE_EXTRUDER_INTERRUPT();
+  #endif
 }
 
 void report_positions() {
