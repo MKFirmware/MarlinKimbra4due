@@ -535,33 +535,52 @@ static const tTimerConfig TimerConfig [NUM_HARDWARE_TIMERS] =
 // http://forum.arduino.cc/index.php?topic=297397.0
 
 void HAL_step_timer_start() {
-  pmc_set_writeprotect(false); //remove write protection on registers
-  
-  // Timer for stepper
-  // Timer 3 HAL.h STEP_TIMER_NUM
-  // uint8_t timer_num = STEP_TIMER_NUM;
-  
   // Get the ISR from table
   Tc *tc = STEP_TIMER_COUNTER;
   IRQn_Type irq = STEP_TIMER_IRQN;
   uint32_t channel = STEP_TIMER_CHANNEL;
-  
-  pmc_enable_periph_clk((uint32_t)irq); //we need a clock?
-  
+
+  pmc_set_writeprotect(false); // remove write protection on registers
+  pmc_enable_periph_clk((uint32_t)irq); // we need a clock?
+
   tc->TC_CHANNEL[channel].TC_CCR = TC_CCR_CLKDIS;
-  
+
   tc->TC_CHANNEL[channel].TC_SR; // clear status register
   tc->TC_CHANNEL[channel].TC_CMR =  TC_CMR_WAVSEL_UP_RC | TC_CMR_WAVE | TC_CMR_TCCLKS_TIMER_CLOCK1;
 
-  tc->TC_CHANNEL[channel].TC_IER /*|*/= TC_IER_CPCS; //enable interrupt on timer match with register C
+  tc->TC_CHANNEL[channel].TC_IER /*|*/= TC_IER_CPCS; // enable interrupt on timer match with register C
   tc->TC_CHANNEL[channel].TC_IDR = ~TC_IER_CPCS;
   tc->TC_CHANNEL[channel].TC_RC   = (VARIANT_MCK >> 1) / 1000; // start with 1kHz as frequency; //interrupt occurs every x interations of the timer counter
-  
+
   tc->TC_CHANNEL[channel].TC_CCR = TC_CCR_CLKEN | TC_CCR_SWTRG;
-  
-  NVIC_EnableIRQ(irq); //enable Nested Vector Interrupt Controller
+
+  NVIC_EnableIRQ(irq); // enable Nested Vector Interrupt Controller
 }
 
+#if ENABLED(ADVANCE) || ENABLED(ADVANCE_LPC)
+  void HAL_advance_extruder_timer_start() {
+    // Get the ISR from table
+    Tc *tc = ADVANCE_EXTRUDER_TIMER_COUNTER;
+    IRQn_Type irq = ADVANCE_EXTRUDER_TIMER_IRQN;
+    uint32_t channel = ADVANCE_EXTRUDER_TIMER_CHANNEL;
+
+    pmc_set_writeprotect(false); // remove write protection on registers
+    pmc_enable_periph_clk((uint32_t)irq);
+
+    tc->TC_CHANNEL[channel].TC_CCR = TC_CCR_CLKDIS;
+
+    tc->TC_CHANNEL[channel].TC_SR; // clear status register
+    tc->TC_CHANNEL[channel].TC_CMR =  TC_CMR_WAVSEL_UP_RC | TC_CMR_WAVE | TC_CMR_TCCLKS_TIMER_CLOCK1;
+
+    tc->TC_CHANNEL[channel].TC_IER /*|*/= TC_IER_CPCS; // enable interrupt on timer match with register C
+    tc->TC_CHANNEL[channel].TC_IDR = ~TC_IER_CPCS;
+    tc->TC_CHANNEL[channel].TC_RC   = (VARIANT_MCK >> 1) / 19230; // start with 19kHz as frequency;
+
+    tc->TC_CHANNEL[channel].TC_CCR = TC_CCR_CLKEN | TC_CCR_SWTRG;
+
+    NVIC_EnableIRQ(irq); // enable Nested Vector Interrupt Controller
+  }
+#endif
 
 void HAL_temp_timer_start (uint8_t timer_num) {
 	Tc *tc = TimerConfig [timer_num].pTimerRegs;

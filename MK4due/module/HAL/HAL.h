@@ -231,6 +231,12 @@
   unsigned char eeprom_read_byte(unsigned char* pos);
 
   // timers
+  #define ADVANCE_EXTRUDER_TIMER_NUM 1
+  #define ADVANCE_EXTRUDER_TIMER_COUNTER TC0
+  #define ADVANCE_EXTRUDER_TIMER_CHANNEL 1
+  #define ADVANCE_EXTRUDER_TIMER_IRQN TC1_IRQn
+  #define HAL_ADVANCE_EXTRUDER_TIMER_ISR 	void TC1_Handler()
+
   #define STEP_TIMER_NUM 2
   #define STEP_TIMER_COUNTER TC0
   #define STEP_TIMER_CHANNEL 2
@@ -241,7 +247,6 @@
   #define TEMP_TIMER_COUNTER TC1
   #define TEMP_TIMER_CHANNEL 0
   #define TEMP_FREQUENCY 2000
-
   #define TEMP_TIMER_IRQN TC3_IRQn
   #define HAL_TEMP_TIMER_ISR 	void TC3_Handler()
 
@@ -256,6 +261,12 @@
 
   #define ENABLE_STEPPER_DRIVER_INTERRUPT()	HAL_timer_enable_interrupt (STEP_TIMER_NUM)
   #define DISABLE_STEPPER_DRIVER_INTERRUPT()	HAL_timer_disable_interrupt (STEP_TIMER_NUM)
+
+  #if ENABLED(ADVANCE) || ENABLED(ADVANCE_LPC)
+    #define ENABLE_ADVANCE_EXTRUDER_INTERRUPT()	HAL_timer_enable_interrupt (ADVANCE_EXTRUDER_TIMER_NUM)
+    #define DISABLE_ADVANCE_EXTRUDER_INTERRUPT()	HAL_timer_disable_interrupt (ADVANCE_EXTRUDER_TIMER_NUM)
+    void HAL_advance_extruder_timer_start(void);
+  #endif
 
   void HAL_step_timer_start(void);
   void HAL_temp_timer_start (uint8_t timer_num);
