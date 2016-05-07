@@ -137,6 +137,7 @@ FORCE_INLINE void setTargetHotend(const float& celsius, uint8_t hotend) {
     start_watching_heater(HOTEND_ARG);
   #endif
 }
+
 FORCE_INLINE void setTargetBed(const float& celsius) {
   target_temperature_bed = celsius;
   #if ENABLED(THERMAL_PROTECTION_BED)
