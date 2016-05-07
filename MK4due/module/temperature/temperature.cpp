@@ -108,6 +108,7 @@ unsigned char soft_pwm_bed;
     static millis_t thermal_runaway_bed_timer;
   #endif
 #endif
+
 #if HAS(POWER_CONSUMPTION_SENSOR)
   int current_raw_powconsumption = 0;  //Holds measured power consumption
   static unsigned long raw_powconsumption_value = 0;
@@ -1287,6 +1288,9 @@ void tp_init() {
 void disable_all_heaters() {
   for (int i = 0; i < HOTENDS; i++) setTargetHotend(0, i);
   setTargetBed(0);
+
+  // If all heaters go down then for sure our print job has stopped
+  print_job_timer.stop();
 
   #define DISABLE_HEATER(NR) { \
     target_temperature[NR] = 0; \

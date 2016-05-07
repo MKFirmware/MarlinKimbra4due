@@ -324,7 +324,7 @@ inline void update_endstops() {
   #if MECH(COREXY) || MECH(COREYX)|| MECH(COREXZ) || MECH(COREZX)
     // Head direction in -X axis for CoreXY and CoreXZ bots.
     // If Delta1 == -Delta2, the movement is only in Y or Z axis
-    if ((current_block->steps[A_AXIS] != current_block->steps[CORE_AXIS_2]) || (TEST(out_bits, A_AXIS) == TEST(out_bits, CORE_AXIS_2))) {
+    if ((current_block->steps[A_AXIS] != current_block->steps[CORE_AXIS_2]) || motor_direction(A_AXIS) == motor_direction(CORE_AXIS_2)) {
       if (motor_direction(X_HEAD))
   #else
     if (motor_direction(X_AXIS))   // stepping along -X axis (regular Cartesian bot)
@@ -358,7 +358,7 @@ inline void update_endstops() {
   #if MECH(COREXY) || MECH(COREYX)
     // Head direction in -Y axis for CoreXY bots.
     // If DeltaX == DeltaY, the movement is only in X axis
-    if ((current_block->steps[A_AXIS] != current_block->steps[B_AXIS]) || (TEST(out_bits, A_AXIS) != TEST(out_bits, B_AXIS))) {
+    if ((current_block->steps[A_AXIS] != current_block->steps[B_AXIS]) || motor_direction(A_AXIS) != motor_direction(B_AXIS)) {
       if (motor_direction(Y_HEAD))
   #else
       if (motor_direction(Y_AXIS))   // -direction
@@ -380,7 +380,7 @@ inline void update_endstops() {
   #if MECH(COREXZ) || MECH(COREZX)
     // Head direction in -Z axis for CoreXZ bots.
     // If DeltaX == DeltaZ, the movement is only in X axis
-    if ((current_block->steps[A_AXIS] != current_block->steps[C_AXIS]) || (TEST(out_bits, A_AXIS) != TEST(out_bits, C_AXIS))) {
+    if ((current_block->steps[A_AXIS] != current_block->steps[C_AXIS]) || motor_direction(A_AXIS) != motor_direction(C_AXIS)) {
       if (motor_direction(Z_HEAD))
   #else
       if (motor_direction(Z_AXIS))
@@ -1198,7 +1198,7 @@ void st_init() {
   enable_endstops(true); // Start with endstops active. After homing they can be disabled
   sei();
 
-  set_stepper_direction(); // Init directions to out_bits = 0
+  set_stepper_direction(); // Init directions to last_direction_bits = 0
 }
 
 
