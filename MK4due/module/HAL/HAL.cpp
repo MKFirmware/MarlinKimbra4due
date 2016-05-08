@@ -574,7 +574,7 @@ void HAL_step_timer_start() {
 
     tc->TC_CHANNEL[channel].TC_IER /*|*/= TC_IER_CPCS; // enable interrupt on timer match with register C
     tc->TC_CHANNEL[channel].TC_IDR = ~TC_IER_CPCS;
-    tc->TC_CHANNEL[channel].TC_RC   = (VARIANT_MCK >> 1) / 19230; // start with 19kHz as frequency;
+    tc->TC_CHANNEL[channel].TC_RC   = (VARIANT_MCK >> 1) / 10000; // start with 10kHz as frequency;
 
     tc->TC_CHANNEL[channel].TC_CCR = TC_CCR_CLKEN | TC_CCR_SWTRG;
 
