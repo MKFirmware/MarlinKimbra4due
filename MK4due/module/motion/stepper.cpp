@@ -640,7 +640,7 @@ HAL_STEP_TIMER_ISR {
           E## INDEX ##_DIR_WRITE(!INVERT_E## INDEX ##_DIR); \
           e_steps[INDEX]--; \
         } \
-        HAL::delayMicroseconds(1); \
+        HAL::delayMicroseconds(2); \
         E## INDEX ##_STEP_WRITE(!INVERT_E_STEP_PIN); \
       }
 
