@@ -530,6 +530,43 @@ static const tTimerConfig TimerConfig [NUM_HARDWARE_TIMERS] =
 	Timer_clock4: Prescaler 128 -> 656.25kHz
 */
 
+uint8_t bestClock(double frequency, uint32_t& retRC){
+	/*
+		Pick the best Clock, thanks to Ogle Basil Hall!
+		Timer		Definition
+		TIMER_CLOCK1	MCK /  2
+		TIMER_CLOCK2	MCK /  8
+		TIMER_CLOCK3	MCK / 32
+		TIMER_CLOCK4	MCK /128
+	*/
+	const struct {
+		uint8_t flag;
+		uint8_t divisor;
+	} clockConfig[] = {
+		{ TC_CMR_TCCLKS_TIMER_CLOCK1,   2 },
+		{ TC_CMR_TCCLKS_TIMER_CLOCK2,   8 },
+		{ TC_CMR_TCCLKS_TIMER_CLOCK3,  32 },
+		{ TC_CMR_TCCLKS_TIMER_CLOCK4, 128 }
+	};
+	float ticks;
+	float error;
+	int clkId = 3;
+	int bestClock = 3;
+	float bestError = 9.999e99;
+	do {
+		ticks = (float) VARIANT_MCK / frequency / (float) clockConfig[clkId].divisor;
+		// error = abs(ticks - round(ticks));
+		error = clockConfig[clkId].divisor * abs(ticks - round(ticks));	// Error comparison needs scaling
+		if (error < bestError) {
+			bestClock = clkId;
+			bestError = error;
+		}
+	} while (clkId-- > 0);
+	ticks = (float) VARIANT_MCK / frequency / (float) clockConfig[bestClock].divisor;
+	retRC = (uint32_t) round(ticks);
+	return clockConfig[bestClock].flag;
+}
+
 // new timer by Ps991
 // thanks for that work
 // http://forum.arduino.cc/index.php?topic=297397.0
@@ -563,6 +600,11 @@ void HAL_step_timer_start() {
     Tc *tc = ADVANCE_EXTRUDER_TIMER_COUNTER;
     IRQn_Type irq = ADVANCE_EXTRUDER_TIMER_IRQN;
     uint32_t channel = ADVANCE_EXTRUDER_TIMER_CHANNEL;
+    uint32_t rc = 0;
+    uint8_t clock;
+
+    // Find the best clock for the wanted frequency
+    clock = bestClock(10000, rc);
 
     pmc_set_writeprotect(false); // remove write protection on registers
     pmc_enable_periph_clk((uint32_t)irq);
@@ -570,11 +612,11 @@ void HAL_step_timer_start() {
     tc->TC_CHANNEL[channel].TC_CCR = TC_CCR_CLKDIS;
 
     tc->TC_CHANNEL[channel].TC_SR; // clear status register
-    tc->TC_CHANNEL[channel].TC_CMR =  TC_CMR_WAVSEL_UP_RC | TC_CMR_WAVE | TC_CMR_TCCLKS_TIMER_CLOCK1;
+    tc->TC_CHANNEL[channel].TC_CMR =  TC_CMR_WAVSEL_UP_RC | TC_CMR_WAVE | clock;
 
     tc->TC_CHANNEL[channel].TC_IER /*|*/= TC_IER_CPCS; // enable interrupt on timer match with register C
     tc->TC_CHANNEL[channel].TC_IDR = ~TC_IER_CPCS;
-    tc->TC_CHANNEL[channel].TC_RC   = (VARIANT_MCK >> 1) / 10000; // start with 10kHz as frequency;
+    tc->TC_CHANNEL[channel].TC_RC  = rc;
 
     tc->TC_CHANNEL[channel].TC_CCR = TC_CCR_CLKEN | TC_CCR_SWTRG;
 
