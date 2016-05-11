@@ -608,18 +608,18 @@
  *                                                                        *
  * Add support for filament exchange support M600                         *
  *                                                                        *
- * Uncomment FILAMENTCHANGEENABLE to enable this feature                  *
+ * Uncomment FILAMENT CHANGE FEATURE to enable this feature               *
  * Requires display                                                       *
  *                                                                        *
  **************************************************************************/
-//#define FILAMENTCHANGEENABLE
+//#define FILAMENT_CHANGE_FEATURE
 
-#define FILAMENTCHANGE_XPOS 3
-#define FILAMENTCHANGE_YPOS 3
-#define FILAMENTCHANGE_ZADD 10
-#define FILAMENTCHANGE_FIRSTRETRACT -2
-#define FILAMENTCHANGE_FINALRETRACT -100
-#define FILAMENTCHANGE_PRINTEROFF 5     // Minutes
+#define FILAMENT_CHANGE_X_POS 3             // X position of hotend
+#define FILAMENT_CHANGE_Y_POS 3             // Y position of hotend
+#define FILAMENT_CHANGE_Z_ADD 10            // Z addition of hotend (lift)
+#define FILAMENT_CHANGE_XY_FEEDRATE 100     // X and Y axes feedrate in mm/s (also used for delta printers Z axis)
+#define FILAMENT_CHANGE_Z_FEEDRATE 5        // Z axis feedrate in mm/s (not used for delta printers)
+#define FILAMENT_CHANGE_RETRACT_LENGTH 2    // Initial retract in mm
                                             // It is a short retract used immediately after print interrupt before move to filament exchange position
 #define FILAMENT_CHANGE_RETRACT_FEEDRATE 50 // Initial retract feedrate in mm/s
 #define FILAMENT_CHANGE_UNLOAD_LENGTH 100   // Unload filament length from hotend in mm
