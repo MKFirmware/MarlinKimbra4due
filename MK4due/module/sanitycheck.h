@@ -1,4 +1,26 @@
 /**
+ * MK & MK4due 3D Printer Firmware
+ *
+ * Based on Marlin, Sprinter and grbl
+ * Copyright (C) 2011 Camiel Gubbels / Erik van der Zalm
+ * Copyright (C) 2013 - 2016 Alberto Cotronei @MagoKimbra
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+/**
  * sanitycheck.h
  *
  * Test configuration values for errors at compile-time.
@@ -152,8 +174,8 @@
   #endif
 
   // Language
-  #if DISABLED(LANGUAGE_CHOICE)
-    #error DEPENDENCY ERROR: Missing setting LANGUAGE_CHOICE
+  #if DISABLED(LCD_LANGUAGE)
+    #error DEPENDENCY ERROR: Missing setting LCD_LANGUAGE
   #endif
 
   /// FEATURE
@@ -369,6 +391,12 @@
     #endif
   #endif
 
+  /**
+   * Advance Extrusion
+   */
+  #if ENABLED(ADVANCE) && ENABLED(ADVANCE_LPC)
+    #error You can enable ADVANCE or ADVANCE_LPC, but not both.
+  #endif
   #if ENABLED(ADVANCE)
     #if DISABLED(EXTRUDER_ADVANCE_K)
       #error DEPENDENCY ERROR: Missing setting EXTRUDER_ADVANCE_K
@@ -378,24 +406,24 @@
     #endif
   #endif
 
-  #if ENABLED(FILAMENTCHANGEENABLE)
-    #if DISABLED(FILAMENTCHANGE_XPOS)
-      #error DEPENDENCY ERROR: Missing setting FILAMENTCHANGE_XPOS
+  #if ENABLED(FILAMENT_CHANGE_FEATURE)
+    #if DISABLED(FILAMENT_CHANGE_X_POS)
+      #error DEPENDENCY ERROR: Missing setting FILAMENT_CHANGE_X_POS
     #endif
-    #if DISABLED(FILAMENTCHANGE_YPOS)
-      #error DEPENDENCY ERROR: Missing setting FILAMENTCHANGE_YPOS
+    #if DISABLED(FILAMENT_CHANGE_Y_POS)
+      #error DEPENDENCY ERROR: Missing setting FILAMENT_CHANGE_Y_POS
     #endif
-    #if DISABLED(FILAMENTCHANGE_ZADD)
-      #error DEPENDENCY ERROR: Missing setting FILAMENTCHANGE_ZADD
+    #if DISABLED(FILAMENT_CHANGE_Z_ADD)
+      #error DEPENDENCY ERROR: Missing setting FILAMENT_CHANGE_Z_ADD
     #endif
-    #if DISABLED(FILAMENTCHANGE_FIRSTRETRACT)
-      #error DEPENDENCY ERROR: Missing setting FILAMENTCHANGE_FIRSTRETRACT
+    #if DISABLED(FILAMENT_CHANGE_RETRACT_LENGTH)
+      #error DEPENDENCY ERROR: Missing setting FILAMENT_CHANGE_RETRACT_LENGTH
     #endif
-    #if DISABLED(FILAMENTCHANGE_FINALRETRACT)
-      #error DEPENDENCY ERROR: Missing setting FILAMENTCHANGE_FINALRETRACT
+    #if DISABLED(FILAMENT_CHANGE_UNLOAD_LENGTH)
+      #error DEPENDENCY ERROR: Missing setting FILAMENT_CHANGE_UNLOAD_LENGTH
     #endif
-    #if DISABLED(FILAMENTCHANGE_PRINTEROFF)
-      #error DEPENDENCY ERROR: Missing setting FILAMENTCHANGE_PRINTEROFF
+    #if DISABLED(FILAMENT_CHANGE_PRINTER_OFF)
+      #error DEPENDENCY ERROR: Missing setting FILAMENT_CHANGE_PRINTER_OFF
     #endif
   #endif
     
@@ -1190,7 +1218,7 @@
       #error DEPENDENCY ERROR: Missing setting MANUAL_Z_HOME_POS
     #endif
   #endif
-  #if MECH(COREXY) || MECH(COREXZ)
+  #if MECH(COREXY) || MECH(COREYX) || MECH(COREXZ) || MECH(COREZX)
     #if DISABLED(COREX_YZ_FACTOR)
       #error DEPENDENCY ERROR: Missing setting COREX_YZ_FACTOR
     #endif
@@ -1220,8 +1248,8 @@
   #endif
 
   #if MECH(DELTA)
-    #if DISABLED(DEFAULT_DELTA_DIAGONAL_ROD)
-      #error DEPENDENCY ERROR: Missing setting DEFAULT_DELTA_DIAGONAL_ROD
+    #if DISABLED(DELTA_DIAGONAL_ROD)
+      #error DEPENDENCY ERROR: Missing setting DELTA_DIAGONAL_ROD
     #endif
     #if DISABLED(DELTA_SMOOTH_ROD_OFFSET)
       #error DEPENDENCY ERROR: Missing setting DELTA_SMOOTH_ROD_OFFSET
@@ -1229,8 +1257,8 @@
     #if DISABLED(DELTA_CARRIAGE_OFFSET)
       #error DEPENDENCY ERROR: Missing setting DELTA_CARRIAGE_OFFSET
     #endif
-    #if DISABLED(BED_PRINTER_RADIUS)
-      #error DEPENDENCY ERROR: Missing setting BED_PRINTER_RADIUS
+    #if DISABLED(DELTA_PRINTABLE_RADIUS)
+      #error DEPENDENCY ERROR: Missing setting DELTA_PRINTABLE_RADIUS
     #endif
     #if DISABLED(DEFAULT_DELTA_RADIUS)
       #error DEPENDENCY ERROR: Missing setting DEFAULT_DELTA_RADIUS
@@ -1280,8 +1308,14 @@
     #if DISABLED(TOWER_C_DIAGROD_ADJ)
       #error DEPENDENCY ERROR: Missing setting TOWER_C_DIAGROD_ADJ
     #endif
-    #if DISABLED(Z_PROBE_OFFSET)
-      #error DEPENDENCY ERROR: Missing setting Z_PROBE_OFFSET
+    #if DISABLED(X_PROBE_OFFSET_FROM_EXTRUDER)
+      #error DEPENDENCY ERROR: Missing setting X_PROBE_OFFSET_FROM_EXTRUDER
+    #endif
+    #if DISABLED(Y_PROBE_OFFSET_FROM_EXTRUDER)
+      #error DEPENDENCY ERROR: Missing setting Y_PROBE_OFFSET_FROM_EXTRUDER
+    #endif
+    #if DISABLED(Z_PROBE_OFFSET_FROM_EXTRUDER)
+      #error DEPENDENCY ERROR: Missing setting Z_PROBE_OFFSET_FROM_EXTRUDER
     #endif
     #if DISABLED(Z_PROBE_DEPLOY_START_LOCATION)
       #error DEPENDENCY ERROR: Missing setting Z_PROBE_DEPLOY_START_LOCATION
@@ -1346,8 +1380,11 @@
    * Babystepping
    */
   #if ENABLED(BABYSTEPPING)
-    #if MECH(COREXY) && ENABLED(BABYSTEP_XY)
+    #if (MECH(COREXY) || MECH(COREYX)) && ENABLED(BABYSTEP_XY)
       #error CONFLICT ERROR: BABYSTEPPING only implemented for Z axis on CoreXY.
+    #endif
+    #if (MECH(COREXZ) || MECH(COREZX))
+      #error CONFLICT ERROR: BABYSTEPPING not implemented for CoreXZ or CoreZX.
     #endif
     #if MECH(SCARA)
       #error CONFLICT ERROR: BABYSTEPPING is not implemented for SCARA yet.
@@ -1435,10 +1472,10 @@
   #endif
 
   /**
-   * Required LCD for FILAMENTCHANGEENABLE
+   * Required LCD for FILAMENT_CHANGE_FEATURE
    */
-  #if ENABLED(FILAMENTCHANGEENABLE) && DISABLED(ULTRA_LCD)
-    #error DEPENDENCY ERROR: You must have LCD in order to use FILAMENTCHANGEENABLE
+  #if ENABLED(FILAMENT_CHANGE_FEATURE) && DISABLED(ULTRA_LCD)
+    #error DEPENDENCY ERROR: You must have LCD in order to use FILAMENT_CHANGE_FEATURE
   #endif
 
   /**
@@ -1713,8 +1750,16 @@
     #error DEPENDENCY ERROR: You have to set E_MIN_PIN to a valid pin if you enable NPR2
   #endif
 
-  #if ENABLED(DONDOLO) && NUM_SERVOS < 1
-    #error DEPENDENCY ERROR: You must set NUM_SERVOS > 0 for DONDOLO
+  #if (ENABLED(DONDOLO_SINGLE_MOTOR) || ENABLED(DONDOLO_DUAL_MOTOR)) && HASNT(SERVOS)
+    #error DEPENDENCY ERROR: You must enabled ENABLE_SERVOS and set NUM_SERVOS > 0 for DONDOLO MULTI EXTRUDER
+  #endif
+
+  #if ENABLED(DONDOLO_SINGLE_MOTOR) && ENABLED(DONDOLO_DUAL_MOTOR)
+    #error DEPENDENCY ERROR: You must enabled only one for DONDOLO_SINGLE_MOTOR and DONDOLO_DUAL_MOTOR
+  #endif
+
+  #if (ENABLED(DONDOLO_SINGLE_MOTOR) || ENABLED(DONDOLO_DUAL_MOTOR)) && EXTRUDERS != 2
+    #error DEPENDENCY ERROR: You must set EXTRUDERS = 2 for DONDOLO
   #endif
 
   #if ENABLED(LASERBEAM) && (!PIN_EXISTS(LASER_PWR) ||  !PIN_EXISTS(LASER_TTL)) 

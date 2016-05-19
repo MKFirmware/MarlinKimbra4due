@@ -9,7 +9,6 @@
  * - Extruders number
  * - Thermistor type
  * - Temperature limits
- * - UI Language
  *
  * Mechanisms-settings can be found in Configuration_Xxxxxx.h (where Xxxxxx can be: Cartesian - Delta - Core - Scara)
  * Feature-settings can be found in Configuration_Feature.h
@@ -22,6 +21,7 @@
 // SERIAL PORT selects which serial port should be used for communication with the host.
 // This allows the connection of wireless adapters (for instance) to non-default port pins.
 // Serial port 0 is still used by the Arduino bootloader regardless of this setting.
+// Valid values are 0-3 for Serial, Serial1, Serial2, Serial3 and -1 for SerialUSB
 #define SERIAL_PORT 0
 
 // This determines the communication speed of the printer
@@ -52,9 +52,17 @@
 //#define FIRMWARE_TEST
 
 // Some particular clients re-start sending commands only after receiving a 'wait' when there is a bad serial-connection.
-//#define NO_TIMEOUTS
+//#define NO_TIMEOUTS 1000 // Milliseconds
 // Uncomment to include more info in ok command
 //#define ADVANCED_OK
+
+//
+// Host Keepalive
+//
+// When enabled MarlinKimbra will send a busy status message to the host
+// every couple of seconds when it can't accept commands.
+#define HOST_KEEPALIVE_FEATURE        // Disable this if your host doesn't like keepalive messages
+#define DEFAULT_KEEPALIVE_INTERVAL 2  // Number of seconds between "busy" messages. Set with M113.
 /***********************************************************************/
 
 
@@ -72,10 +80,22 @@
 
 /***********************************************************************
  *************************** Mechanism type ****************************
+ ***********************************************************************
+ *                                                                     *
+ * CARTESIAN  - Prusa, Mendel, etc                                     *
+ * COREXY     - H-Bot/Core XY (x_motor = x+y, y_motor = x-y)           *
+ * COREYX     - H-Bot/Core XY (x_motor = y+x, y_motor = y-x)           *
+ * COREXZ     - H-Bot/Core XZ (x_motor = x+z, z_motor = x-z)           *
+ * COREZX     - H-Bot/Core XZ (x_motor = z+x, z_motor = z-x)           *
+ * DELTA      - Rostock, Kossel, RostockMax, Cerberus, etc             *
+ * SCARA      - SCARA                                                  *
+ *                                                                     *
  ***********************************************************************/
 #define MECHANISM MECH_CARTESIAN
 //#define MECHANISM MECH_COREXY
+//#define MECHANISM MECH_COREYX
 //#define MECHANISM MECH_COREXZ
+//#define MECHANISM MECH_COREZX
 //#define MECHANISM MECH_DELTA
 //#define MECHANISM MECH_SCARA
 /***********************************************************************/
@@ -136,6 +156,7 @@
  *  12 is 100k 0603 SMD Vishay NTCS0603E3104FXT (4.7k pullup) (calibrated for Makibox hot bed)       *
  *  13 is 100k Hisens 3950  1% up to 300°C for hotend "Simple ONE " & "Hotend "All In ONE"          *
  *  20 is the PT100 circuit found in the Ultimainboard V2.x                                          *
+ *  40 is the 10k Carel NTC015WH01 or ELIWELL SN8T6A1502 (4.7k pullup)                               *
  *  60 is 100k Maker's Tool Works Kapton Bed Thermistor beta=3950                                    *
  *                                                                                                   *
  * 1kohm PULLUP!                                                                                     *
@@ -179,10 +200,15 @@
 /***********************************************************************
  ************************* Temperature limits ***************************
  ***********************************************************************/
-// Actual temperature must be close to target for this long before M109 returns success
+// Hotend temperature must be close to target for this long before M109 returns success
 #define TEMP_RESIDENCY_TIME 10  // (seconds)
 #define TEMP_HYSTERESIS 3       // (degC) range of +/- temperatures considered "close" to the target one
 #define TEMP_WINDOW     1       // (degC) Window around target to start the residency timer x degC early.
+
+// Bed temperature must be close to target for this long before M190 returns success
+#define TEMP_BED_RESIDENCY_TIME 0   // (seconds)
+#define TEMP_BED_HYSTERESIS 3       // (degC) range of +/- temperatures considered "close" to the target one
+#define TEMP_BED_WINDOW     1       // (degC) Window around target to start the residency timer x degC early.
 
 // When temperature exceeds max temp, your heater will be switched off.
 // This feature exists to protect your hotend from overheating accidentally, but *NOT* from thermistor short/failure!
@@ -216,34 +242,4 @@
 #define GUM_PREHEAT_FAN_SPEED   255   // Insert Value between 0 and 255
 /*****************************************************************************************************/
 
-
-/***********************************************************************
- *************************** UI Language  ******************************
- ***********************************************************************
- *                                                                     *
- * Select the language that you prefer and change LANGUAGE_CHOICE      *
- *                                                                     *
- * 1  English                                                          *
- * 2  Polish                                                           *
- * 3  French                                                           *
- * 4  German                                                           *
- * 5  Spanish                                                          *
- * 6  Russian                                                          *
- * 7  Italian                                                          *
- * 8  Portuguese                                                       *
- * 9  Finnish                                                          *
- * 10 Aragonese                                                        *
- * 11 Dutch                                                            *
- * 12 Danish                                                           *
- * 13 Catalan                                                          *
- * 14 Basque-Euskera                                                   *
- * 15 Portuguese (Brazil)                                              *
- * 16 Bulgarian                                                        *
- * 17 Japanese                                                         *
- * 18 Japanese utf                                                     *
- * 19 Chinese                                                          *
- *                                                                     *
- ***********************************************************************/
-#define LANGUAGE_CHOICE 1
-/***********************************************************************/
 #endif

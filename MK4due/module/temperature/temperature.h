@@ -1,4 +1,26 @@
-/*
+/**
+ * MK & MK4due 3D Printer Firmware
+ *
+ * Based on Marlin, Sprinter and grbl
+ * Copyright (C) 2011 Camiel Gubbels / Erik van der Zalm
+ * Copyright (C) 2013 - 2016 Alberto Cotronei @MagoKimbra
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+/**
   temperature.h - temperature controller
   Part of Marlin
 
@@ -105,13 +127,23 @@ FORCE_INLINE float degTargetBed() { return target_temperature_bed; }
   void start_watching_heater(int h = 0);
 #endif
 
+#if ENABLED(THERMAL_PROTECTION_BED)
+  void start_watching_bed();
+#endif
+
 FORCE_INLINE void setTargetHotend(const float& celsius, uint8_t hotend) {
   target_temperature[HOTEND_ARG] = celsius;
   #if ENABLED(THERMAL_PROTECTION_HOTENDS)
     start_watching_heater(HOTEND_ARG);
   #endif
 }
-FORCE_INLINE void setTargetBed(const float& celsius) { target_temperature_bed = celsius; }
+
+FORCE_INLINE void setTargetBed(const float& celsius) {
+  target_temperature_bed = celsius;
+  #if ENABLED(THERMAL_PROTECTION_BED)
+    start_watching_bed();
+  #endif
+}
 
 FORCE_INLINE bool isHeatingHotend(uint8_t hotend) { return target_temperature[HOTEND_ARG] > current_temperature[HOTEND_ARG]; }
 FORCE_INLINE bool isHeatingBed() { return target_temperature_bed > current_temperature_bed; }
@@ -146,7 +178,9 @@ int getHeaterPower(int heater);
 void disable_all_heaters();
 void updatePID();
 
-void PID_autotune(float temp, int hotend, int ncycles);
+#if  HAS(PID_HEATING)
+  void PID_autotune(float temp, int hotend, int ncycles, bool set_result = false);
+#endif
 
 void setExtruderAutoFanState(int pin, bool state);
 void checkExtruderAutoFans();

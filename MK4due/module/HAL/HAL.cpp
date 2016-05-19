@@ -1,23 +1,54 @@
-/*
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
+/**
+ * MK & MK4due 3D Printer Firmware
+ *
+ * Based on Marlin, Sprinter and grbl
+ * Copyright (C) 2011 Camiel Gubbels / Erik van der Zalm
+ * Copyright (C) 2013 - 2016 Alberto Cotronei @MagoKimbra
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
 
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
-// **************************************************************************
-//
-// Description:          *** HAL for Arduino Due ***
-//
-// **************************************************************************
+/**
+ * This is the main Hardware Abstraction Layer (HAL).
+ * To make the firmware work with different processors and toolchains,
+ * all hardware related code should be packed into the hal files.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *
+ * Description:          *** HAL for Arduino Due ***
+ *
+ * Contributors:
+ * Copyright (c) 2014 Bob Cousins bobcousins42@googlemail.com
+ *                    Nico Tonnhofer wurstnase.reprap@gmail.com
+ *
+ * Copyright (c) 2015 - 2016 Alberto Cotronei @MagoKimbra
+ *
+ * ARDUINO_ARCH_SAM
+ */
 
 // --------------------------------------------------------------------------
 // Includes
@@ -499,38 +530,99 @@ static const tTimerConfig TimerConfig [NUM_HARDWARE_TIMERS] =
 	Timer_clock4: Prescaler 128 -> 656.25kHz
 */
 
+uint8_t bestClock(double frequency, uint32_t& retRC){
+	/*
+		Pick the best Clock, thanks to Ogle Basil Hall!
+		Timer		Definition
+		TIMER_CLOCK1	MCK /  2
+		TIMER_CLOCK2	MCK /  8
+		TIMER_CLOCK3	MCK / 32
+		TIMER_CLOCK4	MCK /128
+	*/
+	const struct {
+		uint8_t flag;
+		uint8_t divisor;
+	} clockConfig[] = {
+		{ TC_CMR_TCCLKS_TIMER_CLOCK1,   2 },
+		{ TC_CMR_TCCLKS_TIMER_CLOCK2,   8 },
+		{ TC_CMR_TCCLKS_TIMER_CLOCK3,  32 },
+		{ TC_CMR_TCCLKS_TIMER_CLOCK4, 128 }
+	};
+	float ticks;
+	float error;
+	int clkId = 3;
+	int bestClock = 3;
+	float bestError = 9.999e99;
+	do {
+		ticks = (float) VARIANT_MCK / frequency / (float) clockConfig[clkId].divisor;
+		// error = abs(ticks - round(ticks));
+		error = clockConfig[clkId].divisor * abs(ticks - round(ticks));	// Error comparison needs scaling
+		if (error < bestError) {
+			bestClock = clkId;
+			bestError = error;
+		}
+	} while (clkId-- > 0);
+	ticks = (float) VARIANT_MCK / frequency / (float) clockConfig[bestClock].divisor;
+	retRC = (uint32_t) round(ticks);
+	return clockConfig[bestClock].flag;
+}
+
 // new timer by Ps991
 // thanks for that work
 // http://forum.arduino.cc/index.php?topic=297397.0
 
 void HAL_step_timer_start() {
-  pmc_set_writeprotect(false); //remove write protection on registers
-  
-  // Timer for stepper
-  // Timer 3 HAL.h STEP_TIMER_NUM
-  // uint8_t timer_num = STEP_TIMER_NUM;
-  
   // Get the ISR from table
   Tc *tc = STEP_TIMER_COUNTER;
   IRQn_Type irq = STEP_TIMER_IRQN;
   uint32_t channel = STEP_TIMER_CHANNEL;
-  
-  pmc_enable_periph_clk((uint32_t)irq); //we need a clock?
-  
+
+  pmc_set_writeprotect(false); // remove write protection on registers
+  pmc_enable_periph_clk((uint32_t)irq); // we need a clock?
+
   tc->TC_CHANNEL[channel].TC_CCR = TC_CCR_CLKDIS;
-  
+
   tc->TC_CHANNEL[channel].TC_SR; // clear status register
   tc->TC_CHANNEL[channel].TC_CMR =  TC_CMR_WAVSEL_UP_RC | TC_CMR_WAVE | TC_CMR_TCCLKS_TIMER_CLOCK1;
 
-  tc->TC_CHANNEL[channel].TC_IER /*|*/= TC_IER_CPCS; //enable interrupt on timer match with register C
+  tc->TC_CHANNEL[channel].TC_IER /*|*/= TC_IER_CPCS; // enable interrupt on timer match with register C
   tc->TC_CHANNEL[channel].TC_IDR = ~TC_IER_CPCS;
   tc->TC_CHANNEL[channel].TC_RC   = (VARIANT_MCK >> 1) / 1000; // start with 1kHz as frequency; //interrupt occurs every x interations of the timer counter
-  
+
   tc->TC_CHANNEL[channel].TC_CCR = TC_CCR_CLKEN | TC_CCR_SWTRG;
-  
-  NVIC_EnableIRQ(irq); //enable Nested Vector Interrupt Controller
+
+  NVIC_EnableIRQ(irq); // enable Nested Vector Interrupt Controller
 }
 
+#if ENABLED(ADVANCE) || ENABLED(ADVANCE_LPC)
+  void HAL_advance_extruder_timer_start() {
+    // Get the ISR from table
+    Tc *tc = ADVANCE_EXTRUDER_TIMER_COUNTER;
+    IRQn_Type irq = ADVANCE_EXTRUDER_TIMER_IRQN;
+    uint32_t channel = ADVANCE_EXTRUDER_TIMER_CHANNEL;
+    uint32_t rc = 0;
+    uint8_t clock;
+
+    // Find the best clock for the wanted frequency
+    clock = bestClock(10000, rc);
+
+    pmc_set_writeprotect(false); // remove write protection on registers
+    pmc_enable_periph_clk((uint32_t)irq);
+
+    tc->TC_CHANNEL[channel].TC_CCR = TC_CCR_CLKDIS;
+
+    tc->TC_CHANNEL[channel].TC_SR; // clear status register
+    tc->TC_CHANNEL[channel].TC_CMR =  TC_CMR_WAVSEL_UP_RC | TC_CMR_WAVE | clock;
+
+    tc->TC_CHANNEL[channel].TC_IER /*|*/= TC_IER_CPCS; // enable interrupt on timer match with register C
+    tc->TC_CHANNEL[channel].TC_IDR = ~TC_IER_CPCS;
+    tc->TC_CHANNEL[channel].TC_RC  = rc;
+
+    tc->TC_CHANNEL[channel].TC_CCR = TC_CCR_CLKEN | TC_CCR_SWTRG;
+
+    NVIC_EnableIRQ(irq); // enable Nested Vector Interrupt Controller
+  }
+#endif
 
 void HAL_temp_timer_start (uint8_t timer_num) {
 	Tc *tc = TimerConfig [timer_num].pTimerRegs;

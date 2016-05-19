@@ -1,4 +1,26 @@
-/*
+/**
+ * MK & MK4due 3D Printer Firmware
+ *
+ * Based on Marlin, Sprinter and grbl
+ * Copyright (C) 2011 Camiel Gubbels / Erik van der Zalm
+ * Copyright (C) 2013 - 2016 Alberto Cotronei @MagoKimbra
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+/**
   temperature.cpp - temperature control
   Part of Marlin
 
@@ -75,17 +97,18 @@ unsigned char soft_pwm_bed;
 #endif
 
 #if ENABLED(THERMAL_PROTECTION_HOTENDS) || ENABLED(THERMAL_PROTECTION_BED)
-  enum TRState { TRReset, TRInactive, TRFirstHeating, TRStable, TRRunaway };
+  enum TRState { TRInactive, TRFirstHeating, TRStable, TRRunaway };
   void thermal_runaway_protection(TRState* state, millis_t* timer, float temperature, float target_temperature, int heater_id, int period_seconds, int hysteresis_degc);
   #if ENABLED(THERMAL_PROTECTION_HOTENDS)
-    static TRState thermal_runaway_state_machine[4] = { TRReset, TRReset, TRReset, TRReset };
-    static millis_t thermal_runaway_timer[4]; // = {0,0,0,0};
+    static TRState thermal_runaway_state_machine[HOTENDS] = { TRInactive };
+    static millis_t thermal_runaway_timer[HOTENDS] = { 0 };
   #endif
   #if ENABLED(THERMAL_PROTECTION_BED) && TEMP_SENSOR_BED != 0
-    static TRState thermal_runaway_bed_state_machine = TRReset;
+    static TRState thermal_runaway_bed_state_machine = TRInactive;
     static millis_t thermal_runaway_bed_timer;
   #endif
 #endif
+
 #if HAS(POWER_CONSUMPTION_SENSOR)
   int current_raw_powconsumption = 0;  //Holds measured power consumption
   static unsigned long raw_powconsumption_value = 0;
@@ -178,6 +201,11 @@ static void updateTemperaturesFromRawValues();
   millis_t watch_heater_next_ms[HOTENDS] = { 0 };
 #endif
 
+#if ENABLED(THERMAL_PROTECTION_BED)
+  int watch_target_bed_temp = 0;
+  millis_t watch_bed_next_ms = 0;
+#endif
+
 #if DISABLED(SOFT_PWM_SCALE)
   #define SOFT_PWM_SCALE 0
 #endif
@@ -204,8 +232,8 @@ void autotempShutdown() {
   #endif
 }
 
-#if ENABLED(PIDTEMP) || ENABLED(PIDTEMPBED)
-  void PID_autotune(float temp, int hotend, int ncycles) {
+#if  HAS(PID_HEATING)
+  void PID_autotune(float temp, int hotend, int ncycles, bool set_result/*=false*/) {
     float input = 0.0;
     int cycles = 0;
     bool heating = true;
@@ -215,7 +243,7 @@ void autotempShutdown() {
 
     long bias = 0, d = 0;
     float Ku = 0, Tu = 0;
-    float Kp_temp = 0, Ki_temp = 0, Kd_temp = 0;
+    float workKp = 0, workKi = 0, workKd = 0;
     float max = 0, min = 10000;
 
     #if HAS(AUTO_FAN)
@@ -264,12 +292,12 @@ void autotempShutdown() {
         #if HAS(AUTO_FAN)
           if (ms > next_auto_fan_check_ms) {
             checkExtruderAutoFans();
-            next_auto_fan_check_ms = ms + 2500;
+            next_auto_fan_check_ms = ms + 2500UL;
           }
         #endif
 
         if (heating && input > temp) {
-          if (ms > t2 + 5000) {
+          if (ms > t2 + 5000UL) {
             heating = false;
             if (hotend < 0)
               soft_pwm_bed = (bias - d) >> 1;
@@ -282,7 +310,7 @@ void autotempShutdown() {
         }
 
         if (!heating && input < temp) {
-          if (ms > t1 + 5000) {
+          if (ms > t1 + 5000UL) {
             heating = true;
             t2 = ms;
             t_low = t2 - t1;
@@ -301,23 +329,29 @@ void autotempShutdown() {
                 Tu = ((float)(t_low + t_high) / 1000.0);
                 ECHO_MV(SERIAL_KU, Ku);
                 ECHO_EMV(SERIAL_TU, Tu);
-                Kp_temp = 0.6 * Ku;
-                Ki_temp = 2 * Kp_temp / Tu;
-                Kd_temp = Kp_temp * Tu / 8;
+                workKp = 0.6 * Ku;
+                workKi = 2 * workKp / Tu;
+                workKd = workKp * Tu / 8;
                 
                 ECHO_EM(SERIAL_CLASSIC_PID);
-                ECHO_MV(SERIAL_KP, Kp_temp);
-                ECHO_MV(SERIAL_KI, Ki_temp);
-                ECHO_EMV(SERIAL_KD, Kd_temp);
+                ECHO_MV(SERIAL_KP, workKp);
+                ECHO_MV(SERIAL_KI, workKi);
+                ECHO_EMV(SERIAL_KD, workKd);
               }
               else {
                 ECHO_E;
               }
             }
-            if (hotend < 0)
-              soft_pwm_bed = (bias + d) >> 1;
-            else
+            #if HAS(PID_FOR_BOTH)
+              if (hotend < 0)
+                soft_pwm_bed = (bias + d) >> 1;
+              else
+                soft_pwm[hotend] = (bias + d) >> 1;
+            #elif ENABLED(PIDTEMP)
               soft_pwm[hotend] = (bias + d) >> 1;
+            #else
+              soft_pwm_bed = (bias + d) >> 1;
+            #endif
             cycles++;
             min = temp;
           }
@@ -329,7 +363,7 @@ void autotempShutdown() {
       }
 
       // Every 2 seconds...
-      if (ms > temp_ms + 2000) {
+      if (ELAPSED(ms, temp_ms + 2000UL)) {
         #if HAS(TEMP_0) || HAS(TEMP_BED) || ENABLED(HEATER_0_USES_MAX6675)
           print_heaterstates();
           ECHO_E;
@@ -345,23 +379,51 @@ void autotempShutdown() {
       }
       if (cycles > ncycles) {
         ECHO_LM(DB, SERIAL_PID_AUTOTUNE_FINISHED);
-        #if ENABLED(PIDTEMP)
+        #if HAS(PID_FOR_BOTH)
           if (hotend >= 0) {
-            PID_PARAM(Kp, hotend) = Kp_temp;
-            PID_PARAM(Ki, hotend) = scalePID_i(Ki_temp);
-            PID_PARAM(Kd, hotend) = scalePID_d(Kd_temp);
-            updatePID();
-
             ECHO_SMV(DB, SERIAL_KP, PID_PARAM(Kp, hotend));
             ECHO_MV(SERIAL_KI, unscalePID_i(PID_PARAM(Ki, hotend)));
             ECHO_EMV(SERIAL_KD, unscalePID_d(PID_PARAM(Kd, hotend)));
+            if (set_result) {
+              PID_PARAM(Kp, hotend) = workKp;
+              PID_PARAM(Ki, hotend) = scalePID_i(workKi);
+              PID_PARAM(Kd, hotend) = scalePID_d(workKd);
+              updatePID();
+            }
           }
           else {
-            ECHO_LMV(DB, "#define DEFAULT_bedKp ", Kp_temp);
-            ECHO_LMV(DB, "#define DEFAULT_bedKi ", unscalePID_i(Ki_temp));
-            ECHO_LMV(DB, "#define DEFAULT_bedKd ", unscalePID_d(Kd_temp));
+            ECHO_LMV(DB, "#define DEFAULT_bedKp ", workKp);
+            ECHO_LMV(DB, "#define DEFAULT_bedKi ", unscalePID_i(workKi));
+            ECHO_LMV(DB, "#define DEFAULT_bedKd ", unscalePID_d(workKd));
+            if (set_result) {
+              bedKp = workKp;
+              bedKi = scalePID_i(workKi);
+              bedKd = scalePID_d(workKd);
+              updatePID();
+            }
+          }
+        #elif ENABLED(PIDTEMP)
+          ECHO_SMV(DB, SERIAL_KP, PID_PARAM(Kp, hotend));
+          ECHO_MV(SERIAL_KI, unscalePID_i(PID_PARAM(Ki, hotend)));
+          ECHO_EMV(SERIAL_KD, unscalePID_d(PID_PARAM(Kd, hotend)));
+          if (set_result) {
+            PID_PARAM(Kp, hotend) = workKp;
+            PID_PARAM(Ki, hotend) = scalePID_i(workKi);
+            PID_PARAM(Kd, hotend) = scalePID_d(workKd);
+            updatePID();
+          }
+        #else
+          ECHO_LMV(DB, "#define DEFAULT_bedKp ", workKp);
+          ECHO_LMV(DB, "#define DEFAULT_bedKi ", unscalePID_i(workKi));
+          ECHO_LMV(DB, "#define DEFAULT_bedKd ", unscalePID_d(workKd));
+          if (set_result) {
+            bedKp = workKp;
+            bedKi = scalePID_i(workKi);
+            bedKd = scalePID_d(workKd);
+            updatePID();
           }
         #endif
+
         return;
       }
       lcd_update();
@@ -643,7 +705,7 @@ void manage_heater() {
     if (ct < max(HEATER_0_MINTEMP, 0.01)) min_temp_error(0);
   #endif
 
-  #if ENABLED(THERMAL_PROTECTION_HOTENDS) || DISABLED(PIDTEMPBED) || HAS(AUTO_FAN)
+  #if ENABLED(THERMAL_PROTECTION_HOTENDS) || ENABLED(THERMAL_PROTECTION_BED) || DISABLED(PIDTEMPBED) || HAS(AUTO_FAN)
     millis_t ms = millis();
   #endif
 
@@ -677,9 +739,27 @@ void manage_heater() {
 
     #endif // THERMAL_PROTECTION_HOTENDS
 
+    // Check if the temperature is failing to increase
+    #if ENABLED(THERMAL_PROTECTION_BED)
+
+      // Is it time to check the bed?
+      if (watch_bed_next_ms && ELAPSED(ms, watch_bed_next_ms)) {
+        // Has it failed to increase enough?
+        if (degBed() < watch_target_bed_temp) {
+          // Stop!
+          _temp_error(-1, PSTR(SERIAL_T_HEATING_FAILED), PSTR(MSG_HEATING_FAILED_LCD));
+        }
+        else {
+          // Start again if the target is still far off
+          start_watching_bed();
+        }
+      }
+
+    #endif // THERMAL_PROTECTION_HOTENDS
+
     #if ENABLED(TEMP_SENSOR_1_AS_REDUNDANT)
       if (fabs(current_temperature[0] - redundant_temperature) > MAX_REDUNDANT_TEMP_SENSOR_DIFF) {
-        _temp_error(0, PSTR(MSG_EXTRUDER_SWITCHED_OFF), PSTR(MSG_ERR_REDUNDANT_TEMP));
+        _temp_error(0, PSTR(SERIAL_REDUNDANCY), PSTR(MSG_ERR_REDUNDANT_TEMP));
       }
     #endif
 
@@ -735,7 +815,7 @@ void manage_heater() {
         soft_pwm_bed = 0;
         WRITE_HEATER_BED(LOW);
       }
-    #else // BED_LIMIT_SWITCHING
+    #else // !PIDTEMPBED && !BED_LIMIT_SWITCHING
       // Check if temperature is within the correct range
       if (current_temperature_bed > BED_MINTEMP && current_temperature_bed < BED_MAXTEMP) {
         soft_pwm_bed = current_temperature_bed < target_temperature_bed ? MAX_BED_POWER >> 1 : 0;
@@ -990,6 +1070,19 @@ void tp_init() {
     #endif
   #endif
 
+  #if HAS(AUTO_FAN_0)
+    SET_OUTPUT(EXTRUDER_0_AUTO_FAN_PIN);
+  #endif
+  #if HAS(AUTO_FAN_1) && (EXTRUDER_1_AUTO_FAN_PIN != EXTRUDER_0_AUTO_FAN_PIN)
+    SET_OUTPUT(EXTRUDER_1_AUTO_FAN_PIN);
+  #endif
+  #if HAS(AUTO_FAN_2) && (EXTRUDER_2_AUTO_FAN_PIN != EXTRUDER_0_AUTO_FAN_PIN) && (EXTRUDER_2_AUTO_FAN_PIN != EXTRUDER_1_AUTO_FAN_PIN)
+    SET_OUTPUT(EXTRUDER_2_AUTO_FAN_PIN);
+  #endif
+  #if HAS(AUTO_FAN_3) && (EXTRUDER_3_AUTO_FAN_PIN != EXTRUDER_0_AUTO_FAN_PIN) && (EXTRUDER_3_AUTO_FAN_PIN != EXTRUDER_1_AUTO_FAN_PIN) && (EXTRUDER_3_AUTO_FAN_PIN != EXTRUDER_2_AUTO_FAN_PIN)
+    SET_OUTPUT(EXTRUDER_3_AUTO_FAN_PIN);
+  #endif
+
   #if ENABLED(HEATER_0_USES_MAX6675)
 
     #if DISABLED(SDSUPPORT)
@@ -1124,6 +1217,22 @@ void tp_init() {
   }
 #endif
 
+#if ENABLED(THERMAL_PROTECTION_BED)
+  /**
+   * Start Heating Sanity Check for bed that are below
+   * their target temperature by a configurable margin.
+   * This is called when the temperature is set. (M140, M190)
+   */
+  void start_watching_bed() {
+    if (degBed() < degTargetBed() - (WATCH_BED_TEMP_INCREASE + TEMP_BED_HYSTERESIS + 1)) {
+      watch_target_bed_temp = degBed() + WATCH_BED_TEMP_INCREASE;
+      watch_bed_next_ms = millis() + (WATCH_BED_TEMP_PERIOD) * 1000UL;
+    }
+    else
+      watch_bed_next_ms = 0;
+  }
+#endif
+
 #if ENABLED(THERMAL_PROTECTION_HOTENDS) || ENABLED(THERMAL_PROTECTION_BED)
 
   void thermal_runaway_protection(TRState* state, millis_t* timer, float temperature, float target_temperature, int heater_id, int period_seconds, int hysteresis_degc) {
@@ -1142,33 +1251,26 @@ void tp_init() {
     int heater_index = heater_id >= 0 ? heater_id : HOTENDS;
 
     // If the target temperature changes, restart
-    if (tr_target_temperature[heater_index] != target_temperature)
-      *state = TRReset;
+    if (tr_target_temperature[heater_index] != target_temperature) {
+      tr_target_temperature[heater_index] = target_temperature;
+      *state = target_temperature > 0 ? TRFirstHeating : TRInactive;
+    }
 
     switch (*state) {
-      case TRReset:
-        *timer = 0;
-        *state = TRInactive;
       // Inactive state waits for a target temperature to be set
-      case TRInactive:
-        if (target_temperature > 0) {
-          tr_target_temperature[heater_index] = target_temperature;
-          *state = TRFirstHeating;
-        }
-        break;
+      case TRInactive: break;
       // When first heating, wait for the temperature to be reached then go to Stable state
       case TRFirstHeating:
-        if (temperature >= tr_target_temperature[heater_index]) *state = TRStable;
-        break;
+        if (temperature < tr_target_temperature[heater_index]) break;
+        *state = TRStable;
       // While the temperature is stable watch for a bad temperature
       case TRStable:
-        // If the temperature is over the target (-hysteresis) restart the timer
-        if (temperature >= tr_target_temperature[heater_index] - hysteresis_degc)
-          *timer = millis();
-        // If the timer goes too long without a reset, trigger shutdown
-        else if (millis() > *timer + period_seconds * 1000UL)
+        if (temperature < tr_target_temperature[heater_index] - hysteresis_degc && ELAPSED(millis(), *timer))
           *state = TRRunaway;
-        break;
+        else {
+          *timer = millis() + period_seconds * 1000UL;
+          break;
+        }
       case TRRunaway:
         _temp_error(heater_id, PSTR(SERIAL_T_THERMAL_RUNAWAY), PSTR(MSG_THERMAL_RUNAWAY));
     }
@@ -1179,6 +1281,9 @@ void tp_init() {
 void disable_all_heaters() {
   for (int i = 0; i < HOTENDS; i++) setTargetHotend(0, i);
   setTargetBed(0);
+
+  // If all heaters go down then for sure our print job has stopped
+  print_job_timer.stop();
 
   #define DISABLE_HEATER(NR) { \
     target_temperature[NR] = 0; \

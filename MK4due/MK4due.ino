@@ -1,9 +1,9 @@
 /**
- * MK4due Firmware
+ * MK4due 3D Printer Firmware
  *
  * Based on Marlin, Sprinter and grbl
- * Copyright (C) 2013 MagoKimbra
  * Copyright (C) 2011 Camiel Gubbels / Erik van der Zalm
+ * Copyright (C) 2013 - 2016 Alberto Cotronei @MagoKimbra
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -79,6 +79,7 @@
  * M30  - Delete file from SD (M30 filename.g)
  * M31  - Output time since last M109 or SD card start to serial
  * M32  - Make directory
+ * M35  - Upload Firmware to Nextion from SD
  * M42  - Change pin status via gcode Use M42 Px Sy to set pin x to value y, when omitting Px the onboard led will be used.
  * M48  - Measure Z_Probe repeatability. M48 [P # of points] [X position] [Y position] [V_erboseness #] [E_ngage Probe] [L # of legs of travel]
  * M70  - Power consumption sensor calibration
@@ -145,7 +146,7 @@
  * M300 - Play beep sound S<frequency Hz> P<duration ms>
  * M301 - Set PID parameters P I D and C
  * M302 - Allow cold extrudes, or set the minimum extrude S<temperature>.
- * M303 - PID relay autotune S<temperature> sets the target temperature (default target temperature = 150C). H<hotend> C<cycles>
+ * M303 - PID relay autotune S<temperature> sets the target temperature (default target temperature = 150C). H<hotend> C<cycles> U<Apply result>
  * M304 - Set bed PID parameters P I and D
  * M350 - Set microstepping mode.
  * M351 - Toggle MS1 MS2 pins directly.

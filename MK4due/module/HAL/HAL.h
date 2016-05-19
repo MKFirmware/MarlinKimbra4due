@@ -1,4 +1,26 @@
 /**
+ * MK & MK4due 3D Printer Firmware
+ *
+ * Based on Marlin, Sprinter and grbl
+ * Copyright (C) 2011 Camiel Gubbels / Erik van der Zalm
+ * Copyright (C) 2013 - 2016 Alberto Cotronei @MagoKimbra
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+/**
  * This is the main Hardware Abstraction Layer (HAL).
  * To make the firmware work with different processors and toolchains,
  * all hardware related code should be packed into the hal files.
@@ -18,6 +40,12 @@
  *
  *
  * Description:          *** HAL for Arduino Due ***
+ *
+ * Contributors:
+ * Copyright (c) 2014 Bob Cousins bobcousins42@googlemail.com
+ *                    Nico Tonnhofer wurstnase.reprap@gmail.com
+ *
+ * Copyright (c) 2015 - 2016 Alberto Cotronei @MagoKimbra
  *
  * ARDUINO_ARCH_SAM
  */
@@ -203,6 +231,12 @@
   unsigned char eeprom_read_byte(unsigned char* pos);
 
   // timers
+  #define ADVANCE_EXTRUDER_TIMER_NUM 1
+  #define ADVANCE_EXTRUDER_TIMER_COUNTER TC0
+  #define ADVANCE_EXTRUDER_TIMER_CHANNEL 1
+  #define ADVANCE_EXTRUDER_TIMER_IRQN TC1_IRQn
+  #define HAL_ADVANCE_EXTRUDER_TIMER_ISR 	void TC1_Handler()
+
   #define STEP_TIMER_NUM 2
   #define STEP_TIMER_COUNTER TC0
   #define STEP_TIMER_CHANNEL 2
@@ -213,7 +247,6 @@
   #define TEMP_TIMER_COUNTER TC1
   #define TEMP_TIMER_CHANNEL 0
   #define TEMP_FREQUENCY 2000
-
   #define TEMP_TIMER_IRQN TC3_IRQn
   #define HAL_TEMP_TIMER_ISR 	void TC3_Handler()
 
@@ -228,6 +261,12 @@
 
   #define ENABLE_STEPPER_DRIVER_INTERRUPT()	HAL_timer_enable_interrupt (STEP_TIMER_NUM)
   #define DISABLE_STEPPER_DRIVER_INTERRUPT()	HAL_timer_disable_interrupt (STEP_TIMER_NUM)
+
+  #if ENABLED(ADVANCE) || ENABLED(ADVANCE_LPC)
+    #define ENABLE_ADVANCE_EXTRUDER_INTERRUPT()	HAL_timer_enable_interrupt (ADVANCE_EXTRUDER_TIMER_NUM)
+    #define DISABLE_ADVANCE_EXTRUDER_INTERRUPT()	HAL_timer_disable_interrupt (ADVANCE_EXTRUDER_TIMER_NUM)
+    void HAL_advance_extruder_timer_start(void);
+  #endif
 
   void HAL_step_timer_start(void);
   void HAL_temp_timer_start (uint8_t timer_num);
