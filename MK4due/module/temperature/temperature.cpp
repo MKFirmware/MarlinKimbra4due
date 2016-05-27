@@ -1318,7 +1318,7 @@ void disable_all_heaters() {
 
   int16_t read_max6675() {
 
-    if (HAL::timeInMilliseconds() - last_max6675_read > 230) {
+    if (HAL::timeInMilliseconds() - last_max6675_read > 250) { // ensure 250ms core correct read!
       HAL::spiBegin();
       HAL::spiInit(2);
       HAL::digitalWrite(MAX6675_SS, 0);  // enable TT_MAX6675
