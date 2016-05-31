@@ -437,7 +437,11 @@ void check_axes_activity() {
   }
   if (DISABLE_X && !axis_active[X_AXIS]) disable_x();
   if (DISABLE_Y && !axis_active[Y_AXIS]) disable_y();
-  if (DISABLE_Z && !axis_active[Z_AXIS]) disable_z();
+
+  #if DISABLED(LASERBEAM)
+    if (DISABLE_Z && !axis_active[Z_AXIS]) disable_z();
+  #endif
+
   if (DISABLE_E && !axis_active[E_AXIS]) {
     disable_e0();
     disable_e1();
@@ -873,39 +877,33 @@ float junction_deviation = 0.1;
     block->laser_duration = laser.duration;
     block->laser_status = laser.status;
     block->laser_mode = laser.mode;
+
     // When operating in PULSED or RASTER modes, laser pulsing must operate in sync with movement.
     // Calculate steps between laser firings (steps_l) and consider that when determining largest
     // interval between steps for X, Y, Z, E, L to feed to the motion control code.
     if (laser.mode == RASTER || laser.mode == PULSED) {
-      #if ENABLED(LASER_PULSE_METHOD)
-        // Optimizing. Move calculations here rather than in stepper isr
-        static const float Factor = F_CPU/(LASER_PWM*2*100.0*255.0); 
-        block->laser_raster_intensity_factor = laser.intensity * Factor;
-      #endif
-      block->steps_l = (unsigned long)labs(block->millimeters*laser.ppm);
-      if (laser.mode == RASTER) {
-        for (int i = 0; i < LASER_MAX_RASTER_LINE; i++) {
-          #if (!ENABLED(LASER_PULSE_METHOD))
-            float OldRange, NewRange, NewValue;
-            OldRange = (255.0 - 0.0);
-            NewRange = (laser.rasterlaserpower - LASER_REMAP_INTENSITY); 
-            NewValue = (float)(((((float)laser.raster_data[i] - 0) * NewRange) / OldRange) + LASER_REMAP_INTENSITY);
+      block->steps_l = labs(1000 * block->millimeters * laser.ppm);
+      for (int i = 0; i < LASER_MAX_RASTER_LINE; i++) {
+        // Scale the image intensity based on the raster power.
+        // 100% power on a pixel basis is 255, convert back to 255 = 100.
+        int OldRange, NewRange;
+        float NewValue;
 
-            //If less than 7%, turn off the laser tube.
-            if(NewValue == LASER_REMAP_INTENSITY)
-              NewValue = 0;
+        OldRange = (255.0 - 0.0);
+        NewRange = (laser.rasterlaserpower * 255.0 / 100.0 - LASER_REMAP_INTENSITY);
+        NewValue = (float)(((((float)laser.raster_data[i] - 0) * NewRange) / OldRange) + LASER_REMAP_INTENSITY);
 
-            block->laser_raster_data[i] = NewValue;
-          #else
-            block->laser_raster_data[i] = laser.raster_data[i];
-          #endif
-        }
+        // If less than 7%, turn off the laser tube.
+        if (NewValue <= LASER_REMAP_INTENSITY)
+          NewValue = 0;
+
+        block->laser_raster_data[i] = NewValue;
       }
     }
     else
       block->steps_l = 0;
 
-    block->step_event_count = max(block->steps[X_AXIS], max(block->steps[Y_AXIS], max(block->steps[Z_AXIS], max(block->steps[E_AXIS], block->steps_l))));
+    block->step_event_count = max(block->step_event_count, block->steps_l / 1000);
 
     if (laser.diagnostics && block->laser_status == LASER_ON)
       ECHO_LM(INFO, "Laser firing enabled");

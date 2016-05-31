@@ -64,7 +64,7 @@ More features have been added by:
   - Nico [@wurstnase]
   - Giutrec
   - Drakelive
-  - and others...
+  - Franco (nextime) Lanza
 
 ## License
 

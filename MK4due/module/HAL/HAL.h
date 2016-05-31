@@ -293,4 +293,10 @@
   uint16_t getAdcSuperSample(adc_channel_num_t chan);
   void stopAdcFreerun(adc_channel_num_t chan);
 
+  #if ENABLED(LASERBEAM)
+    #define LASER_PWM_MAX_DUTY 255
+    void HAL_laser_init_pwm(uint8_t pin, uint16_t freq);
+    void HAL_laser_intensity(uint8_t intensity); // Range: 0 - LASER_PWM_MAX_DUTY
+  #endif
+
 #endif // HAL_H
