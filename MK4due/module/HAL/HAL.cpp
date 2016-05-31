@@ -765,3 +765,85 @@ uint16_t getAdcSuperSample(adc_channel_num_t chan) {
 void stopAdcFreerun(adc_channel_num_t chan) {
   ADC->ADC_CHDR |= _BV(chan);
 }
+
+#if ENABLED(LASERBEAM)
+  static void TC_SetCMR_ChannelA(Tc *tc, uint32_t chan, uint32_t v) {
+    tc->TC_CHANNEL[chan].TC_CMR = (tc->TC_CHANNEL[chan].TC_CMR & 0xFFF0FFFF) | v;
+  }
+
+  static void TC_SetCMR_ChannelB(Tc *tc, uint32_t chan, uint32_t v) {
+    tc->TC_CHANNEL[chan].TC_CMR = (tc->TC_CHANNEL[chan].TC_CMR & 0xF0FFFFFF) | v;
+  }
+
+  static uint32_t chA, chNo;
+  static Tc *chTC;
+  static uint32_t TC_const;
+
+  void HAL_laser_init_pwm(uint8_t ulPin, uint16_t ulFreq) {
+    uint32_t attr = g_APinDescription[ulPin].ulPinAttribute;
+    if ((attr & PIN_ATTR_TIMER) == PIN_ATTR_TIMER) {
+      // We use MCLK/2 as clock.
+      const uint32_t TC = VARIANT_MCK / 2 / ulFreq;
+      TC_const = TC/TC_MAX_DUTY_CYCLE;
+
+      // Setup Timer for this pin
+      ETCChannel channel = g_APinDescription[ulPin].ulTCChannel;
+      static const uint32_t channelToChNo[] = { 0, 0, 1, 1, 2, 2, 0, 0, 1, 1, 2, 2, 0, 0, 1, 1, 2, 2 };
+      static const uint32_t channelToAB[]   = { 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0 };
+
+      static Tc *channelToTC[] = {
+        TC0, TC0, TC0, TC0, TC0, TC0,
+        TC1, TC1, TC1, TC1, TC1, TC1,
+        TC2, TC2, TC2, TC2, TC2, TC2
+      };
+
+      static const uint32_t channelToId[] = { 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8 };
+      chNo = channelToChNo[channel];
+      chA  = channelToAB[channel];
+      chTC = channelToTC[channel];
+      uint32_t interfaceID = channelToId[channel];
+      pmc_enable_periph_clk(TC_INTERFACE_ID + interfaceID);
+      TC_Configure(chTC, chNo,
+      TC_CMR_TCCLKS_TIMER_CLOCK1 |
+      TC_CMR_WAVE |         // Waveform mode
+      TC_CMR_WAVSEL_UP_RC | // Counter running up and reset when equals to RC
+      TC_CMR_EEVT_XC0 |     // Set external events from XC0 (this setup TIOB as output)
+      TC_CMR_ACPA_CLEAR | TC_CMR_ACPC_CLEAR |
+      TC_CMR_BCPB_CLEAR | TC_CMR_BCPC_CLEAR);
+      TC_SetRC(chTC, chNo, TC);
+
+      if (chA)
+        TC_SetCMR_ChannelA(chTC, chNo, TC_CMR_ACPA_CLEAR | TC_CMR_ACPC_CLEAR);
+      else
+        TC_SetCMR_ChannelB(chTC, chNo, TC_CMR_BCPB_CLEAR | TC_CMR_BCPC_CLEAR);
+
+      PIO_Configure(g_APinDescription[ulPin].pPort,
+        g_APinDescription[ulPin].ulPinType,
+        g_APinDescription[ulPin].ulPin,
+        g_APinDescription[ulPin].ulPinConfiguration);
+
+      TC_Start(chTC, chNo);
+    }
+  }
+
+  void HAL_laser_intensity(uint8_t intensity) {
+    uint32_t ulValue = intensity * TC_const;
+
+    if (ulValue == 0) {
+      if (chA)
+        TC_SetCMR_ChannelA(chTC, chNo, TC_CMR_ACPA_CLEAR | TC_CMR_ACPC_CLEAR);
+      else
+        TC_SetCMR_ChannelB(chTC, chNo, TC_CMR_BCPB_CLEAR | TC_CMR_BCPC_CLEAR);
+    }
+    else {
+      if (chA) {
+        TC_SetRA(chTC, chNo, ulValue);
+        TC_SetCMR_ChannelA(chTC, chNo, TC_CMR_ACPA_CLEAR | TC_CMR_ACPC_SET);
+      }
+      else {
+        TC_SetRB(chTC, chNo, ulValue);
+        TC_SetCMR_ChannelB(chTC, chNo, TC_CMR_BCPB_CLEAR | TC_CMR_BCPC_SET);
+      }
+    }
+  }
+#endif

@@ -108,7 +108,6 @@ typedef struct {
     float laser_intensity; // Laser firing instensity in clock cycles for the PWM timer
     #if ENABLED(LASER_RASTER)
       unsigned char laser_raster_data[LASER_MAX_RASTER_LINE];
-      float laser_raster_intensity_factor;
     #endif
   #endif 
 

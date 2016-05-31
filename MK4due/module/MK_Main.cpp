@@ -3643,7 +3643,7 @@ inline void gcode_G4() {
         ECHO_LM(INFO, "Positive Raster Line");
     }
 
-    laser.ppm = 1 / laser.raster_mm_per_pulse; //number of pulses per millimetre
+    laser.ppm = 1 / laser.raster_mm_per_pulse; // number of pulses per millimetre
     laser.duration = (1000000 / ( feedrate / 60)) / laser.ppm; // (1 second in microseconds / (time to move 1mm in microseconds)) / (pulses per mm) = Duration of pulse, taking into account feedrate as speed and ppm
 
     laser.mode = RASTER;
@@ -7688,7 +7688,7 @@ inline void gcode_M503() {
     if (code_seen('D') && IsRunning()) laser.diagnostics = (bool) code_value();
 
     // Wait for the rest 
-    //st_synchronize();
+    // st_synchronize();
     if (code_seen('S') && IsRunning()) {
       laser.intensity = (float) code_value();
       laser.rasterlaserpower =  laser.intensity;
