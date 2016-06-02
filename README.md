@@ -65,7 +65,7 @@ More features have been added by:
   - Nico [@wurstnase]
   - Giutrec
   - Drakelive
-  - Franco (nextime) Lanza
+  - Franco (nextime) Lanza (https://git.nexlab.net/u/nextime)
 
 ## License
 
