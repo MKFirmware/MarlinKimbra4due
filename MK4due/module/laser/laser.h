@@ -23,7 +23,6 @@
 /**
  * laser.cpp - Laser control library for Arduino using 16 bit timers- Version 1
  * Copyright (c) 2013 Timothy Schmidt.  All right reserved.
- * Copyright (c) 2016 Franco (nextime) Lanza
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -75,12 +74,12 @@
 
   void laser_init();
   void laser_fire(float intensity);
-  void laser_fire_byte(uint8_t intensity);
+  #if ENABLED(LASER_PULSE_METHOD)
+    void laser_pulse(uint32_t ulValue, unsigned long usec);
+  #endif
   void laser_extinguish();
   void laser_update_lifetime();
   void laser_set_mode(int mode);
-  void laser_diagnose();
-
   #if ENABLED(LASER_PERIPHERALS)
     bool laser_peripherals_ok();
     void laser_peripherals_on();
@@ -103,7 +102,5 @@
   #define CONTINUOUS 0
   #define PULSED 1
   #define RASTER 2
-
-  #define LASER_PWM_MAX_DUTY_CYCLE 255
 
 #endif // LASER_H
