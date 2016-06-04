@@ -33,11 +33,11 @@
 
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  GNU General Public License for more details.
 
  You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "../../base.h"
@@ -330,9 +330,9 @@ unsigned char getPwmCooler(bool soft = true) {
 
 void autotempShutdown() {
   #if ENABLED(AUTOTEMP)
-    if (autotemp_enabled) {
-      autotemp_enabled = false;
-      if (degTargetHotend(active_extruder) > autotemp_min)
+    if (planner.autotemp_enabled) {
+      planner.autotemp_enabled = false;
+      if (degTargetHotend(active_extruder) > planner.autotemp_min)
         setTargetHotend(0, active_extruder);
     }
   #endif
@@ -789,7 +789,7 @@ float get_pid_output(int h) {
               lpq[lpq_ptr++] = 0;
             }
             if (lpq_ptr >= lpq_len) lpq_ptr = 0;
-            cTerm[0] = (lpq[lpq_ptr] / axis_steps_per_unit[E_AXIS + active_extruder]) * PID_PARAM(Kc, 0);
+            cTerm[0] = (lpq[lpq_ptr] / planner.axis_steps_per_unit[E_AXIS + active_extruder]) * PID_PARAM(Kc, 0);
             pid_output += cTerm[0] / 100.0;
           #else  
             if (h == active_extruder) {
@@ -802,7 +802,7 @@ float get_pid_output(int h) {
                 lpq[lpq_ptr++] = 0;
               }
               if (lpq_ptr >= lpq_len) lpq_ptr = 0;
-              cTerm[h] = (lpq[lpq_ptr] / axis_steps_per_unit[E_AXIS + active_extruder]) * PID_PARAM(Kc, h);
+              cTerm[h] = (lpq[lpq_ptr] / planner.axis_steps_per_unit[E_AXIS + active_extruder]) * PID_PARAM(Kc, h);
               pid_output += cTerm[h] / 100.0;
             }
           #endif // SINGLENOZZLE
