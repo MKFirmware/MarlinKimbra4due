@@ -1,6 +1,6 @@
 <img align="right" src="Documentation/Logo/MarlinKimbra%20Logo%20GitHub.png"/>
 # MK4due 3D Printer Firmware for Arduino due
-## Version 4.2.82 dev
+## Version 4.2.85 dev
 
 ### Special thanks
 * Wurstnase
@@ -54,6 +54,7 @@ Added support reader TAG width MFRC522
 Added Cooler and Hot Chamber
 Added Laser beam and raster base64
 Addes Mesh Bed Level (MBL)
+Added Stop and Save for Restart (SSR)
 
 ## Credits
 
