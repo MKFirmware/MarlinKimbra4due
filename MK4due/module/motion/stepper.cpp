@@ -411,7 +411,7 @@ HAL_STEP_TIMER_ISR {
     #endif
 
     // Update endstops state, if enabled
-    #if ENABLED(Z_PROBE_ENDSTOP)
+    #if HAS(BED_PROBE)
       if (endstops.enabled || endstops.z_probe_enabled) endstops.update();
     #else
       if (endstops.enabled) endstops.update();
