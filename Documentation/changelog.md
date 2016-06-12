@@ -1,27 +1,90 @@
+### Version 4.2.85
+* Add Stop and Save for Restart (SSR)
+
+### Version 4.2.84
+* Add Mesh Bed Level (MBL)
+
+### Version 4.2.83
+* Add Cooler and Hot Chamber
+* Add Laser Beam PWM and raster base64
+
+### Version 4.2.82
+* Add DONDOLO_DUAL_MOTOR for DONDOLO bowden and dual extruder
+* Add reader TAG width MFRC522
+
+### Version 4.2.81
+* Fix serial protocol for Repetier Host
+* Bug fix
+
+### Version 4.2.8
+* Add board folder with files of various board containing the pins
+* Add End time on Graphics display when SD print
+* Add M35 for upload firmware to Nextion from SD
+* Rewrite macros
+* Fix M109 so it won't wait for cooling
+* Clear code
+* Bug fix
+
+### Version 4.2.7
+* Add M906 Set motor Currents for ALLIGATOR board
+* Add M408 JSON OUTPUT
+* Add Cartesian Correction Hysteresis and Zwooble
+* Bug fix
+
+### Version 4.2.6
+* Bug Fix
+
+### Version 4.2.5
+* Big Update
+* Add HAL for 8 bit version
+* Rewrite Communication
+* Rewrite Servo
+* Add Color Mixing Extruder
+
+### Version 4.2.4
+* Added Abort on endstop hit feature
+* Added Purge command G1 P<valor>
+* Added M222 T<extruder> S<factor in percent> set density extrude factor percentage for purge
+
+### Version 4.2.3
+* Added Filament tot printed in stats
+* Overall rewrite
+
+### Version 4.2.2
+* Added the possibility to invert the logic for lcd buttons.
+* Language files bugfix.
+* Fixed a freeze problem during write operations to the SD.
+* Re-enabled by default SDSUPPORT for DISCOUNT displays.
+
+### Version 4.2.1
+* SDSUPPORT disabled by default.
+* General BugFix.
+
 ### Version 4.2.0
+* Add Dual Extruder DONDOLO.
 * Add PID Extrusion Rate Kc in percent.
-* New configuration systems (Now you can create a separate file with all configuration and use it in you FW update)
-* New namings for file
-* Added more documentation inside configuration file
-* More checks for feature incompatibility during compilation
-* Codeclean
-* General bugfix
-* Removed legacy support for old configuration (Do not use your old configuration files, namings and position for configuration has changed)
+* New configuration systems (Now you can create a separate file with all configuration and use it in you FW update).
+* New namings for file.
+* Added more documentation inside configuration file.
+* More checks for feature incompatibility during compilation.
+* Codeclean.
+* General bugfix.
+* Removed legacy support for old configuration (Do not use your old configuration files, namings and position for configuration has changed).
 
 ### Version 4.1.5
-* Added dot for SD write operation
-* Added statistics menu
-* Added an overall configuration file
-* Added M70 gcode for calibrate AC721 current sensor
-* Added documentation for calibrate AC721 current sensor
-* Critical stepper motor frequency bugfix
+* Added dot for SD write operation.
+* Added statistics menu.
+* Added an overall configuration file.
+* Added M70 gcode for calibrate AC721 current sensor.
+* Added documentation for calibrate AC721 current sensor.
+* Critical stepper motor frequency bugfix.
 * Introduced more intuitive menu tree.
-* Added a menu option to fix loose steps from LCD
-* Improved italian translation
+* Added a menu option to fix loose steps from LCD.
+* Improved italian translation.
 * G28 gcode now support the "B" flag that enable you to come back to the last position of the axis before the homing command. (Used for fix loose steps)
 * Implemented FAST_PWM_FAN and FAN_SOFT_PWM also for other fan that can be added in configuration_adv file.
 * Added the ability to set a min speed to the fan that can be added in configuration_adv file.
-* General bugfix
+* General bugfix.
 
 ### Version 4.1.4
 * Add support for Piggy Alligator board
