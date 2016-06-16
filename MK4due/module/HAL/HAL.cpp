@@ -319,6 +319,32 @@ void HAL::resetHardware() {
     spiSend(buf[n - 1]);
   }
 
+  void HAL::spiSend(uint32_t chan, byte b) {
+    uint8_t dummy_read = 0;
+    // wait for transmit register empty
+    while ((SPI0->SPI_SR & SPI_SR_TDRE) == 0);
+    // write byte with address and end transmission flag
+    SPI0->SPI_TDR = (uint32_t)b | SPI_PCS(chan) | SPI_TDR_LASTXFER;
+    // wait for receive register
+    while ((SPI0->SPI_SR & SPI_SR_RDRF) == 0);
+    // clear status
+    while ((SPI0->SPI_SR & SPI_SR_RDRF) == 1)
+      dummy_read = SPI0->SPI_RDR;
+  }
+
+  void HAL::spiSend(uint32_t chan, const uint8_t* buf, size_t n) {
+    uint8_t dummy_read = 0;
+    if (n == 0) return;
+    for (int i = 0; i < n - 1; i++) {
+      while ((SPI0->SPI_SR & SPI_SR_TDRE) == 0);
+      SPI0->SPI_TDR = (uint32_t)buf[i] | SPI_PCS(chan);
+      while ((SPI0->SPI_SR & SPI_SR_RDRF) == 0);
+      while ((SPI0->SPI_SR & SPI_SR_RDRF) == 1)
+        dummy_read = SPI0->SPI_RDR;
+    }
+    spiSend(chan, buf[n - 1]);
+  }
+
   // Read single byte from SPI
   uint8_t HAL::spiReceive() {
     // write dummy byte with address and end transmission flag
@@ -333,79 +359,51 @@ void HAL::resetHardware() {
     return SPI0->SPI_RDR;
   }
 
-  #if MB(ALLIGATOR)
-    void HAL::spiSend(uint32_t chan, byte b) {
-      uint8_t dummy_read = 0;
-      // wait for transmit register empty
-      while ((SPI0->SPI_SR & SPI_SR_TDRE) == 0);
-      // write byte with address and end transmission flag
-      SPI0->SPI_TDR = (uint32_t)b | SPI_PCS(chan) | SPI_TDR_LASTXFER;
-      // wait for receive register
+  uint8_t HAL::spiReceive(uint32_t chan) {
+    uint8_t spirec_tmp;
+    // wait for transmit register empty
+    while ((SPI0->SPI_SR & SPI_SR_TDRE) == 0);
+    while ((SPI0->SPI_SR & SPI_SR_RDRF) == 1)
+      spirec_tmp =  SPI0->SPI_RDR;
+
+    // write dummy byte with address and end transmission flag
+    SPI0->SPI_TDR = 0x000000FF | SPI_PCS(chan) | SPI_TDR_LASTXFER;
+
+    // wait for receive register
+    while ((SPI0->SPI_SR & SPI_SR_RDRF) == 0);
+    // get byte from receive register
+    return SPI0->SPI_RDR;
+  }
+
+  // Read from SPI into buffer
+  void HAL::spiReadBlock(uint8_t*buf, uint16_t nbyte) {
+    if (nbyte-- == 0) return;
+
+    for (int i = 0; i < nbyte; i++) {
+      //while ((SPI0->SPI_SR & SPI_SR_TDRE) == 0);
+      SPI0->SPI_TDR = 0x000000FF | SPI_PCS(SPI_CHAN);
       while ((SPI0->SPI_SR & SPI_SR_RDRF) == 0);
-      // clear status
-      while ((SPI0->SPI_SR & SPI_SR_RDRF) == 1)
-        dummy_read = SPI0->SPI_RDR;
+      buf[i] = SPI0->SPI_RDR;
+      // delayMicroseconds(1);
     }
+    buf[nbyte] = spiReceive();
+  }
 
-    void HAL::spiSend(uint32_t chan, const uint8_t* buf, size_t n) {
-      uint8_t dummy_read = 0;
-      if (n == 0) return;
-      for (int i = 0; i < n - 1; i++) {
-        while ((SPI0->SPI_SR & SPI_SR_TDRE) == 0);
-        SPI0->SPI_TDR = (uint32_t)buf[i] | SPI_PCS(chan);
-        while ((SPI0->SPI_SR & SPI_SR_RDRF) == 0);
-        while ((SPI0->SPI_SR & SPI_SR_RDRF) == 1)
-          dummy_read = SPI0->SPI_RDR;
-      }
-      spiSend(chan, buf[n - 1]);
-    }
-
-    uint8_t HAL::spiReceive(uint32_t chan) {
-      uint8_t spirec_tmp;
-      // wait for transmit register empty
+  // Write from buffer to SPI
+  void HAL::spiSendBlock(uint8_t token, const uint8_t* buf) {
+    SPI0->SPI_TDR = (uint32_t)token | SPI_PCS(SPI_CHAN);
+    while ((SPI0->SPI_SR & SPI_SR_TDRE) == 0);
+    //while ((SPI0->SPI_SR & SPI_SR_RDRF) == 0);
+    //SPI0->SPI_RDR;
+    for (int i = 0; i < 511; i++) {
+      SPI0->SPI_TDR = (uint32_t)buf[i] | SPI_PCS(SPI_CHAN);
       while ((SPI0->SPI_SR & SPI_SR_TDRE) == 0);
-      while ((SPI0->SPI_SR & SPI_SR_RDRF) == 1)
-        spirec_tmp =  SPI0->SPI_RDR;
-
-      // write dummy byte with address and end transmission flag
-      SPI0->SPI_TDR = 0x000000FF | SPI_PCS(chan) | SPI_TDR_LASTXFER;
-
-      // wait for receive register
       while ((SPI0->SPI_SR & SPI_SR_RDRF) == 0);
-      // get byte from receive register
-      return SPI0->SPI_RDR;
+      SPI0->SPI_RDR;
+      //        delayMicroseconds(1);
     }
-
-    // Read from SPI into buffer
-    void HAL::spiReadBlock(uint8_t*buf, uint16_t nbyte) {
-      if (nbyte-- == 0) return;
-
-      for (int i = 0; i < nbyte; i++) {
-        //while ((SPI0->SPI_SR & SPI_SR_TDRE) == 0);
-        SPI0->SPI_TDR = 0x000000FF | SPI_PCS(SPI_CHAN);
-        while ((SPI0->SPI_SR & SPI_SR_RDRF) == 0);
-        buf[i] = SPI0->SPI_RDR;
-        // delayMicroseconds(1);
-      }
-      buf[nbyte] = spiReceive();
-    }
-
-    // Write from buffer to SPI
-    void HAL::spiSendBlock(uint8_t token, const uint8_t* buf) {
-      SPI0->SPI_TDR = (uint32_t)token | SPI_PCS(SPI_CHAN);
-      while ((SPI0->SPI_SR & SPI_SR_TDRE) == 0);
-      //while ((SPI0->SPI_SR & SPI_SR_RDRF) == 0);
-      //SPI0->SPI_RDR;
-      for (int i = 0; i < 511; i++) {
-        SPI0->SPI_TDR = (uint32_t)buf[i] | SPI_PCS(SPI_CHAN);
-        while ((SPI0->SPI_SR & SPI_SR_TDRE) == 0);
-        while ((SPI0->SPI_SR & SPI_SR_RDRF) == 0);
-        SPI0->SPI_RDR;
-        //        delayMicroseconds(1);
-      }
-      spiSend(buf[511]);
-    }
-  #endif // MB(ALLIGATOR)
+    spiSend(buf[511]);
+  }
 
 #endif // DISABLED(SOFTWARE_SPI)
 
