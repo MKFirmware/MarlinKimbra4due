@@ -43,8 +43,8 @@
 #if HAS(SERVOS)
   #include "servo.h"
 
-  #define usToTicks(_us)    (( clockCyclesPerMicrosecond()* _us) / 8)     // converts microseconds to tick (assumes prescale of 8)  // 12 Aug 2009
-  #define ticksToUs(_ticks) (( (unsigned)_ticks * 8)/ clockCyclesPerMicrosecond() ) // converts from ticks back to microseconds
+  #define usToTicks(_us)    (( clockCyclesPerMicrosecond() * _us) / 32)     // converts microseconds to tick
+  #define ticksToUs(_ticks) (( (unsigned)_ticks * 32) / clockCyclesPerMicrosecond() ) // converts from ticks back to microseconds
 
   #define TRIM_DURATION       2                               // compensation ticks to trim adjust for digitalWrite delays
 
@@ -57,7 +57,7 @@
   #define SERVO_INDEX_TO_TIMER(_servo_nbr) ((timer16_Sequence_t)(_servo_nbr / SERVOS_PER_TIMER)) // returns the timer controlling this servo
   #define SERVO_INDEX_TO_CHANNEL(_servo_nbr) (_servo_nbr % SERVOS_PER_TIMER)       // returns the index of the servo on this timer
   #define SERVO_INDEX(_timer,_channel)  ((_timer*SERVOS_PER_TIMER) + _channel)     // macro to access servo index by timer and channel
-  #define SERVO(_timer,_channel)  (servo_info[SERVO_INDEX(_timer,_channel)])       // macro to access servo class by timer and channel
+  #define SERVO(_timer,_channel)  (servo_info[SERVO_INDEX(_timer, _channel)])      // macro to access servo class by timer and channel
 
   #define SERVO_MIN() (MIN_PULSE_WIDTH - this->min * 4)  // minimum value in uS for this servo
   #define SERVO_MAX() (MAX_PULSE_WIDTH - this->max * 4)  // maximum value in uS for this servo
