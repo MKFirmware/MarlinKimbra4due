@@ -2298,12 +2298,12 @@ HAL_TEMP_TIMER_ISR {
     min_temp[temp_id] = min(min_temp[temp_id], temp_read)
 
   #define READ_CHAMBER_TEMP(temp_id) temp_read = getAdcFreerun(pinToAdcChannel(TEMP_CHAMBER_PIN)); \
-    raw_temp_bed_value += temp_read; \
+    raw_temp_chamber_value += temp_read; \
     max_temp[temp_id] = max(max_temp[temp_id], temp_read); \
     min_temp[temp_id] = min(min_temp[temp_id], temp_read)
 
   #define READ_COOLER_TEMP(temp_id) temp_read = getAdcFreerun(pinToAdcChannel(TEMP_COOLER_PIN)); \
-    raw_temp_bed_value += temp_read; \
+    raw_temp_cooler_value += temp_read; \
     max_temp[temp_id] = max(max_temp[temp_id], temp_read); \
     min_temp[temp_id] = min(min_temp[temp_id], temp_read)
 
@@ -2459,12 +2459,12 @@ HAL_TEMP_TIMER_ISR {
     for(int i = 0; i < MEDIAN_COUNT; i++) sum += raw_median_temp[temp_id][i]; \
     current_temperature_bed_raw = (sum / MEDIAN_COUNT + 4) >> 2
 
-  #define SET_CURRENT_CHAMBER_RAW(temp_id) raw_median_temp[temp_id][median_counter] = (raw_temp_bed_value - (min_temp[temp_id] + max_temp[temp_id])); \
+  #define SET_CURRENT_CHAMBER_RAW(temp_id) raw_median_temp[temp_id][median_counter] = (raw_temp_chamber_value - (min_temp[temp_id] + max_temp[temp_id])); \
     sum = 0; \
     for(int i = 0; i < MEDIAN_COUNT; i++) sum += raw_median_temp[temp_id][i]; \
     current_temperature_chamber_raw = (sum / MEDIAN_COUNT + 4) >> 2
 
-  #define SET_CURRENT_COOLER_RAW(temp_id) raw_median_temp[temp_id][median_counter] = (raw_temp_bed_value - (min_temp[temp_id] + max_temp[temp_id])); \
+  #define SET_CURRENT_COOLER_RAW(temp_id) raw_median_temp[temp_id][median_counter] = (raw_temp_cooler_value - (min_temp[temp_id] + max_temp[temp_id])); \
     sum = 0; \
     for(int i = 0; i < MEDIAN_COUNT; i++) sum += raw_median_temp[temp_id][i]; \
     current_temperature_cooler_raw = (sum / MEDIAN_COUNT + 4) >> 2
