@@ -2579,8 +2579,8 @@ HAL_TEMP_TIMER_ISR {
       #else
         #define GECHAMBER >=
       #endif
-      if (current_temperature_chamber_raw GECHAMBER chamber_maxttemp_raw) _temp_error(-1, SERIAL_T_MAXTEMP, PSTR(MSG_ERR_MAXTEMP_CHAMBER));
-      if (chamber_minttemp_raw GECHAMBER current_temperature_chamber_raw) _temp_error(-1, SERIAL_T_MINTEMP, PSTR(MSG_ERR_MINTEMP_CHAMBER));
+      if (current_temperature_chamber_raw GECHAMBER chamber_maxttemp_raw) _temp_error(-2, SERIAL_T_MAXTEMP, PSTR(MSG_ERR_MAXTEMP_CHAMBER));
+      if (chamber_minttemp_raw GECHAMBER current_temperature_chamber_raw) _temp_error(-2, SERIAL_T_MINTEMP, PSTR(MSG_ERR_MINTEMP_CHAMBER));
     #endif
 
     #if HAS(TEMP_COOLER)
@@ -2589,8 +2589,8 @@ HAL_TEMP_TIMER_ISR {
       #else
         #define GECOOLER >=
       #endif
-      if (current_temperature_cooler_raw GECOOLER cooler_maxttemp_raw) _temp_error(-2, SERIAL_T_MAXTEMP, PSTR(MSG_ERR_MAXTEMP_COOLER));
-      if (cooler_minttemp_raw GECOOLER current_temperature_cooler_raw) _temp_error(-2, SERIAL_T_MINTEMP, PSTR(MSG_ERR_MINTEMP_COOLER));
+      if (current_temperature_cooler_raw GECOOLER cooler_maxttemp_raw) _temp_error(-3, SERIAL_T_MAXTEMP, PSTR(MSG_ERR_MAXTEMP_COOLER));
+      if (cooler_minttemp_raw GECOOLER current_temperature_cooler_raw) _temp_error(-3, SERIAL_T_MINTEMP, PSTR(MSG_ERR_MINTEMP_COOLER));
     #endif
 
   } // temp_count >= OVERSAMPLENR
