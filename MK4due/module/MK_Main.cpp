@@ -162,8 +162,8 @@ bool software_endstops = true;
 #endif
 
 #if HEATER_USES_AD595
-  float ad595_offset[HOTENDS] = ARRAY_BY_HOTENDS1(TEMP_SENSOR_AD595_OFFSET);
-  float ad595_gain[HOTENDS] = ARRAY_BY_HOTENDS1(TEMP_SENSOR_AD595_GAIN);
+  float ad595_offset[HOTENDS] = ARRAY_BY_HOTENDS(TEMP_SENSOR_AD595_OFFSET);
+  float ad595_gain[HOTENDS] = ARRAY_BY_HOTENDS(TEMP_SENSOR_AD595_GAIN);
 #endif
 
 #if ENABLED(NPR2)
@@ -172,9 +172,9 @@ bool software_endstops = true;
 
 #if ENABLED(RFID_MODULE)
   bool RFID_ON = false;
-  unsigned long Spool_ID[EXTRUDERS] = ARRAY_BY_EXTRUDERS (0);
-  bool Spool_must_read[EXTRUDERS]   = ARRAY_BY_EXTRUDERS (false);
-  bool Spool_must_write[EXTRUDERS]  = ARRAY_BY_EXTRUDERS (false);
+  unsigned long Spool_ID[EXTRUDERS] = ARRAY_BY_EXTRUDERS(0);
+  bool Spool_must_read[EXTRUDERS]   = ARRAY_BY_EXTRUDERS(false);
+  bool Spool_must_write[EXTRUDERS]  = ARRAY_BY_EXTRUDERS(false);
 #endif
 
 #if HAS(Z_SERVO_ENDSTOP)
@@ -398,7 +398,7 @@ void print_xyz(const char* prefix, const float xyz[]) {
     print_xyz(prefix, xyz.x, xyz.y, xyz.z);
   }
 #endif
-#define DEBUG_POS(PREFIX,VAR) do{ ECHO_M(PREFIX); print_xyz(" > " STRINGIFY(VAR), VAR); }while(0)
+#define DEBUG_POS(PREFIX,VAR) do{ ECHO_SM(INFO, PREFIX); print_xyz(" > " STRINGIFY(VAR), VAR); }while(0)
 
 #if ENABLED(PREVENT_DANGEROUS_EXTRUDE)
   float extrude_min_temp = EXTRUDE_MINTEMP;
@@ -1953,12 +1953,10 @@ static bool axis_unhomed_error(const bool x, const bool y, const bool z) {
         if (DEBUGGING(INFO)) ECHO_SM(INFO, "> ");
         stow_z_probe();
       }
-      #if Z_RAISE_BETWEEN_PROBINGS > 0
-        else {
-          if (DEBUGGING(INFO)) ECHO_LM(INFO, "> do_probe_raise");
-          do_probe_raise(Z_RAISE_BETWEEN_PROBINGS);
-        }
-      #endif
+      else {
+        if (DEBUGGING(INFO)) ECHO_LM(INFO, "> do_probe_raise");
+        do_probe_raise(Z_RAISE_BETWEEN_PROBINGS);
+      }
 
       if (verbose_level > 2) {
         ECHO_SM(DB, SERIAL_BED_LEVELLING_BED);
@@ -2429,7 +2427,6 @@ static bool axis_unhomed_error(const bool x, const bool y, const bool z) {
       if (DEBUGGING(INFO)) {
         ECHO_LM(INFO, "probe_bed >>>");
         DEBUG_POS("", current_position);
-        ECHO_LMV(INFO, "Z Raise by bed_safe_z ", bed_safe_z);
       }
 
       float old_feedrate = feedrate;
@@ -3315,10 +3312,10 @@ inline void wait_heater(bool no_wait_for_cooling = true) {
     #define TEMP_CONDITIONS (wants_to_cool ? isCoolingHotend(target_extruder) : isHeatingHotend(target_extruder))
   #endif // TEMP_RESIDENCY_TIME
 
-  float theTarget = -1;
+  float theTarget = -1.0, old_temp = 9999.0;
   bool wants_to_cool;
   cancel_heatup = false;
-  millis_t now, next_temp_ms = 0;
+  millis_t now, next_temp_ms = 0, next_cool_check_ms = 0;
 
   KEEPALIVE_STATE(NOT_BUSY);
 
@@ -3330,10 +3327,6 @@ inline void wait_heater(bool no_wait_for_cooling = true) {
 
       // Exit if S<lower>, continue if S<higher>, R<lower>, or R<higher>
       if (no_wait_for_cooling && wants_to_cool) break;
-
-      // Prevent a wait-forever situation if R is misused i.e. M109 R0
-      // Try to calculate a ballpark safe margin by halving EXTRUDE_MINTEMP
-      if (wants_to_cool && theTarget < (EXTRUDE_MINTEMP) / 2) break;
     }
 
     now = millis();
@@ -3357,9 +3350,11 @@ inline void wait_heater(bool no_wait_for_cooling = true) {
     idle();
     refresh_cmd_timeout(); // to prevent stepper_inactive_time from running out
 
+    float temp = degHotend(target_extruder);
+
     #if TEMP_RESIDENCY_TIME > 0
 
-      float temp_diff = fabs(theTarget - degHotend(target_extruder));
+      float temp_diff = fabs(theTarget - temp);
 
       if (!residency_start_ms) {
         // Start the TEMP_RESIDENCY_TIME timer when we reach target temp for the first time.
@@ -3371,6 +3366,17 @@ inline void wait_heater(bool no_wait_for_cooling = true) {
       }
 
     #endif //TEMP_RESIDENCY_TIME > 0
+
+    // Prevent a wait-forever situation if R is misused i.e. M109 R0
+    if (wants_to_cool) {
+      if (temp < (EXTRUDE_MINTEMP) / 2) break; // always break at (default) 85°
+      // break after 20 seconds if cooling stalls
+      if (!next_cool_check_ms || ELAPSED(now, next_cool_check_ms)) {
+        if (old_temp - temp < 1.0) break;
+        next_cool_check_ms = now + 20000;
+        old_temp = temp;
+      }
+    }
 
   } while(!cancel_heatup && TEMP_CONDITIONS);
 
@@ -4147,7 +4153,7 @@ inline void gcode_G28() {
              */
             destination[X_AXIS] = round(Z_SAFE_HOMING_X_POINT - (X_PROBE_OFFSET_FROM_NOZZLE));
             destination[Y_AXIS] = round(Z_SAFE_HOMING_Y_POINT - (Y_PROBE_OFFSET_FROM_NOZZLE));
-            destination[Z_AXIS] = current_position[Z_AXIS]; //z is already at the right height
+            destination[Z_AXIS] = current_position[Z_AXIS]; // z is already at the right height
 
             feedrate = XY_PROBE_FEEDRATE;
 
@@ -6278,7 +6284,7 @@ inline void gcode_M109() {
      */
     else print_job_counter.start();
 
-    if (temp > degHotend(target_extruder)) LCD_MESSAGEPGM(MSG_HEATING);
+    if (isHeatingHotend(target_extruder)) LCD_MESSAGEPGM(MSG_HEATING);
   }
 
   #if ENABLED(AUTOTEMP)
@@ -8452,43 +8458,6 @@ inline void gcode_T(uint8_t tmp_extruder) {
                   enable_e3();
                   break;
               }
-            #elif (EXTRUDERS == 4) && HAS(E0E1) && HAS(E0E2) && HAS(E0E3) && (DRIVER_EXTRUDERS == 1)
-              st_synchronize(); // Finish all movement
-              disable_e();
-              switch(target_extruder) {
-                case 0:
-                  WRITE_RELE(E0E1_CHOICE_PIN, LOW);
-                  WRITE_RELE(E0E2_CHOICE_PIN, LOW);
-                  WRITE_RELE(E0E3_CHOICE_PIN, LOW);
-                  active_driver = 0;
-                  delay_ms(500); // 500 microseconds delay for relay
-                  enable_e0();
-                  break;
-                case 1:
-                  WRITE_RELE(E0E1_CHOICE_PIN, HIGH);
-                  WRITE_RELE(E0E2_CHOICE_PIN, LOW);
-                  WRITE_RELE(E0E3_CHOICE_PIN, LOW);
-                  active_driver = 0;
-                  delay_ms(500); // 500 microseconds delay for relay
-                  enable_e0();
-                  break;
-                case 2:
-                  WRITE_RELE(E0E1_CHOICE_PIN, HIGH);
-                  WRITE_RELE(E0E2_CHOICE_PIN, HIGH);
-                  WRITE_RELE(E0E3_CHOICE_PIN, LOW);
-                  active_driver = 0;
-                  delay_ms(500); // 500 microseconds delay for relay
-                  enable_e0();
-                  break;
-                case 3:
-                  WRITE_RELE(E0E1_CHOICE_PIN, HIGH);
-                  WRITE_RELE(E0E2_CHOICE_PIN, HIGH);
-                  WRITE_RELE(E0E3_CHOICE_PIN, HIGH);
-                  active_driver = 0;
-                  delay_ms(500); // 500 microseconds delay for relay
-                  enable_e0();
-                  break;
-              }
             #elif (EXTRUDERS == 3) && HAS(E0E2) && (DRIVER_EXTRUDERS == 2)
               st_synchronize(); // Finish all movement
               disable_e();
@@ -8506,32 +8475,6 @@ inline void gcode_T(uint8_t tmp_extruder) {
                   enable_e1();
                   break;
                 case 2:
-                  WRITE_RELE(E0E2_CHOICE_PIN, HIGH);
-                  active_driver = 0;
-                  delay_ms(500); // 500 microseconds delay for relay
-                  enable_e0();
-                  break;
-              }
-            #elif (EXTRUDERS == 3) && HAS(E0E1) && HAS(E0E2) && (DRIVER_EXTRUDERS == 1)
-              st_synchronize(); // Finish all movement
-              disable_e();
-              switch(target_extruder) {
-                case 0:
-                  WRITE_RELE(E0E1_CHOICE_PIN, LOW);
-                  WRITE_RELE(E0E2_CHOICE_PIN, LOW);
-                  active_driver = 0;
-                  delay_ms(500); // 500 microseconds delay for relay
-                  enable_e0();
-                  break;
-                case 1:
-                  WRITE_RELE(E0E1_CHOICE_PIN, HIGH);
-                  WRITE_RELE(E0E2_CHOICE_PIN, LOW);
-                  active_driver = 0;
-                  delay_ms(500); // 500 microseconds delay for relay
-                  enable_e0();
-                  break;
-                case 2:
-                  WRITE_RELE(E0E1_CHOICE_PIN, HIGH);
                   WRITE_RELE(E0E2_CHOICE_PIN, HIGH);
                   active_driver = 0;
                   delay_ms(500); // 500 microseconds delay for relay
@@ -8556,6 +8499,104 @@ inline void gcode_T(uint8_t tmp_extruder) {
                   break;
               }
             #endif // E0E1_CHOICE_PIN E0E2_CHOICE_PIN E1E3_CHOICE_PIN
+
+            previous_extruder = active_extruder;
+            active_extruder = target_extruder;
+            ECHO_LMV(DB, SERIAL_ACTIVE_DRIVER, (int)active_driver);
+            ECHO_LMV(DB, SERIAL_ACTIVE_EXTRUDER, (int)active_extruder);
+
+          #elif ENABLED(MKR6)
+            #if (EXTRUDERS == 2) && HAS(EX1) && (DRIVER_EXTRUDERS == 1)
+              st_synchronize(); // Finish all movement
+              disable_e();
+              switch(target_extruder) {
+                case 0:
+                  WRITE_RELE(EX1_CHOICE_PIN, LOW);
+                  active_driver = 0;
+                  delay_ms(500); // 500 microseconds delay for relay
+                  enable_e0();
+                  break;
+                case 1:
+                  WRITE_RELE(EX1_CHOICE_PIN, HIGH);
+                  active_driver = 0;
+                  delay_ms(500); // 500 microseconds delay for relay
+                  enable_e0();
+                  break;
+              }
+            #elif (EXTRUDERS == 3) && HAS(EX1) && HAS(EX2) && (DRIVER_EXTRUDERS == 1)
+              st_synchronize(); // Finish all movement
+              disable_e();
+              switch(target_extruder) {
+                case 0:
+                  WRITE_RELE(EX1_CHOICE_PIN, LOW);
+                  WRITE_RELE(EX2_CHOICE_PIN, LOW);
+                  active_driver = 0;
+                  delay_ms(500); // 500 microseconds delay for relay
+                  enable_e0();
+                  break;
+                case 1:
+                  WRITE_RELE(EX1_CHOICE_PIN, HIGH);
+                  WRITE_RELE(EX2_CHOICE_PIN, LOW);
+                  active_driver = 0;
+                  delay_ms(500); // 500 microseconds delay for relay
+                  enable_e0();
+                  break;
+                case 2:
+                  WRITE_RELE(EX1_CHOICE_PIN, HIGH);
+                  WRITE_RELE(EX2_CHOICE_PIN, HIGH);
+                  active_driver = 0;
+                  delay_ms(500); // 500 microseconds delay for relay
+                  enable_e0();
+                  break;
+              }
+            #elif (EXTRUDERS > 3) && HAS(EX1) && HAS(EX2) && (DRIVER_EXTRUDERS == 2)
+              st_synchronize(); // Finish all movement
+              disable_e();
+              switch(target_extruder) {
+                case 0:
+                  WRITE_RELE(EX1_CHOICE_PIN, LOW);
+                  WRITE_RELE(EX2_CHOICE_PIN, LOW);
+                  active_driver = 0;
+                  delay_ms(500); // 500 microseconds delay for relay
+                  enable_e0();
+                  break;
+                case 1:
+                  WRITE_RELE(EX1_CHOICE_PIN, HIGH);
+                  WRITE_RELE(EX2_CHOICE_PIN, LOW);
+                  active_driver = 0;
+                  delay_ms(500); // 500 microseconds delay for relay
+                  enable_e0();
+                  break;
+                case 2:
+                  WRITE_RELE(EX1_CHOICE_PIN, HIGH);
+                  WRITE_RELE(EX2_CHOICE_PIN, HIGH);
+                  active_driver = 0;
+                  delay_ms(500); // 500 microseconds delay for relay
+                  enable_e0();
+                  break;
+                case 3:
+                  WRITE_RELE(EX1_CHOICE_PIN, LOW);
+                  WRITE_RELE(EX2_CHOICE_PIN, LOW);
+                  active_driver = 1;
+                  delay_ms(500); // 500 microseconds delay for relay
+                  enable_e1();
+                  break;
+                case 4:
+                  WRITE_RELE(EX1_CHOICE_PIN, HIGH);
+                  WRITE_RELE(EX2_CHOICE_PIN, LOW);
+                  active_driver = 1;
+                  delay_ms(500); // 500 microseconds delay for relay
+                  enable_e1();
+                  break;
+                case 5:
+                  WRITE_RELE(EX1_CHOICE_PIN, HIGH);
+                  WRITE_RELE(EX2_CHOICE_PIN, HIGH);
+                  active_driver = 1;
+                  delay_ms(500); // 500 microseconds delay for relay
+                  enable_e1();
+                  break;
+              }
+            #endif
 
             previous_extruder = active_extruder;
             active_extruder = target_extruder;
@@ -9867,7 +9908,7 @@ void plan_arc(
   }
 
   void calculate_delta(float cartesian[3]) {
-    //reverse kinematics.
+    // reverse kinematics.
     // Perform reversed kinematics, and place results in delta[3]
     // The maths and first version has been done by QHARLEY . Integrated into masterbranch 06/2014 and slightly restructured by Joachim Cerny in June 2014
 
