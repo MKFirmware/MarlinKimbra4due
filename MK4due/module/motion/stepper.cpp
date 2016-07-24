@@ -1054,7 +1054,7 @@ void finishAndDisableSteppers() {
   disable_all_steppers();
 }
 
-void quickStop() {
+void quick_stop() {
   cleaning_buffer_counter = 5000;
   DISABLE_STEPPER_DRIVER_INTERRUPT();
   while (planner.blocks_queued()) planner.discard_current_block();
