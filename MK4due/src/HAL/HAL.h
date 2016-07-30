@@ -101,12 +101,6 @@
   #define HIGH        1
 
   /**
-   * Types
-   */
-  typedef char prog_char;
-  typedef uint32_t millis_t;
-
-  /**
    * Public Variables
    */
 
