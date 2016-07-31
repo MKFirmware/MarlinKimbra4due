@@ -855,11 +855,8 @@ void loop() {
 
     #endif // SDSUPPORT
 
-    // The queue may be reset by a command handler or by code invoked by idle() within a handler
-    if (commands_in_queue) {
-      --commands_in_queue;
-      cmd_queue_index_r = (cmd_queue_index_r + 1) % BUFSIZE;
-    }
+    commands_in_queue--;
+    cmd_queue_index_r = (cmd_queue_index_r + 1) % BUFSIZE;
   }
   endstops.report_state();
   idle();
@@ -880,7 +877,7 @@ inline void get_serial_commands() {
 
   // If the command buffer is empty for too long,
   // send "wait" to indicate Marlin is still waiting.
-  #if defined(NO_TIMEOUTS) && NO_TIMEOUTS > 0
+  #if ENABLED(NO_TIMEOUTS) && NO_TIMEOUTS > 0
     static millis_t last_command_time = 0;
     millis_t ms = millis();
     if (!MKSERIAL.available() && commands_in_queue == 0 && ELAPSED(ms, last_command_time + NO_TIMEOUTS)) {
@@ -1900,210 +1897,130 @@ void do_blocking_move_to_z(float z, float fr_mm_m/*=0.0*/) {
 
 #define HOMEAXIS(LETTER) homeaxis(LETTER##_AXIS)
 
-#if MECH(DELTA)
+static void homeaxis(AxisEnum axis) {
+  #define HOMEAXIS_DO(LETTER) \
+    ((LETTER##_MIN_PIN > -1 && LETTER##_HOME_DIR==-1) || (LETTER##_MAX_PIN > -1 && LETTER##_HOME_DIR==1))
 
-  static void homeaxis(AxisEnum axis) {
-    #define HOMEAXIS_DO(LETTER) \
-      ((LETTER##_MIN_PIN > -1 && LETTER##_HOME_DIR==-1) || (LETTER##_MAX_PIN > -1 && LETTER##_HOME_DIR==1))
+  if (!(axis == X_AXIS ? HOMEAXIS_DO(X) : axis == Y_AXIS ? HOMEAXIS_DO(Y) : axis == Z_AXIS ? HOMEAXIS_DO(Z) : 0)) return;
 
-    if (!(axis == X_AXIS ? HOMEAXIS_DO(X) : axis == Y_AXIS ? HOMEAXIS_DO(Y) : axis == Z_AXIS ? HOMEAXIS_DO(Z) : 0)) return;
+  if (DEBUGGING(INFO)) {
+    ECHO_SMV(INFO, ">>> homeaxis(", axis);
+    ECHO_EM(")");
+  }
 
-    if (DEBUGGING(INFO)) {
-      ECHO_SMV(INFO, ">>> homeaxis(", axis);
-      ECHO_EM(")");
+  int axis_home_dir =
+    #if ENABLED(DUAL_X_CARRIAGE)
+      (axis == X_AXIS) ? x_home_dir(active_extruder) :
+    #endif
+    home_dir(axis);
+
+  #if ENABLED(LASERBEAM) && (LASER_HAS_FOCUS == false)
+    if (axis == Z_AXIS) goto AvoidLaserFocus;
+  #endif
+
+  // Homing Z towards the bed? Deploy the Z probe or endstop.
+  #if HAS(BED_PROBE)
+    if (axis == Z_AXIS && axis_home_dir < 0) {
+      if (DEBUGGING(INFO)) ECHO_SM(INFO, "> ");
+      if (DEPLOY_PROBE()) return;
     }
+  #endif
 
-    int axis_home_dir = home_dir(axis);
-    float old_feedrate_mm_m = feedrate_mm_m;
+  // Set the axis position as setup for the move
+  current_position[axis] = 0;
+  sync_plan_position();
 
-    #if ENABLED(LASERBEAM) && (LASER_HAS_FOCUS == false)
-      if (axis == Z_AXIS) goto AvoidLaserFocus;
-    #endif
+  // Set a flag for Z motor locking
+  #if ENABLED(Z_DUAL_ENDSTOPS)
+    if (axis == Z_AXIS) set_homing_flag(true);
+  #endif
 
-    // Homing Z towards the bed? Deploy the Z probe or endstop.
-    #if HAS(BED_PROBE)
-      if (axis == Z_AXIS && axis_home_dir < 0) {
-        if (DEBUGGING(INFO)) ECHO_SM(INFO, "> ");
-        if (DEPLOY_PROBE()) return;
+  // Move towards the endstop until an endstop is triggered
+  #if MECH(DELTA)
+    line_to_axis_pos(axis, 1.5 * max_length[axis] * axis_home_dir);
+  #else
+    line_to_axis_pos(axis, 1.5 * max_length(axis) * axis_home_dir);
+  #endif
+
+  // Set the axis position as setup for the move
+  current_position[axis] = 0;
+  sync_plan_position();
+
+  // Move away from the endstop by the axis HOME_BUMP_MM
+  line_to_axis_pos(axis, -home_bump_mm(axis) * axis_home_dir);
+
+  // Move slowly towards the endstop until triggered
+  line_to_axis_pos(axis, 2 * home_bump_mm(axis) * axis_home_dir, get_homing_bump_feedrate(axis));
+
+  // reset current_position to 0 to reflect hitting endpoint
+  current_position[axis] = 0;
+  sync_plan_position();
+
+  if (DEBUGGING(INFO)) DEBUG_INFO_POS("TRIGGER ENDSTOP", current_position);
+
+  #if ENABLED(Z_DUAL_ENDSTOPS)
+    if (axis == Z_AXIS) {
+      float adj = fabs(z_endstop_adj);
+      bool lockZ1;
+      if (axis_home_dir > 0) {
+        adj = -adj;
+        lockZ1 = (z_endstop_adj > 0);
       }
-    #endif
+      else
+        lockZ1 = (z_endstop_adj < 0);
 
-    // Set the axis position as setup for the move
-    current_position[axis] = 0;
-    sync_plan_position();
+      if (lockZ1) set_z_lock(true); else set_z2_lock(true);
+      sync_plan_position();
 
-    // Move towards the endstop until an endstop is triggered
-    destination[axis] = 1.5 * max_length[axis] * axis_home_dir;
-    feedrate_mm_m = homing_feedrate_mm_m[axis];
-    line_to_destination();
-    st_synchronize();
+      // Move to the adjusted endstop height
+      line_to_axis_pos(axis, adj);
 
-    // Set the axis position as setup for the move
-    current_position[axis] = 0;
-    sync_plan_position();
+      if (lockZ1) set_z_lock(false); else set_z2_lock(false);
+      set_homing_flag(false);
+    } // Z_AXIS
+  #endif
 
-    // Move away from the endstop by the axis HOME_BUMP_MM
-    destination[axis] = -home_bump_mm(axis) * axis_home_dir;
-    line_to_destination();
-    st_synchronize();
-
-    // Slow down the feedrate for the next move
-    feedrate_mm_m = get_homing_bump_feedrate(axis);
-
-    // Move slowly towards the Endstop until triggered
-    destination[axis] = 2 * home_bump_mm(axis) * axis_home_dir;
-    line_to_destination();
-    st_synchronize();
-
+  #if MECH(DELTA)
     // retrace by the amount specified in endstop_adj
     if (endstop_adj[axis] * axis_home_dir < 0) {
-      sync_plan_position();
-      destination[axis] = endstop_adj[axis];
       if (DEBUGGING(INFO)) {
-        ECHO_LMV(INFO, " > endstop_adj = ", endstop_adj[axis]);
-        DEBUG_POS("", destination);
+        destination[axis] = endstop_adj[axis];
+        ECHO_LMV(INFO, "endstop_adj = ", endstop_adj[axis]);
+        DEBUG_INFO_POS("", destination);
       }
-      line_to_destination();
-      st_synchronize();
+      line_to_axis_pos(axis, endstop_adj[axis]);
     }
-
-    // Set the axis position to its home position (plus home offsets)
-    set_axis_is_at_home(axis);
-    sync_plan_position();
-
-    if (DEBUGGING(INFO)) DEBUG_INFO_POS("AFTER set_axis_is_at_home", current_position);
-
-    destination[axis] = current_position[axis];
-    endstops.hit_on_purpose(); // clear endstop hit flags
-    axis_known_position[axis] = true;
-    axis_homed[axis] = true;
-
-    // Put away the Z probe with a function
-    #if HAS(BED_PROBE)
-      if (axis == Z_AXIS && axis_home_dir < 0) {
-        if (DEBUGGING(INFO)) ECHO_SM(INFO, "> ");
-        if (STOW_PROBE()) return;
-      }
-    #endif
-
-  #if ENABLED(LASERBEAM) && (LASER_HAS_FOCUS == false)
-  AvoidLaserFocus:
   #endif
 
-    if (DEBUGGING(INFO)) {
-      ECHO_SMV(INFO, "<<< homeaxis(", axis);
-      ECHO_EM(")");
+  // Set the axis position to its home position (plus home offsets)
+  set_axis_is_at_home(axis);
+
+  SYNC_PLAN_POSITION_KINEMATIC();
+
+  if (DEBUGGING(INFO)) DEBUG_INFO_POS("AFTER set_axis_is_at_home", current_position);
+
+  destination[axis] = current_position[axis];
+  endstops.hit_on_purpose(); // clear endstop hit flags
+  axis_known_position[axis] = true;
+  axis_homed[axis] = true;
+
+  // Put away the Z probe with a function
+  #if HAS(BED_PROBE)
+    if (axis == Z_AXIS && axis_home_dir < 0) {
+      if (DEBUGGING(INFO)) ECHO_SM(INFO, "> ");
+      if (STOW_PROBE()) return;
     }
-  }
-
-#else
-
-  static void homeaxis(AxisEnum axis) {
-    #define HOMEAXIS_DO(LETTER) \
-      ((LETTER##_MIN_PIN > -1 && LETTER##_HOME_DIR==-1) || (LETTER##_MAX_PIN > -1 && LETTER##_HOME_DIR==1))
-
-    if (!(axis == X_AXIS ? HOMEAXIS_DO(X) : axis == Y_AXIS ? HOMEAXIS_DO(Y) : axis == Z_AXIS ? HOMEAXIS_DO(Z) : 0)) return;
-
-    if (DEBUGGING(INFO)) {
-      ECHO_SMV(INFO, ">>> homeaxis(", axis);
-      ECHO_EM(")");
-    }
-
-    int axis_home_dir =
-      #if ENABLED(DUAL_X_CARRIAGE)
-        (axis == X_AXIS) ? x_home_dir(active_extruder) :
-      #endif
-      home_dir(axis);
-
-    #if ENABLED(LASERBEAM) && (LASER_HAS_FOCUS == false)
-      if (axis == Z_AXIS) goto AvoidLaserFocus;
-    #endif
-
-    // Homing Z towards the bed? Deploy the Z probe or endstop.
-    #if HAS(BED_PROBE)
-      if (axis == Z_AXIS && axis_home_dir < 0) {
-        if (DEBUGGING(INFO)) ECHO_SM(INFO, "> ");
-        if (DEPLOY_PROBE()) return;
-      }
-    #endif
-
-    // Set the axis position as setup for the move
-    current_position[axis] = 0;
-    sync_plan_position();
-
-    // Set a flag for Z motor locking
-    #if ENABLED(Z_DUAL_ENDSTOPS)
-      if (axis == Z_AXIS) set_homing_flag(true);
-    #endif
-
-    // Move towards the endstop until an endstop is triggered
-    line_to_axis_pos(axis, 1.5 * max_length(axis) * axis_home_dir);
-
-    // Set the axis position as setup for the move
-    current_position[axis] = 0;
-    sync_plan_position();
-
-    // Move away from the endstop by the axis HOME_BUMP_MM
-    line_to_axis_pos(axis, -home_bump_mm(axis) * axis_home_dir);
-
-    // Move slowly towards the endstop until triggered
-    line_to_axis_pos(axis, 2 * home_bump_mm(axis) * axis_home_dir, get_homing_bump_feedrate(axis));
-
-    if (DEBUGGING(INFO)) DEBUG_INFO_POS("TRIGGER ENDSTOP", current_position);
-
-    #if ENABLED(Z_DUAL_ENDSTOPS)
-      if (axis == Z_AXIS) {
-        float adj = fabs(z_endstop_adj);
-        bool lockZ1;
-        if (axis_home_dir > 0) {
-          adj = -adj;
-          lockZ1 = (z_endstop_adj > 0);
-        }
-        else
-          lockZ1 = (z_endstop_adj < 0);
-
-        if (lockZ1) set_z_lock(true); else set_z2_lock(true);
-        sync_plan_position();
-
-        // Move to the adjusted endstop height
-        line_to_axis_pos(axis, adj);
-
-        if (lockZ1) set_z_lock(false); else set_z2_lock(false);
-        set_homing_flag(false);
-      } // Z_AXIS
-    #endif
-
-    // Set the axis position to its home position (plus home offsets)
-    set_axis_is_at_home(axis);
-
-    sync_plan_position();
-
-    if (DEBUGGING(INFO)) DEBUG_INFO_POS("AFTER set_axis_is_at_home", current_position);
-
-    destination[axis] = current_position[axis];
-    endstops.hit_on_purpose(); // clear endstop hit flags
-    axis_known_position[axis] = true;
-    axis_homed[axis] = true;
-
-    // Put away the Z probe with a function
-    #if HAS(BED_PROBE)
-      if (axis == Z_AXIS && axis_home_dir < 0) {
-        if (DEBUGGING(INFO)) ECHO_SM(INFO, "> ");
-        if (STOW_PROBE()) return;
-      }
-    #endif
-
-  #if ENABLED(LASERBEAM) && (LASER_HAS_FOCUS == false)
-  AvoidLaserFocus:
   #endif
 
-    if (DEBUGGING(INFO)) {
-      ECHO_SMV(INFO, "<<< homeaxis(", axis);
-      ECHO_EM(")");
-    }
-  }
+  #if ENABLED(LASERBEAM) && (LASER_HAS_FOCUS == false)
+    AvoidLaserFocus:
+  #endif
 
-#endif // NOMECH(DELTA)
+  if (DEBUGGING(INFO)) {
+    ECHO_SMV(INFO, "<<< homeaxis(", axis);
+    ECHO_EM(")");
+  }
+}
 
 /**
  * Function for Cartesian, Core & Scara mechanism
@@ -10242,7 +10159,7 @@ void manage_inactivity(bool ignore_stepper_queue/*=false*/) {
       handle_filament_runout();
   #endif
 
-  if (commands_in_queue < BUFSIZE - 1) get_available_commands();
+  if (commands_in_queue < BUFSIZE) get_available_commands();
 
   millis_t ms = millis();
 
@@ -10446,10 +10363,6 @@ void manage_inactivity(bool ignore_stepper_queue/*=false*/) {
         }
       }
     }
-  #endif
-
-  #if ENABLED(TEMP_STAT_LEDS)
-    handle_status_leds();
   #endif
 
   #if ENABLED(TEMP_STAT_LEDS)
