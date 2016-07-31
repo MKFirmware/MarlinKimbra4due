@@ -3150,7 +3150,7 @@ void set_current_from_steppers_for_axis(AxisEnum axis) {
       #endif
     #endif
     #if HOTENDS > 1
-      HOTEND_LOOP() {
+      for (uint8_t h = 0; h < HOTENDS; h++) {
         ECHO_MV(" T", h);
         ECHO_C(':');
         ECHO_V(degHotend(h), 1);
@@ -3166,7 +3166,7 @@ void set_current_from_steppers_for_axis(AxisEnum axis) {
       ECHO_MV(SERIAL_BAT, getBedPower());
     #endif
     #if HOTENDS > 1
-      HOTEND_LOOP() {
+      for (uint8_t h = 0; h < HOTENDS; h++) {
         ECHO_MV(SERIAL_AT, h);
         ECHO_C(':');
         ECHO_V(getHeaterPower(h));
