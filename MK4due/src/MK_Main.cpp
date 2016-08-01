@@ -488,6 +488,11 @@ void enqueue_and_echo_commands_P(const char* pgcode) {
   drain_queued_commands_P(); // first command executed asap (when possible)
 }
 
+void clear_command_queue() {
+  cmd_queue_index_r = cmd_queue_index_w;
+  commands_in_queue = 0;
+}
+
 /**
  * Once a new command is in the ring buffer, call this to commit it
  */
@@ -1970,7 +1975,6 @@ static void homeaxis(AxisEnum axis) {
         lockZ1 = (z_endstop_adj < 0);
 
       if (lockZ1) set_z_lock(true); else set_z2_lock(true);
-      sync_plan_position();
 
       // Move to the adjusted endstop height
       line_to_axis_pos(axis, adj);
@@ -2026,22 +2030,6 @@ static void homeaxis(AxisEnum axis) {
  * Function for Cartesian, Core & Scara mechanism
  */
 #if MECH(CARTESIAN) || MECH(COREXY) || MECH(COREYX) || MECH(COREXZ) || MECH(COREZX) || MECH(SCARA)
-
-  void set_current_position_from_planner() {
-    st_synchronize();
-    #if ENABLED(AUTO_BED_LEVELING_FEATURE)
-      vector_3 pos = planner.adjusted_position(); // values directly from steppers...
-      current_position[X_AXIS] = pos.x;
-      current_position[Y_AXIS] = pos.y;
-      current_position[Z_AXIS] = pos.z;
-    #else
-      current_position[X_AXIS] = st_get_axis_position_mm(X_AXIS);
-      current_position[Y_AXIS] = st_get_axis_position_mm(Y_AXIS);
-      current_position[Z_AXIS] = st_get_axis_position_mm(Z_AXIS);
-    #endif
-
-    sync_plan_position(); // ...re-apply to planner position
-  }
 
   #if ENABLED(AUTO_BED_LEVELING_FEATURE)
 
