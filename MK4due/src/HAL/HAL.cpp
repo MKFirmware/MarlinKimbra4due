@@ -55,7 +55,6 @@
 // --------------------------------------------------------------------------
 
 #include "../../base.h"
-#include "HAL.h"
 #include <Wire.h>
 
 // disable interrupts
@@ -89,19 +88,19 @@ void HAL::showStartReason() {
   int mcu = (RSTC->RSTC_SR & RSTC_SR_RSTTYP_Msk) >> RSTC_SR_RSTTYP_Pos;
   switch (mcu) {
     case 0:
-      ECHO_LM(INFO, SERIAL_POWERUP);
+      Com::printInfoLN(Com::tPowerUp);
       break;
     case 1:
       // this is return from backup mode on SAM
-      ECHO_LM(INFO, SERIAL_BROWNOUT_RESET);
+      Com::printInfoLN(Com::tBrownOut);
     case 2:
-      ECHO_LM(INFO, SERIAL_WATCHDOG_RESET);
+      Com::printInfoLN(Com::tWatchdog);
       break;
     case 3:
-      ECHO_LM(INFO, SERIAL_SOFTWARE_RESET);
+      Com::printInfoLN(Com::tSoftwareReset);
       break;
     case 4:
-      ECHO_LM(INFO, SERIAL_EXTERNAL_RESET);
+      Com::printInfoLN(Com::tExternalReset);
   }
 }
 
@@ -739,7 +738,7 @@ uint16_t getAdcReading(adc_channel_num_t chan) {
     return rslt;
   }
   else {
-    ECHO_LM(DB, "error getAdcReading");
+    SERIAL_LM(ER, "error getAdcReading");
     return 0;
   }
 }
@@ -762,7 +761,7 @@ uint16_t getAdcFreerun(adc_channel_num_t chan, bool wait_for_conversion) {
     return rslt;
   }
   else {
-    ECHO_LM(DB, "wait freerun");
+    SERIAL_LM(ER, "wait freerun");
     return 0;
   }
 }
