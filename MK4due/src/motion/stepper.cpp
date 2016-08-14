@@ -344,7 +344,7 @@ HAL_STEP_TIMER_ISR {
   #if ENABLED(LASERBEAM)
     if (laser.firing == LASER_ON && laser.dur != 0 && (laser.last_firing + laser.dur < micros())) {
       if (laser.diagnostics)
-        ECHO_LM(INFO, "Laser firing duration elapsed, in interrupt handler");
+        SERIAL_EM("Laser firing duration elapsed, in interrupt handler");
       laser_extinguish();
     }
   #endif
@@ -413,7 +413,7 @@ HAL_STEP_TIMER_ISR {
 
       if (current_block->laser_status == LASER_OFF) {
         if (laser.diagnostics)
-          ECHO_LM(INFO, "Laser status set to off, in interrupt handler");
+          SERIAL_EM("Laser status set to off, in interrupt handler");
         laser_extinguish();
       }
     #endif
@@ -567,9 +567,9 @@ HAL_STEP_TIMER_ISR {
           if (current_block->laser_mode == PULSED && current_block->laser_status == LASER_ON) { // Pulsed Firing Mode
             laser_fire(current_block->laser_intensity);
             if (laser.diagnostics) {
-              ECHO_MV("X: ", counter_X);
-              ECHO_MV("Y: ", counter_Y);
-              ECHO_MV("L: ", counter_L);
+              SERIAL_MV("X: ", counter_X);
+              SERIAL_MV("Y: ", counter_Y);
+              SERIAL_MV("L: ", counter_L);
             }
           }
           #if ENABLED(LASER_RASTER)
@@ -577,7 +577,7 @@ HAL_STEP_TIMER_ISR {
               uint8_t v = current_block->laser_raster_data[counter_raster];
               laser_fire_byte(v); // Full byte range 0-255
               if (laser.diagnostics)
-                ECHO_MV("Pixel: ", (float)current_block->laser_raster_data[counter_raster]);
+                SERIAL_MV("Pixel: ", (float)current_block->laser_raster_data[counter_raster]);
               counter_raster++;
             }
           #endif // LASER_RASTER
@@ -586,7 +586,7 @@ HAL_STEP_TIMER_ISR {
 
         if (current_block->laser_duration != 0 && (laser.last_firing + current_block->laser_duration < micros())) {
           if (laser.diagnostics)
-            ECHO_LM(INFO, "Laser firing duration elapsed, in interrupt fast loop ");
+            SERIAL_EM("Laser firing duration elapsed, in interrupt fast loop");
           laser_extinguish();
         }
       #endif // LASERBEAM
@@ -1093,33 +1093,33 @@ void report_positions() {
   CRITICAL_SECTION_END;
 
   #if MECH(COREXY) || MECH(COREYX) || MECH(COREXZ) || MECH(COREZX)
-    ECHO_M(SERIAL_COUNT_A);
+    SERIAL_M(MSG_COUNT_A);
   #elif MECH(DELTA)
-    ECHO_M(SERIAL_COUNT_ALPHA);
+    SERIAL_M(MSG_COUNT_ALPHA);
   #else
-    ECHO_M(SERIAL_COUNT_X);
+    SERIAL_M(MSG_COUNT_X);
   #endif
-  ECHO_V(xpos);
+  SERIAL_V(xpos);
 
   #if MECH(COREXY) || MECH(COREYX)
-    ECHO_M(" B:");
+    SERIAL_M(" B:");
   #elif MECH(DELTA)
-    ECHO_M(" Beta:");
+    SERIAL_M(" Beta:");
   #else
-    ECHO_M(" Y:");
+    SERIAL_M(" Y:");
   #endif
-  ECHO_V(ypos);
+  SERIAL_V(ypos);
 
   #if MECH(COREXZ) || MECH(COREZX)
-    ECHO_M(" C:");
+    SERIAL_M(" C:");
   #elif MECH(DELTA)
-    ECHO_M(" Teta:");
+    SERIAL_M(" Teta:");
   #else
-    ECHO_M(" Z:");
+    SERIAL_M(" Z:");
   #endif
-  ECHO_V(zpos);
+  SERIAL_V(zpos);
 
-  ECHO_E;
+  SERIAL_E;
 }
 
 void kill_current_block() {
@@ -1351,23 +1351,23 @@ void microstep_mode(uint8_t driver, uint8_t stepping_mode) {
 }
 
 void microstep_readings() {
-  ECHO_SM(DB, SERIAL_MICROSTEP_MS1_MS2);
-  ECHO_M(SERIAL_MICROSTEP_X);
-  ECHO_V(digitalRead(X_MS1_PIN));
-  ECHO_EV(digitalRead(X_MS2_PIN));
-  ECHO_SM(DB, SERIAL_MICROSTEP_Y);
-  ECHO_V(digitalRead(Y_MS1_PIN));
-  ECHO_EV(digitalRead(Y_MS2_PIN));
-  ECHO_SM(DB, SERIAL_MICROSTEP_Z);
-  ECHO_V(digitalRead(Z_MS1_PIN));
-  ECHO_EV(digitalRead(Z_MS2_PIN));
-  ECHO_SM(DB, SERIAL_MICROSTEP_E0);
-  ECHO_V(digitalRead(E0_MS1_PIN));
-  ECHO_EV(digitalRead(E0_MS2_PIN));
+  SERIAL_M(MSG_MICROSTEP_MS1_MS2);
+  SERIAL_M(MSG_MICROSTEP_X);
+  SERIAL_V(digitalRead(X_MS1_PIN));
+  SERIAL_EV(digitalRead(X_MS2_PIN));
+  SERIAL_M(MSG_MICROSTEP_Y);
+  SERIAL_V(digitalRead(Y_MS1_PIN));
+  SERIAL_EV(digitalRead(Y_MS2_PIN));
+  SERIAL_M(MSG_MICROSTEP_Z);
+  SERIAL_V(digitalRead(Z_MS1_PIN));
+  SERIAL_EV(digitalRead(Z_MS2_PIN));
+  SERIAL_M(MSG_MICROSTEP_E0);
+  SERIAL_V(digitalRead(E0_MS1_PIN));
+  SERIAL_EV(digitalRead(E0_MS2_PIN));
   #if HAS(MICROSTEPS_E1)
-    ECHO_SM(DB, SERIAL_MICROSTEP_E1);
-    ECHO_V(digitalRead(E1_MS1_PIN));
-    ECHO_EV(digitalRead(E1_MS2_PIN));
+    SERIAL_M(MSG_MICROSTEP_E1);
+    SERIAL_V(digitalRead(E1_MS1_PIN));
+    SERIAL_EV(digitalRead(E1_MS2_PIN));
   #endif
 }
 
