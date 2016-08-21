@@ -2062,7 +2062,7 @@ static void set_current_temp_raw() {
 
   #ifdef __SAM3X8E__
     // Reset min/max-holder
-    for (uint8_t i = 0; i < HOTENDS + 1; i++) {
+    for (uint8_t i = 0; i < 7; i++) {
       min_temp[i] = RAW_MIN_TEMP_DEFAULT;
       max_temp[i] = 0;
     }
