@@ -581,14 +581,21 @@ uint8_t bestClock(double frequency, uint32_t& retRC){
 // thanks for that work
 // http://forum.arduino.cc/index.php?topic=297397.0
 
+#if ENABLED(ADVANCE) || ENABLED(ADVANCE_LPC)
+  TcChannel *extruderChannel = (ADVANCE_EXTRUDER_TIMER_COUNTER->TC_CHANNEL + ADVANCE_EXTRUDER_TIMER_CHANNEL);
+#endif
+TcChannel* stepperChannel = (STEP_TIMER_COUNTER->TC_CHANNEL + STEP_TIMER_CHANNEL);
+
 void HAL_step_timer_start() {
+  pmc_set_writeprotect(false); // remove write protection on registers
+
   // Get the ISR from table
   Tc *tc = STEP_TIMER_COUNTER;
   IRQn_Type irq = STEP_TIMER_IRQN;
   uint32_t channel = STEP_TIMER_CHANNEL;
 
-  pmc_set_writeprotect(false); // remove write protection on registers
   pmc_enable_periph_clk((uint32_t)irq); // we need a clock?
+  NVIC_SetPriority(irq, 1); // highest priority - no surprises here wanted
 
   tc->TC_CHANNEL[channel].TC_CCR = TC_CCR_CLKDIS;
 
@@ -597,7 +604,7 @@ void HAL_step_timer_start() {
 
   tc->TC_CHANNEL[channel].TC_IER /*|*/= TC_IER_CPCS; // enable interrupt on timer match with register C
   tc->TC_CHANNEL[channel].TC_IDR = ~TC_IER_CPCS;
-  tc->TC_CHANNEL[channel].TC_RC   = (VARIANT_MCK >> 1) / 1000; // start with 1kHz as frequency; //interrupt occurs every x interations of the timer counter
+  tc->TC_CHANNEL[channel].TC_RC   = (VARIANT_MCK >> 1) / STEP_FREQUENCY; // start with 1kHz as frequency; //interrupt occurs every x interations of the timer counter
 
   tc->TC_CHANNEL[channel].TC_CCR = TC_CCR_CLKEN | TC_CCR_SWTRG;
 
@@ -614,10 +621,11 @@ void HAL_step_timer_start() {
     uint8_t clock;
 
     // Find the best clock for the wanted frequency
-    clock = bestClock(10000, rc);
+    clock = bestClock(ADVANCE_EXTRUDER_FREQUENCY, rc);
 
     pmc_set_writeprotect(false); // remove write protection on registers
     pmc_enable_periph_clk((uint32_t)irq);
+    NVIC_SetPriority(irq, 6);
 
     tc->TC_CHANNEL[channel].TC_CCR = TC_CCR_CLKDIS;
 
@@ -641,11 +649,11 @@ void HAL_temp_timer_start (uint8_t timer_num) {
 
 	pmc_set_writeprotect(false);
 	pmc_enable_periph_clk((uint32_t)irq);
-	
-	NVIC_SetPriorityGrouping(4);
-	
-	NVIC_SetPriority(irq, NVIC_EncodePriority(4, 6, 0));
-	
+
+	//NVIC_SetPriorityGrouping(4);
+	//NVIC_SetPriority(irq, NVIC_EncodePriority(4, 6, 0));
+  NVIC_SetPriority(irq, 15);
+
 	TC_Configure (tc, channel, TC_CMR_CPCTRG | TC_CMR_TCCLKS_TIMER_CLOCK4);
   tc->TC_CHANNEL[channel].TC_IER |= TC_IER_CPCS; //enable interrupt on timer match with register C
 
@@ -715,7 +723,6 @@ void noTone(uint8_t pin) {
   WRITE_VAR(pin, LOW);
 }
 
-
 // IRQ handler for tone generator
 HAL_BEEPER_TIMER_ISR {
   static bool toggle;
@@ -732,9 +739,9 @@ HAL_BEEPER_TIMER_ISR {
 // --------------------------------------------------------------------------
 
 uint16_t getAdcReading(adc_channel_num_t chan) {
-  if ((ADC->ADC_ISR & _BV(chan)) == _BV(chan)) {
+  if ((ADC->ADC_ISR & _BV(chan)) == (uint32_t)_BV(chan)) {
     uint16_t rslt = ADC->ADC_CDR[chan];
-    ADC->ADC_CHDR |= _BV(chan);
+    SBI(ADC->ADC_CHDR, chan);
     return rslt;
   }
   else {
@@ -744,7 +751,7 @@ uint16_t getAdcReading(adc_channel_num_t chan) {
 }
 
 void startAdcConversion(adc_channel_num_t chan) {
-  ADC->ADC_CHER |= _BV(chan);
+  SBI(ADC->ADC_CHER, chan);
 }
 
 // Convert an Arduino Due pin number to the corresponding ADC channel number
@@ -755,8 +762,8 @@ adc_channel_num_t pinToAdcChannel(int pin) {
 }
 
 uint16_t getAdcFreerun(adc_channel_num_t chan, bool wait_for_conversion) {
-  if (wait_for_conversion) while (!((ADC->ADC_ISR & _BV(chan)) == _BV(chan)));
-  if ((ADC->ADC_ISR & _BV(chan)) == _BV(chan)) {
+  if (wait_for_conversion) while (!((ADC->ADC_ISR & _BV(chan)) == (uint32_t)_BV(chan)));
+  if ((ADC->ADC_ISR & _BV(chan)) == (uint32_t)_BV(chan)) {
     uint16_t rslt = ADC->ADC_CDR[chan];
     return rslt;
   }
@@ -773,7 +780,7 @@ uint16_t getAdcSuperSample(adc_channel_num_t chan) {
 }
 
 void stopAdcFreerun(adc_channel_num_t chan) {
-  ADC->ADC_CHDR |= _BV(chan);
+  SBI(ADC->ADC_CHDR, chan);
 }
 
 #if ENABLED(LASERBEAM)

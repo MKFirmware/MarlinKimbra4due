@@ -128,6 +128,10 @@
 
   #define NOOP do{}while(0)
 
+  #define MAX3(a, b, c)     max(max(a, b), c)
+  #define MAX4(a, b, c, d)  max(max(max(a, b), c), d)
+  #define MIN3(a, b, c)     min(min(a, b), c)
+
   #define _AXIS(AXIS) AXIS ##_AXIS
 
   #define LOOP_XYZ(VAR)  for (uint8_t VAR=X_AXIS; VAR<=Z_AXIS; VAR++)

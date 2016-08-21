@@ -50,9 +50,6 @@
   #define K2 (1.0 - K1)
 #endif
 
-#if ENABLED(PIDTEMPBED) || ENABLED(PIDTEMP)  || ENABLED(PIDTEMPCHAMBER) || ENABLED(PIDTEMPCOOLER)
-  #define PID_dT (((OVERSAMPLENR + 2) * 18.0)/ TEMP_FREQUENCY)
-#endif
 
 //===========================================================================
 //============================= public variables ============================
@@ -235,6 +232,12 @@ static int minttemp_raw[HOTENDS] = ARRAY_BY_HOTENDS_N( HEATER_0_RAW_LO_TEMP , HE
 static int maxttemp_raw[HOTENDS] = ARRAY_BY_HOTENDS_N( HEATER_0_RAW_HI_TEMP , HEATER_1_RAW_HI_TEMP , HEATER_2_RAW_HI_TEMP, HEATER_3_RAW_HI_TEMP);
 static int minttemp[HOTENDS] = { 0 };
 static int maxttemp[HOTENDS] = ARRAY_BY_HOTENDS(16383);
+
+static unsigned long raw_temp_value[4] = { 0 };
+static unsigned long raw_temp_bed_value = 0;
+static unsigned long raw_temp_chamber_value = 0;
+static unsigned long raw_temp_cooler_value = 0;
+
 #if ENABLED(BED_MINTEMP)
   static int bed_minttemp_raw = HEATER_BED_RAW_LO_TEMP;
 #endif
@@ -252,6 +255,23 @@ static int maxttemp[HOTENDS] = ARRAY_BY_HOTENDS(16383);
 #endif
 #if ENABLED(COOLER_MAXTEMP)
   static int cooler_maxttemp_raw = COOLER_RAW_HI_TEMP;
+#endif
+
+#ifdef __SAM3X8E__
+  // MEDIAN COUNT
+  // For Smoother temperature
+  // ONLY FOR DUE
+  #define MEDIAN_COUNT 10
+
+  #define CORRECTION_FOR_RAW_TEMP 4
+  #define RAW_MIN_TEMP_DEFAULT 123000
+  #define RAW_MEDIAN_TEMP_DEFAULT 3600 * OVERSAMPLENR
+
+  static int min_temp[7];
+  static int max_temp[7];
+  static unsigned long raw_median_temp[7][MEDIAN_COUNT];
+  static uint8_t median_counter;
+  static unsigned long sum;
 #endif
 
 #if ENABLED(TEMP_SENSOR_1_AS_REDUNDANT)
@@ -745,7 +765,7 @@ float get_pid_output(int h) {
         #if ENABLED(PID_ADD_EXTRUSION_RATE)
           cTerm[HOTEND_INDEX] = 0;
           if (_HOTEND_TEST) {
-            long e_position = st_get_position(E_AXIS);
+            long e_position = stepper.position(E_AXIS);
             if (e_position > last_e_position) {
               lpq[lpq_ptr++] = e_position - last_e_position;
               last_e_position = e_position;
@@ -1398,6 +1418,7 @@ static void updateTemperaturesFromRawValues() {
  * The manager is implemented by periodic calls to manage_temp_controller()
  */
 void tp_init() {
+
   #if MB(RUMBA) && ((TEMP_SENSOR_0==-1)||(TEMP_SENSOR_1==-1)||(TEMP_SENSOR_2==-1)||(TEMP_SENSOR_BED==-1)||(TEMP_SENSOR_COOLER==-1))
     // disable RUMBA JTAG in case the thermocouple extension is plugged on top of JTAG connector
     MCUCR = _BV(JTD);
@@ -1467,28 +1488,15 @@ void tp_init() {
     #endif
   #endif
 
-  #if HAS(AUTO_FAN_0)
-    SET_OUTPUT(EXTRUDER_0_AUTO_FAN_PIN);
-  #endif
-  #if HAS(AUTO_FAN_1) && (EXTRUDER_1_AUTO_FAN_PIN != EXTRUDER_0_AUTO_FAN_PIN)
-    SET_OUTPUT(EXTRUDER_1_AUTO_FAN_PIN);
-  #endif
-  #if HAS(AUTO_FAN_2) && (EXTRUDER_2_AUTO_FAN_PIN != EXTRUDER_0_AUTO_FAN_PIN) && (EXTRUDER_2_AUTO_FAN_PIN != EXTRUDER_1_AUTO_FAN_PIN)
-    SET_OUTPUT(EXTRUDER_2_AUTO_FAN_PIN);
-  #endif
-  #if HAS(AUTO_FAN_3) && (EXTRUDER_3_AUTO_FAN_PIN != EXTRUDER_0_AUTO_FAN_PIN) && (EXTRUDER_3_AUTO_FAN_PIN != EXTRUDER_1_AUTO_FAN_PIN) && (EXTRUDER_3_AUTO_FAN_PIN != EXTRUDER_2_AUTO_FAN_PIN)
-    SET_OUTPUT(EXTRUDER_3_AUTO_FAN_PIN);
-  #endif
-
   #if ENABLED(HEATER_0_USES_MAX6675)
 
     #if DISABLED(SDSUPPORT)
-      WRITE(SCK_PIN, 0);
-      SET_OUTPUT(SCK_PIN);
-      WRITE(MOSI_PIN, 1);
-      SET_OUTPUT(MOSI_PIN);
-      WRITE(MISO_PIN, 1);
+      OUT_WRITE(SCK_PIN, LOW);
+      OUT_WRITE(MOSI_PIN, HIGH);
       SET_INPUT(MISO_PIN);
+      WRITE(MISO_PIN,1);
+    #else
+      OUT_WRITE(SS_PIN, HIGH);
     #endif
 
     OUT_WRITE(MAX6675_SS, HIGH);
@@ -1496,47 +1504,95 @@ void tp_init() {
   #endif // HEATER_0_USES_MAX6675
 
   // Set analog inputs
-  
+  #ifdef __SAM3X8E__
+    #define ANALOG_SELECT(pin) startAdcConversion(pinToAdcChannel(pin))
+  #else
+    #ifdef DIDR2
+      #define ANALOG_SELECT(pin) do{ if (pin < 8) SBI(DIDR0, pin); else SBI(DIDR2, pin - 8); }while(0)
+    #else
+      #define ANALOG_SELECT(pin) do{ SBI(DIDR0, pin); }while(0)
+    #endif
+  #endif
+
   // Setup channels
+  #ifdef __SAM3X8E__
+    // ADC_MR_FREERUN_ON: Free Run Mode. It never waits for any trigger.
+    ADC->ADC_MR |= ADC_MR_FREERUN_ON | ADC_MR_LOWRES_BITS_12;
+  #else
+    ADCSRA = _BV(ADEN) | _BV(ADSC) | _BV(ADIF) | 0x07;
+    DIDR0 = 0;
+    #ifdef DIDR2
+      DIDR2 = 0;
+    #endif
+  #endif
 
-    ADC->ADC_MR |= ADC_MR_FREERUN_ON |
-    		  	  	 ADC_MR_LOWRES_BITS_12;
+  #if HAS(TEMP_0)
+    ANALOG_SELECT(TEMP_0_PIN);
+  #endif
+  #if HAS(TEMP_1)
+    ANALOG_SELECT(TEMP_1_PIN);
+  #endif
+  #if HAS(TEMP_2)
+    ANALOG_SELECT(TEMP_2_PIN);
+  #endif
+  #if HAS(TEMP_3)
+    ANALOG_SELECT(TEMP_3_PIN);
+  #endif
 
-    #define START_TEMP(temp_id) startAdcConversion(pinToAdcChannel(TEMP_## temp_id ##_PIN))
-    #define START_BED_TEMP() startAdcConversion(pinToAdcChannel(TEMP_BED_PIN))
-    #define START_CHAMBER_TEMP() startAdcConversion(pinToAdcChannel(TEMP_CHAMBER_PIN))
-    #define START_COOLER_TEMP() startAdcConversion(pinToAdcChannel(TEMP_COOLER_PIN))
+  #if HAS(TEMP_BED)
+    ANALOG_SELECT(TEMP_BED_PIN);
+  #endif
 
-    #if HAS(TEMP_0)
-      START_TEMP(0);
-    #endif
-    #if HAS(TEMP_BED)
-      START_BED_TEMP();
-    #endif
+  #if HAS(TEMP_CHAMBER)
+    ANALOG_SELECT(TEMP_CHAMBER_PIN);
+  #endif
 
-    #if HAS(TEMP_CHAMBER)
-      START_CHAMBER_TEMP();
-    #endif
+  #if HAS(TEMP_COOLER)
+    ANALOG_SELECT(TEMP_COOLER_PIN);
+  #endif
 
-    #if HAS(TEMP_COOLER)
-      START_COOLER_TEMP();
-    #endif
+  #if HAS(FILAMENT_SENSOR)
+    ANALOG_SELECT(FILWIDTH_PIN);
+  #endif
 
-    #if HAS(TEMP_1)
-      START_TEMP(1);
+  #if HAS(POWER_CONSUMPTION_SENSOR)
+    ANALOG_SELECT(POWER_CONSUMPTION_PIN);
+  #endif
+
+  #if HAS(AUTO_FAN_0)
+    SET_OUTPUT(EXTRUDER_0_AUTO_FAN_PIN);
+    #if ENABLED(FAST_PWM_FAN)
+      setPwmFrequency(EXTRUDER_0_AUTO_FAN_PIN, 1); // No prescaling. Pwm frequency = F_CPU/256/8
     #endif
-    #if HAS(TEMP_2)
-      START_TEMP(2);
+  #endif
+  #if HAS(AUTO_FAN_1) && !AUTO_1_IS_0
+    SET_OUTPUT(EXTRUDER_1_AUTO_FAN_PIN);
+    #if ENABLED(FAST_PWM_FAN)
+      setPwmFrequency(EXTRUDER_1_AUTO_FAN_PIN, 1); // No prescaling. Pwm frequency = F_CPU/256/8
     #endif
-    #if HAS(TEMP_3)
-      START_TEMP(3);
+  #endif
+  #if HAS(AUTO_FAN_2) && !AUTO_2_IS_0 && !AUTO_2_IS_1
+    SET_OUTPUT(EXTRUDER_2_AUTO_FAN_PIN);
+    #if ENABLED(FAST_PWM_FAN)
+      setPwmFrequency(EXTRUDER_2_AUTO_FAN_PIN, 1); // No prescaling. Pwm frequency = F_CPU/256/8
     #endif
+  #endif
+  #if HAS(AUTO_FAN_3) && !AUTO_3_IS_0 && !AUTO_3_IS_1 && !AUTO_3_IS_2
+    SET_OUTPUT(EXTRUDER_3_AUTO_FAN_PIN);
+    #if ENABLED(FAST_PWM_FAN)
+      setPwmFrequency(EXTRUDER_3_AUTO_FAN_PIN, 1); // No prescaling. Pwm frequency = F_CPU/256/8
+    #endif
+  #endif
 
   // Use timer0 for temperature measurement
   // Interleave temperature interrupt with millies interrupt
-
-  HAL_temp_timer_start(TEMP_TIMER_NUM);
-  HAL_timer_enable_interrupt (TEMP_TIMER_NUM);
+  #ifdef __SAM3X8E__
+    HAL_temp_timer_start(TEMP_TIMER_NUM);
+    HAL_timer_enable_interrupt (TEMP_TIMER_NUM);
+  #else
+    OCR0B = 128;
+    SBI(TIMSK0, OCIE0B);
+  #endif
 
   // Wait for temperature measurement to settle
   HAL::delayMilliseconds(250);
@@ -1843,45 +1899,201 @@ void disable_all_coolers() {
 }
 
 #if ENABLED(HEATER_0_USES_MAX6675)
-  static millis_t last_max6675_read = 0;
-  static int16_t max6675_temp = 0;
 
-  int16_t read_max6675() {
+  #define MAX6675_HEAT_INTERVAL 250u
 
-    if (HAL::timeInMilliseconds() - last_max6675_read > 250) { // ensure 250ms core correct read!
+  #if ENABLED(MAX6675_IS_MAX31855)
+    uint32_t max6675_temp = 2000;
+    #define MAX6675_ERROR_MASK 7
+    #define MAX6675_DISCARD_BITS 18
+  #else
+    uint16_t max6675_temp = 2000;
+    #define MAX6675_ERROR_MASK 4
+    #define MAX6675_DISCARD_BITS 3
+  #endif
+
+  int read_max6675() {
+
+    static millis_t next_max6675_ms = 0;
+
+    millis_t ms = millis();
+
+    if (PENDING(ms, next_max6675_ms)) return (int)max6675_temp;
+
+    next_max6675_ms = ms + MAX6675_HEAT_INTERVAL;
+
+    #ifdef __SAM3X8E__
       HAL::spiBegin();
       HAL::spiInit(2);
-      HAL::digitalWrite(MAX6675_SS, 0);  // enable TT_MAX6675
-      HAL::delayMicroseconds(1);    // ensure 100ns delay - a bit extra is fine
-      max6675_temp = HAL::spiReceive();
+    #else
+      CBI(
+        #ifdef PRR
+          PRR
+        #elif defined(PRR0)
+          PRR0
+        #endif
+          , PRSPI);
+      SPCR = _BV(MSTR) | _BV(SPE) | _BV(SPR0);
+    #endif
+
+    HAL::digitalWrite(MAX6675_SS, 0);  // enable TT_MAX6675
+
+    // ensure 100ns delay - a bit extra is fine
+    #ifdef __SAM3X8E__
+      HAL_delayMicroseconds(1);
+    #else
+      asm("nop");//50ns on 20Mhz, 62.5ns on 16Mhz
+      asm("nop");//50ns on 20Mhz, 62.5ns on 16Mhz
+    #endif
+
+    // Read a big-endian temperature value
+    max6675_temp = 0;
+    for (uint8_t i = sizeof(max6675_temp); i--;) {
+      #ifdef __SAM3X8E__
+        max6675_temp = HAL::spiReceive();
+      #else
+        SPDR = 0;
+        for (;!TEST(SPSR, SPIF););
+        max6675_temp |= SPDR;
+      #endif
+      if (i > 0) max6675_temp <<= 8; // shift left if not the last byte
       max6675_temp <<= 8;
-      max6675_temp |= HAL::spiReceive();
-      HAL::digitalWrite(MAX6675_SS, 1);  // disable TT_MAX6675
-      last_max6675_read = HAL::timeInMilliseconds();
     }
-    return max6675_temp & 4 ? 2000 : max6675_temp >> 3; // thermocouple open?
+
+    HAL::digitalWrite(MAX6675_SS, 1); // disable TT_MAX6675
+
+    if (max6675_temp & MAX6675_ERROR_MASK)
+      max6675_temp = 4000; // thermocouple open
+    else
+      max6675_temp >>= MAX6675_DISCARD_BITS;
+
+    return (int)max6675_temp;
   }
 #endif // HEATER_0_USES_MAX6675
 
-//
-// Timer 0 is shared with millies
-//
-HAL_TEMP_TIMER_ISR {
+/**
+ * Get raw temperatures
+ */
+#ifdef __SAM3X8E__
+  static int calc_raw_temp_value(uint8_t temp_id) {
+    raw_median_temp[temp_id][median_counter] = (raw_temp_value[temp_id] - (min_temp[temp_id] + max_temp[temp_id]));
+    sum = 0;
+    for(int i = 0; i < MEDIAN_COUNT; i++) sum += raw_median_temp[temp_id][i];
+    return (sum / MEDIAN_COUNT + CORRECTION_FOR_RAW_TEMP) >> 2;
+  }
+
+  static int calc_raw_temp_bed_value() {
+    raw_median_temp[4][median_counter] = (raw_temp_bed_value - (min_temp[4] + max_temp[4]));
+    sum = 0;
+    for(int i = 0; i < MEDIAN_COUNT; i++) sum += raw_median_temp[4][i];
+    return (sum / MEDIAN_COUNT + CORRECTION_FOR_RAW_TEMP) >> 2;
+  }
+  
+  static int calc_raw_temp_chamber_value() {
+    raw_median_temp[5][median_counter] = (raw_temp_chamber_value - (min_temp[5] + max_temp[5]));
+    sum = 0;
+    for(int i = 0; i < MEDIAN_COUNT; i++) sum += raw_median_temp[5][i];
+    return (sum / MEDIAN_COUNT + CORRECTION_FOR_RAW_TEMP) >> 2;
+  }
+
+  static int calc_raw_temp_cooler_value() {
+    raw_median_temp[6][median_counter] = (raw_temp_cooler_value - (min_temp[6] + max_temp[6]));
+    sum = 0;
+    for(int i = 0; i < MEDIAN_COUNT; i++) sum += raw_median_temp[6][i];
+    return (sum / MEDIAN_COUNT + CORRECTION_FOR_RAW_TEMP) >> 2;
+  }
+#endif
+    
+static void set_current_temp_raw() {
+  #if HAS(TEMP_0) && DISABLED(HEATER_0_USES_MAX6675)
+    #ifdef __SAM3X8E__
+      current_temperature_raw[0] = calc_raw_temp_value(0);
+    #else
+      current_temperature_raw[0] = raw_temp_value[0];
+    #endif
+  #endif
+  #if HAS(TEMP_1)
+    #if ENABLED(TEMP_SENSOR_1_AS_REDUNDANT)
+      #ifdef __SAM3X8E__
+        redundant_temperature_raw = calc_raw_temp_value(1);
+      #else
+        redundant_temperature_raw = raw_temp_value[1];
+      #endif
+    #else
+      #ifdef __SAM3X8E__
+        current_temperature_raw[1] = calc_raw_temp_value(1);
+      #else
+        current_temperature_raw[1] = raw_temp_value[1];
+      #endif
+    #endif
+    #if HAS(TEMP_2)
+      #ifdef __SAM3X8E__
+        current_temperature_raw[2] = calc_raw_temp_value(2);
+      #else
+        current_temperature_raw[2] = raw_temp_value[2];
+      #endif
+      #if HAS(TEMP_3)
+        #ifdef __SAM3X8E__
+          current_temperature_raw[3] = calc_raw_temp_value(3);
+        #else
+          current_temperature_raw[3] = raw_temp_value[3];
+        #endif
+      #endif
+    #endif
+  #endif
+
+  #ifdef __SAM3X8E__
+    current_temperature_bed_raw = calc_raw_temp_bed_value();
+    current_temperature_chamber_raw = calc_raw_temp_chamber_value();
+    current_temperature_cooler_raw = calc_raw_temp_cooler_value();
+  #else
+    current_temperature_bed_raw = raw_temp_bed_value;
+    current_temperature_chamber_raw = raw_temp_chamber_value;
+    current_temperature_cooler_raw = raw_temp_cooler_value;
+  #endif
+
+  #if HAS(POWER_CONSUMPTION_SENSOR)
+    #ifdef __SAM3X8E__
+      current_raw_powconsumption = calc_raw_powconsumption_value();
+    #else
+      current_raw_powconsumption = raw_powconsumption_value;
+    #endif
+  #endif
+
+  #ifdef __SAM3X8E__
+    // Reset min/max-holder
+    for (uint8_t i = 0; i < HOTENDS + 1; i++) {
+      min_temp[i] = RAW_MIN_TEMP_DEFAULT;
+      max_temp[i] = 0;
+    }
+
+    median_counter++;
+    if (median_counter >= MEDIAN_COUNT) median_counter = 0;
+  #endif
+
+  temp_meas_ready = true;
+}
+
+/**
+ * Timer 0 is shared with millies
+ *  - Manage PWM to all the heaters and fan
+ *  - Update the raw temperature values
+ *  - Check new temperature values for MIN/MAX errors
+ *  - Step the babysteps value for each axis towards 0
+ */
+#ifdef __SAM3X8E__
+  HAL_TEMP_TIMER_ISR {
+#else
+  ISR(TIMER0_COMPB_vect) {
+#endif
   //these variables are only accesible from the ISR, but static, so they don't lose their value
   static unsigned char temp_count = 0;
-  static uint32_t raw_temp_value[4] = { 0 };
-  static uint32_t raw_temp_bed_value = 0;
-  static uint32_t raw_temp_chamber_value = 0;
-  static uint32_t raw_temp_cooler_value = 0;
   static TempState temp_state = StartupDelay;
   static unsigned char pwm_count = _BV(SOFT_PWM_SCALE);
-  static int max_temp[7] = { 0 };
-  static int min_temp[7] = { 123000 };
-  static int temp_read = 0;
+  #ifdef __SAM3X8E__
+    static int temp_read = 0;
+  #endif
 
-  static unsigned char median_counter = 0;
-  static unsigned long raw_median_temp[7][MEDIAN_COUNT] = { { 3950 * OVERSAMPLENR } };
-  static bool first_start = true;
   // Static members for each heater
   #if ENABLED(SLOW_PWM_HEATERS)
     static unsigned char slow_pwm_count = 0;
@@ -1918,18 +2130,9 @@ HAL_TEMP_TIMER_ISR {
     static unsigned long raw_filwidth_value = 0;
   #endif
 
-  // Initialize some variables only at start!
-  if (first_start) {
-	  for (uint8_t i = 0; i < 7; i++) {
-		  for (int j = 0; j < MEDIAN_COUNT; j++) raw_median_temp[i][j] = 3600 * OVERSAMPLENR;
-		  max_temp[i] = 0;
-		  min_temp[i] = 123000;
-	  }
-	  first_start = false;
-	  SERIAL_EM("First start for temperature finished.");
-  }
-
-  HAL_timer_isr_status (TEMP_TIMER_COUNTER, TEMP_TIMER_CHANNEL);
+  #ifdef __SAM3X8E__
+    HAL_timer_isr_status (TEMP_TIMER_COUNTER, TEMP_TIMER_CHANNEL);
+  #endif
 
   #if DISABLED(SLOW_PWM_HEATERS)
     /**
@@ -2008,7 +2211,7 @@ HAL_TEMP_TIMER_ISR {
 
   #else // SLOW_PWM_HEATERS
 
-    /*
+    /**
      * SLOW PWM HEATERS
      *
      * for heaters drived by relay
@@ -2138,129 +2341,198 @@ HAL_TEMP_TIMER_ISR {
 
   #endif // SLOW_PWM_HEATERS
 
-  #define READ_TEMP(temp_id) temp_read = getAdcFreerun(pinToAdcChannel(TEMP_## temp_id ##_PIN)); \
-    raw_temp_value[temp_id] += temp_read; \
-    max_temp[temp_id] = max(max_temp[temp_id], temp_read); \
-    min_temp[temp_id] = min(min_temp[temp_id], temp_read)
+  #ifdef __SAM3X8E__
+    #define SET_RAW_TEMP_VALUE(temp_id) temp_read = getAdcFreerun(pinToAdcChannel(TEMP_## temp_id ##_PIN)); \
+      raw_temp_value[temp_id] += temp_read; \
+      max_temp[temp_id] = max(max_temp[temp_id], temp_read); \
+      min_temp[temp_id] = min(min_temp[temp_id], temp_read)
 
-  #define READ_BED_TEMP(temp_id) temp_read = getAdcFreerun(pinToAdcChannel(TEMP_BED_PIN)); \
-    raw_temp_bed_value += temp_read; \
-    max_temp[temp_id] = max(max_temp[temp_id], temp_read); \
-    min_temp[temp_id] = min(min_temp[temp_id], temp_read)
+    #define SET_RAW_TEMP_BED_VALUE() temp_read = getAdcFreerun(pinToAdcChannel(TEMP_BED_PIN)); \
+      raw_temp_bed_value += temp_read; \
+      max_temp[4] = max(max_temp[4], temp_read); \
+      min_temp[4] = min(min_temp[4], temp_read)
 
-  #define READ_CHAMBER_TEMP(temp_id) temp_read = getAdcFreerun(pinToAdcChannel(TEMP_CHAMBER_PIN)); \
-    raw_temp_chamber_value += temp_read; \
-    max_temp[temp_id] = max(max_temp[temp_id], temp_read); \
-    min_temp[temp_id] = min(min_temp[temp_id], temp_read)
+    #define SET_RAW_TEMP_CHAMBER_VALUE() temp_read = getAdcFreerun(pinToAdcChannel(TEMP_CHAMBER_PIN)); \
+      raw_temp_chamber_value += temp_read; \
+      max_temp[5] = max(max_temp[5], temp_read); \
+      min_temp[5] = min(min_temp[5], temp_read)
 
-  #define READ_COOLER_TEMP(temp_id) temp_read = getAdcFreerun(pinToAdcChannel(TEMP_COOLER_PIN)); \
-    raw_temp_cooler_value += temp_read; \
-    max_temp[temp_id] = max(max_temp[temp_id], temp_read); \
-    min_temp[temp_id] = min(min_temp[temp_id], temp_read)
+    #define SET_RAW_TEMP_COOLER_VALUE() temp_read = getAdcFreerun(pinToAdcChannel(TEMP_COOLER_PIN)); \
+      raw_temp_cooler_value += temp_read; \
+      max_temp[6] = max(max_temp[6], temp_read); \
+      min_temp[6] = min(min_temp[6], temp_read)
+  #else
+    #define SET_ADMUX_ADCSRA(pin) ADMUX = _BV(REFS0) | (pin & 0x07); SBI(ADCSRA, ADSC)
+    #ifdef MUX5
+      #define START_ADC(pin) if (pin > 7) ADCSRB = _BV(MUX5); else ADCSRB = 0; SET_ADMUX_ADCSRA(pin)
+    #else
+      #define START_ADC(pin) ADCSRB = 0; SET_ADMUX_ADCSRA(pin)
+    #endif
+  #endif
 
   // Prepare or measure a sensor, each one every 14th frame
   switch (temp_state) {
     case PrepareTemp_0:
       #if HAS(TEMP_0)
-        // START_TEMP(0);
+        #ifdef __SAM3X8E__
+          // nothing todo for Due
+        #else
+          START_ADC(TEMP_0_PIN);
+        #endif
       #endif
       lcd_buttons_update();
       temp_state = MeasureTemp_0;
       break;
     case MeasureTemp_0:
       #if HAS(TEMP_0)
-        READ_TEMP(0);
+        #ifdef __SAM3X8E__
+          SET_RAW_TEMP_VALUE(0);
+        #else
+          raw_temp_value[0] += ADC;
+        #endif
       #endif
       temp_state = PrepareTemp_BED;
       break;
 
     case PrepareTemp_BED:
       #if HAS(TEMP_BED)
-        // START_BED_TEMP();
+        #ifdef __SAM3X8E__
+          // nothing todo for Due
+        #else
+          START_ADC(TEMP_BED_PIN);
+        #endif
       #endif
       lcd_buttons_update();
       temp_state = MeasureTemp_BED;
       break;
     case MeasureTemp_BED:
       #if HAS(TEMP_BED)
-        READ_BED_TEMP(4);
-      #endif
-      temp_state = PrepareTemp_CHAMBER;
-      break;
-
-    case PrepareTemp_CHAMBER:
-      #if HAS(TEMP_CHAMBER)
-        // START_CHAMBER_TEMP();
-      #endif
-      lcd_buttons_update();
-      temp_state = MeasureTemp_CHAMBER;
-      break;
-    case MeasureTemp_CHAMBER:
-      #if HAS(TEMP_CHAMBER)
-        READ_CHAMBER_TEMP(5);
-      #endif
-      temp_state = PrepareTemp_COOLER;
-      break;
-
-    case PrepareTemp_COOLER:
-      #if HAS(TEMP_COOLER)
-        // START_COOLER_TEMP();
-      #endif
-      lcd_buttons_update();
-      temp_state = MeasureTemp_COOLER;
-      break;
-    case MeasureTemp_COOLER:
-      #if HAS(TEMP_COOLER)
-        READ_COOLER_TEMP(6);
+        #ifdef __SAM3X8E__
+          SET_RAW_TEMP_BED_VALUE();
+        #else
+          raw_temp_bed_value += ADC;
+        #endif
       #endif
       temp_state = PrepareTemp_1;
       break;
 
     case PrepareTemp_1:
       #if HAS(TEMP_1)
-        // START_TEMP(1);
+        #ifdef __SAM3X8E__
+          // nothing todo for Due
+        #else
+          START_ADC(TEMP_1_PIN);
+        #endif
       #endif
       lcd_buttons_update();
       temp_state = MeasureTemp_1;
       break;
     case MeasureTemp_1:
       #if HAS(TEMP_1)
-        READ_TEMP(1);
+        #ifdef __SAM3X8E__
+          SET_RAW_TEMP_VALUE(1);
+        #else
+          raw_temp_value[1] += ADC;
+        #endif
       #endif
       temp_state = PrepareTemp_2;
       break;
 
     case PrepareTemp_2:
       #if HAS(TEMP_2)
-        // START_TEMP(2);
+        #ifdef __SAM3X8E__
+          // nothing todo for Due
+        #else
+          START_ADC(TEMP_2_PIN);
+        #endif
       #endif
       lcd_buttons_update();
       temp_state = MeasureTemp_2;
       break;
     case MeasureTemp_2:
       #if HAS(TEMP_2)
-        READ_TEMP(2);
+        #ifdef __SAM3X8E__
+          SET_RAW_TEMP_VALUE(2);
+        #else
+          raw_temp_value[2] += ADC;
+        #endif
       #endif
       temp_state = PrepareTemp_3;
       break;
 
     case PrepareTemp_3:
       #if HAS(TEMP_3)
-        // START_TEMP(3);
+        #ifdef __SAM3X8E__
+          // nothing todo for Due
+        #else
+          START_ADC(TEMP_3_PIN);
+        #endif
       #endif
       lcd_buttons_update();
       temp_state = MeasureTemp_3;
       break;
     case MeasureTemp_3:
       #if HAS(TEMP_3)
-        READ_TEMP(3);
+        #ifdef __SAM3X8E__
+          SET_RAW_TEMP_VALUE(3);
+        #else
+          raw_temp_value[3] += ADC;
+        #endif
+      #endif
+      temp_state = PrepareTemp_CHAMBER;
+      break;
+
+    case PrepareTemp_CHAMBER:
+      #if HAS(TEMP_CHAMBER)
+        #ifdef __SAM3X8E__
+          // nothing todo for Due
+        #else
+          START_ADC(TEMP_CHAMBER_PIN);
+        #endif
+      #endif
+      lcd_buttons_update();
+      temp_state = MeasureTemp_CHAMBER;
+      break;
+    case MeasureTemp_CHAMBER:
+      #if HAS(TEMP_CHAMBER)
+        #ifdef __SAM3X8E__
+          SET_RAW_TEMP_CHAMBER_VALUE();
+        #else
+          raw_temp_chamber_value += ADC;
+        #endif
+      #endif
+      temp_state = PrepareTemp_COOLER;
+      break;
+
+    case PrepareTemp_COOLER:
+      #if HAS(TEMP_COOLER)
+        #ifdef __SAM3X8E__
+          // nothing todo for Due
+        #else
+          START_ADC(TEMP_COOLER_PIN);
+        #endif
+      #endif
+      lcd_buttons_update();
+      temp_state = MeasureTemp_COOLER;
+      break;
+    case MeasureTemp_COOLER:
+      #if HAS(TEMP_COOLER)
+        #ifdef __SAM3X8E__
+          SET_RAW_TEMP_COOLER_VALUE();
+        #else
+          raw_temp_cooler_value += ADC;
+        #endif
       #endif
       temp_state = Prepare_FILWIDTH;
       break;
 
     case Prepare_FILWIDTH:
       #if HAS(FILAMENT_SENSOR)
-      // nothing todo for Due
+        #ifdef __SAM3X8E__
+          // nothing todo for Due
+        #else
+          START_ADC(FILWIDTH_PIN);
+        #endif
       #endif
       lcd_buttons_update();
       temp_state = Measure_FILWIDTH;
@@ -2278,14 +2550,22 @@ HAL_TEMP_TIMER_ISR {
 
     case Prepare_POWCONSUMPTION:
       #if HAS(POWER_CONSUMPTION_SENSOR)
-      // nothing todo for Due
+        #ifdef __SAM3X8E__
+          // nothing todo for Due
+        #else
+          START_ADC(POWER_CONSUMPTION_PIN);
+        #endif
       #endif
       lcd_buttons_update();
       temp_state = Measure_POWCONSUMPTION;
       break;
     case Measure_POWCONSUMPTION:
       #if HAS(POWER_CONSUMPTION_SENSOR)
-        raw_powconsumption_value = analogRead(POWER_CONSUMPTION_PIN);
+        #ifdef __SAM3X8E__
+          raw_powconsumption_value = analogRead(POWER_CONSUMPTION_PIN);
+        #else
+          raw_powconsumption_value += ADC;
+        #endif
       #endif
       temp_state = PrepareTemp_0;
       temp_count++;
@@ -2300,70 +2580,20 @@ HAL_TEMP_TIMER_ISR {
     //  break;
   } // switch(temp_state)
 
-  #define SET_CURRENT_TEMP_RAW(temp_id) raw_median_temp[temp_id][median_counter] = (raw_temp_value[temp_id] - (min_temp[temp_id] + max_temp[temp_id])); \
-    sum = 0; \
-    for(int i = 0; i < MEDIAN_COUNT; i++) sum += raw_median_temp[temp_id][i]; \
-    current_temperature_raw[temp_id] = (sum / MEDIAN_COUNT + 4) >> 2
+  #ifdef __SAM3X8E__
+    if (temp_count >= OVERSAMPLENR + 2) { // 14 * 16 * 1/(16000000/64/256)  = 164ms.
+  #else
+    if (temp_count >= OVERSAMPLENR) { // 10 * 16 * 1/(16000000/64/256)  = 164ms.
+  #endif
 
-  #define SET_CURRENT_BED_RAW(temp_id) raw_median_temp[temp_id][median_counter] = (raw_temp_bed_value - (min_temp[temp_id] + max_temp[temp_id])); \
-    sum = 0; \
-    for(int i = 0; i < MEDIAN_COUNT; i++) sum += raw_median_temp[temp_id][i]; \
-    current_temperature_bed_raw = (sum / MEDIAN_COUNT + 4) >> 2
-
-  #define SET_CURRENT_CHAMBER_RAW(temp_id) raw_median_temp[temp_id][median_counter] = (raw_temp_chamber_value - (min_temp[temp_id] + max_temp[temp_id])); \
-    sum = 0; \
-    for(int i = 0; i < MEDIAN_COUNT; i++) sum += raw_median_temp[temp_id][i]; \
-    current_temperature_chamber_raw = (sum / MEDIAN_COUNT + 4) >> 2
-
-  #define SET_CURRENT_COOLER_RAW(temp_id) raw_median_temp[temp_id][median_counter] = (raw_temp_cooler_value - (min_temp[temp_id] + max_temp[temp_id])); \
-    sum = 0; \
-    for(int i = 0; i < MEDIAN_COUNT; i++) sum += raw_median_temp[temp_id][i]; \
-    current_temperature_cooler_raw = (sum / MEDIAN_COUNT + 4) >> 2
-
-  #define SET_REDUNDANT_RAW(temp_id) raw_median_temp[temp_id][median_counter] = (raw_temp_bed_value - (min_temp[temp_id] + max_temp[temp_id])); \
-    sum = 0; \
-    for(int i = 0; i < MEDIAN_COUNT; i++) sum += raw_median_temp[temp_id][i]; \
-    redundant_temperature_raw = (sum / MEDIAN_COUNT + 4) >> 2
-
-  if(temp_count >= OVERSAMPLENR + 2) { // 14 * 16 * 1/(16000000/64/256)  = 164ms.
-    if (!temp_meas_ready) { //Only update the raw values if they have been read. Else we could be updating them during reading.
-      unsigned long sum = 0;
-      #ifndef HEATER_0_USES_MAX6675
-        SET_CURRENT_TEMP_RAW(0);
-      #endif
-      #if HOTENDS > 1
-        SET_CURRENT_TEMP_RAW(1);
-        #if HOTENDS > 2
-          SET_CURRENT_TEMP_RAW(2);
-          #if HOTENDS > 3
-            SET_CURRENT_TEMP_RAW(3);
-          #endif
-        #endif
-      #endif
-      #ifdef TEMP_SENSOR_1_AS_REDUNDANT
-        SET_REDUNDANT_RAW(1);
-      #endif
-
-      SET_CURRENT_BED_RAW(4);
-      SET_CURRENT_CHAMBER_RAW(5);
-      SET_CURRENT_COOLER_RAW(6);
-      
-      //  Reset min/max-holder
-      for (uint8_t i = 0; i < 5; i++) {
-        max_temp[i] = 0;
-        min_temp[i] = 123000;
-      }
-    } //!temp_meas_ready
+    // Update the raw values if they've been read. Else we could be updating them during reading.
+    if (!temp_meas_ready) set_current_temp_raw();
 
     // Filament Sensor - can be read any time since IIR filtering is used
     #if HAS(FILAMENT_SENSOR)
       current_raw_filwidth = raw_filwidth_value >> 10;  // Divide to get to 0-16384 range since we used 1/128 IIR filter approach
     #endif
 
-    median_counter++;
-    if (median_counter >= MEDIAN_COUNT) median_counter = 0;
-
-    temp_meas_ready = true;
     temp_count = 0;
     for (int i = 0; i < 4; i++) raw_temp_value[i] = 0;
     raw_temp_bed_value = 0;
@@ -2451,11 +2681,11 @@ HAL_TEMP_TIMER_ISR {
       int curTodo = babystepsTodo[axis]; //get rid of volatile for performance
 
       if (curTodo > 0) {
-        babystep(axis,/*fwd*/true);
+        stepper.babystep(axis,/*fwd*/true);
         babystepsTodo[axis]--; //fewer to do next time
       }
       else if (curTodo < 0) {
-        babystep(axis,/*fwd*/false);
+        stepper.babystep(axis,/*fwd*/false);
         babystepsTodo[axis]++; //fewer to do next time
       }
     }
