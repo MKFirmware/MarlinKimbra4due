@@ -38,7 +38,7 @@
  * - PID Settings - COOLER
  * - Inverted PINS
  * - Thermal runaway protection
- * - Mediancount (ONLY FOR DUE)
+ * - Prevent cold extrusion
  *
  */
 
@@ -521,5 +521,25 @@
 #define WATCH_TEMP_COOLER_PERIOD 60          // Seconds
 #define WATCH_TEMP_COOLER_DECREASE 1         // Degree Celsius
 /********************************************************************************/
+
+
+/***********************************************************************
+ ************************ Prevent cold extrusion ***********************
+ ***********************************************************************
+ * This option prevents extrusion if the temperature is                *
+ * below EXTRUDE_MINTEMP.                                              *
+ * It also enables the M302 command to set the minimum extrusion       *
+ * temperature or to allow moving the extruder regardless of the       *
+ * hotend temperature.                                                 *
+ * *** IT IS HIGHLY RECOMMENDED TO LEAVE THIS OPTION ENABLED! ***      *
+ *                                                                     *
+ ***********************************************************************/
+#define PREVENT_COLD_EXTRUSION
+#define EXTRUDE_MINTEMP 170                 // Degree Celsius
+
+// This option prevents a single extrusion longer than EXTRUDE_MAXLENGTH.
+//#define PREVENT_LENGTHY_EXTRUDE
+#define EXTRUDE_MAXLENGTH (X_MAX_LENGTH + Y_MAX_LENGTH)
+/***********************************************************************/
 
 #endif
