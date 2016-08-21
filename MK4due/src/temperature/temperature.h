@@ -49,6 +49,14 @@
   #define HOTEND_INDEX  h
 #endif
 
+#if ENABLED(PIDTEMPBED) || ENABLED(PIDTEMP)  || ENABLED(PIDTEMPCHAMBER) || ENABLED(PIDTEMPCOOLER)
+  #ifdef __SAM3X8E__
+    #define PID_dT (((OVERSAMPLENR + 2) * 14.0)/ TEMP_FREQUENCY)
+  #else
+    #define PID_dT ((OVERSAMPLENR * 12.0)/(F_CPU / 64.0 / 256.0))
+  #endif
+#endif
+
 // public functions
 void tp_init();  //initialize the heating
 void manage_temp_controller(); //it is critical that this is called periodically.

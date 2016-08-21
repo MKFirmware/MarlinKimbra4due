@@ -945,15 +945,15 @@ void kill_screen(const char* lcd_msg) {
     // Flow 4:
     //
     #if EXTRUDERS == 1
-      MENU_ITEM_EDIT(int3, MSG_FLOW, &extruder_multiplier[0], 10, 999);
+      MENU_ITEM_EDIT(int3, MSG_FLOW, &flow_percentage[0], 10, 999);
     #else // EXTRUDERS > 1
-      MENU_ITEM_EDIT(int3, MSG_FLOW, &extruder_multiplier[active_extruder], 10, 999);
-      MENU_ITEM_EDIT(int3, MSG_FLOW " 0", &extruder_multiplier[0], 10, 999);
-      MENU_ITEM_EDIT(int3, MSG_FLOW " 1", &extruder_multiplier[1], 10, 999);
+      MENU_ITEM_EDIT(int3, MSG_FLOW, &flow_percentage[active_extruder], 10, 999);
+      MENU_ITEM_EDIT(int3, MSG_FLOW " 0", &flow_percentage[0], 10, 999);
+      MENU_ITEM_EDIT(int3, MSG_FLOW " 1", &flow_percentage[1], 10, 999);
       #if EXTRUDERS > 2
-        MENU_ITEM_EDIT(int3, MSG_FLOW " 2", &extruder_multiplier[2], 10, 999);
+        MENU_ITEM_EDIT(int3, MSG_FLOW " 2", &flow_percentage[2], 10, 999);
         #if EXTRUDERS > 3
-          MENU_ITEM_EDIT(int3, MSG_FLOW " 3", &extruder_multiplier[3], 10, 999);
+          MENU_ITEM_EDIT(int3, MSG_FLOW " 3", &flow_percentage[3], 10, 999);
         #endif // EXTRUDERS > 3
       #endif // EXTRUDERS > 2
     #endif // EXTRUDERS > 1
@@ -1196,7 +1196,7 @@ void kill_screen(const char* lcd_msg) {
         current_position[Z_AXIS] = MESH_HOME_SEARCH_Z;
         line_to_current(Z_AXIS);
       #endif
-      st_synchronize();
+      stepper.synchronize();
     }
 
     static void _lcd_level_goto_next_point();
@@ -1245,7 +1245,7 @@ void kill_screen(const char* lcd_msg) {
 
             current_position[Z_AXIS] = MESH_HOME_SEARCH_Z + MIN_Z_HEIGHT_FOR_HOMING;
             line_to_current(Z_AXIS);
-            st_synchronize();
+            stepper.synchronize();
 
             mbl.set_has_mesh(true);
             enqueue_and_echo_commands_P(PSTR("G28"));

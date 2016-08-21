@@ -121,6 +121,14 @@
 #define HIGH        1
 
 /**
+ * Stepper Definition
+ */
+// intRes = intIn1 * intIn2 >> 16
+#define MultiU16X8toH16(intRes, charIn1, intIn2)   intRes = ((charIn1) * (intIn2)) >> 16
+// intRes = longIn1 * longIn2 >> 24
+#define MultiU32X32toH32(intRes, longIn1, longIn2) intRes = ((uint64_t)longIn1 * longIn2 + 0x80000000) >> 32
+
+/**
  * Public Variables
  */
 
@@ -263,25 +271,27 @@ void sei(void);
 
 int freeMemory(void);
 void eeprom_write_byte(unsigned char* pos, unsigned char value);
-unsigned char eeprom_read_byte(unsigned char* pos);
+uint8_t eeprom_read_byte(uint8_t* pos);
 
 // timers
 #define ADVANCE_EXTRUDER_TIMER_NUM 1
 #define ADVANCE_EXTRUDER_TIMER_COUNTER TC0
 #define ADVANCE_EXTRUDER_TIMER_CHANNEL 1
+#define ADVANCE_EXTRUDER_FREQUENCY 60000
 #define ADVANCE_EXTRUDER_TIMER_IRQN TC1_IRQn
 #define HAL_ADVANCE_EXTRUDER_TIMER_ISR 	void TC1_Handler()
 
 #define STEP_TIMER_NUM 2
 #define STEP_TIMER_COUNTER TC0
 #define STEP_TIMER_CHANNEL 2
+#define STEP_FREQUENCY 1000
 #define STEP_TIMER_IRQN TC2_IRQn
 #define HAL_STEP_TIMER_ISR 	void TC2_Handler()
 
 #define TEMP_TIMER_NUM 3
 #define TEMP_TIMER_COUNTER TC1
 #define TEMP_TIMER_CHANNEL 0
-#define TEMP_FREQUENCY 2000
+#define TEMP_FREQUENCY 4000
 #define TEMP_TIMER_IRQN TC3_IRQn
 #define HAL_TEMP_TIMER_ISR 	void TC3_Handler()
 
@@ -301,7 +311,10 @@ unsigned char eeprom_read_byte(unsigned char* pos);
   #define ENABLE_ADVANCE_EXTRUDER_INTERRUPT()	HAL_timer_enable_interrupt (ADVANCE_EXTRUDER_TIMER_NUM)
   #define DISABLE_ADVANCE_EXTRUDER_INTERRUPT()	HAL_timer_disable_interrupt (ADVANCE_EXTRUDER_TIMER_NUM)
   void HAL_advance_extruder_timer_start(void);
+  extern  TcChannel *extruderChannel;
 #endif
+
+extern TcChannel* stepperChannel;
 
 void HAL_step_timer_start(void);
 void HAL_temp_timer_start (uint8_t timer_num);
@@ -309,16 +322,20 @@ void HAL_temp_timer_start (uint8_t timer_num);
 void HAL_timer_enable_interrupt (uint8_t timer_num);
 void HAL_timer_disable_interrupt (uint8_t timer_num);
 
-inline
-void HAL_timer_isr_status (Tc* tc, uint32_t channel) {
+inline void HAL_timer_isr_status (Tc* tc, uint32_t channel) {
   tc->TC_CHANNEL[channel].TC_SR; // clear status register
 }
 
 int HAL_timer_get_count (uint8_t timer_num);
 
+static FORCE_INLINE void HAL_timer_stepper_count(uint32_t count) {
+  uint32_t counter_value = stepperChannel->TC_CV + 42;  // we need time for other stuff!
+  //if(count < 105) count = 105;
+  stepperChannel->TC_RC = (counter_value <= count) ? count : counter_value;
+}
+
 void tone(uint8_t pin, int frequency, unsigned long duration);
 void noTone(uint8_t pin);
-// void tone(uint8_t pin, int frequency, long duration);
 
 uint16_t getAdcReading(adc_channel_num_t chan);
 void startAdcConversion(adc_channel_num_t chan);
