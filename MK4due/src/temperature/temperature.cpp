@@ -267,8 +267,8 @@ static unsigned long raw_temp_cooler_value = 0;
   #define RAW_MIN_TEMP_DEFAULT 123000
   #define RAW_MEDIAN_TEMP_DEFAULT 3600 * OVERSAMPLENR
 
-  static int min_temp[7];
-  static int max_temp[7];
+  static int max_temp[7] = ARRAY_BY_N(7, 0);
+  static int min_temp[7] = ARRAY_BY_N(7, RAW_MIN_TEMP_DEFAULT);
   static unsigned long raw_median_temp[7][MEDIAN_COUNT];
   static uint8_t median_counter;
   static unsigned long sum;
