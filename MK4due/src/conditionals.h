@@ -928,9 +928,4 @@
     #endif
   #endif
 
-  /**
-   * The axis order in all axis related arrays is X, Y, Z, E
-   */
-  #define NUM_AXIS 4
-
 #endif //CONDITIONALS_H

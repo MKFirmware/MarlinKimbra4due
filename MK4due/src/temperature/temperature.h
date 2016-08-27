@@ -43,6 +43,8 @@
 #ifndef TEMPERATURE_H
 #define TEMPERATURE_H
 
+#include "thermistortables.h"
+
 #if HOTENDS <= 1
   #define HOTEND_INDEX  0
 #else
@@ -239,7 +241,7 @@ FORCE_INLINE bool isCoolingBed() { return target_temperature_bed < current_tempe
 FORCE_INLINE bool isCoolingChamber() { return target_temperature_chamber < current_temperature_chamber; }
 FORCE_INLINE bool isCoolingCooler() { return target_temperature_cooler < current_temperature_cooler; } 
 
-#if ENABLED(PREVENT_DANGEROUS_EXTRUDE)
+#if ENABLED(PREVENT_COLD_EXTRUSION)
   extern float extrude_min_temp;
   extern bool allow_cold_extrude;
   FORCE_INLINE bool tooColdToExtrude(uint8_t h) {

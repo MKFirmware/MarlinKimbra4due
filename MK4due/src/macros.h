@@ -23,6 +23,12 @@
 #ifndef MACROS_H
   #define MACROS_H
 
+  // The axis order in all axis related arrays is X, Y, Z, E
+  #define NUM_AXIS 4
+  #define XYZE 4
+  #define ABC  3
+  #define XYZ  3
+
   // Compiler warning on unused varable.
   #define UNUSED(x) (void) (x)
 
@@ -71,7 +77,6 @@
 
   // Function macro
   #define FORCE_INLINE __attribute__((always_inline)) inline
-  #define strncpy_P(dest, src, num) strncpy((dest), (src), (num))
 
   // Macro for debugging
   #define DEBUGGING(F) (mk_debug_flags & (DEBUG_## F))

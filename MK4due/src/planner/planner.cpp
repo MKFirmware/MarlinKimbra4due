@@ -528,7 +528,7 @@ void Planner::check_axes_activity() {
   if (DEBUGGING(DRYRUN)) position[E_AXIS] = target[E_AXIS];
   long de = target[E_AXIS] - position[E_AXIS];
 
-  #if ENABLED(PREVENT_DANGEROUS_EXTRUDE)
+  #if ENABLED(PREVENT_COLD_EXTRUSION)
     if (de) {
       #if ENABLED(NPR2)
         if (extruder != 1)
@@ -556,7 +556,7 @@ void Planner::check_axes_activity() {
         }
       #endif // PREVENT_LENGTHY_EXTRUDE
     }
-  #endif // PREVENT_DANGEROUS_EXTRUDE
+  #endif // PREVENT_COLD_EXTRUSION
 
   // Prepare to set up new block
   block_t* block = &block_buffer[block_buffer_head];

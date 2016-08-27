@@ -28,7 +28,6 @@
  * EXTRUDER FEATURES:
  * - Fan configuration
  * - Default nominal filament diameter
- * - Dangerous extrution prevention
  * - Single nozzle
  * - BariCUDA paste extruder
  * - Color Mixing Extruder
@@ -161,22 +160,6 @@
  *                                                                     *
  ***********************************************************************/
 #define DEFAULT_NOMINAL_FILAMENT_DIA 1.75
-/***********************************************************************/
-
-
-/***********************************************************************
- ******************** Dangerous extrution prevention *******************
- ***********************************************************************
- *                                                                     *
- * This prevents dangerous Extruder moves.                             *
- *                                                                     *
- ***********************************************************************/
-#define PREVENT_DANGEROUS_EXTRUDE
-#define EXTRUDE_MINTEMP 170 // degC
-
-// if PREVENT DANGEROUS EXTRUDE is on, you can still disable (uncomment) very long bits of extrusion separately.
-//#define PREVENT_LENGTHY_EXTRUDE
-#define EXTRUDE_MAXLENGTH (X_MAX_LENGTH + Y_MAX_LENGTH) // prevent extrusion of very large distances.
 /***********************************************************************/
 
 
