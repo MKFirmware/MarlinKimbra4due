@@ -267,8 +267,8 @@ static unsigned long raw_temp_cooler_value = 0;
   #define RAW_MIN_TEMP_DEFAULT 123000
   #define RAW_MEDIAN_TEMP_DEFAULT 3600 * OVERSAMPLENR
 
-  static int max_temp[7] = ARRAY_BY_N(7, 0);
-  static int min_temp[7] = ARRAY_BY_N(7, RAW_MIN_TEMP_DEFAULT);
+  static int max_temp[7];
+  static int min_temp[7];
   static unsigned long raw_median_temp[7][MEDIAN_COUNT];
   static uint8_t median_counter;
   static unsigned long sum;
@@ -298,7 +298,7 @@ static void updateTemperaturesFromRawValues();
   millis_t watch_bed_next_ms = 0;
 #endif
 
-#if ENABLED(PREVENT_DANGEROUS_EXTRUDE)
+#if ENABLED(PREVENT_COLD_EXTRUSION)
   float extrude_min_temp = EXTRUDE_MINTEMP;
   bool allow_cold_extrude = false;
 #endif
@@ -721,10 +721,10 @@ inline void _temp_error(int tc, const char* serial_msg, const char* lcd_msg) {
   #endif
 }
 
-void max_temp_error(uint8_t h) {
+void max_temp_error(int8_t h) {
   _temp_error(h, PSTR(MSG_T_MAXTEMP), PSTR(MSG_ERR_MAXTEMP));
 }
-void min_temp_error(uint8_t h) {
+void min_temp_error(int8_t h) {
   _temp_error(h, PSTR(MSG_T_MINTEMP), PSTR(MSG_ERR_MINTEMP));
 }
 
@@ -1494,7 +1494,7 @@ void tp_init() {
       OUT_WRITE(SCK_PIN, LOW);
       OUT_WRITE(MOSI_PIN, HIGH);
       SET_INPUT(MISO_PIN);
-      WRITE(MISO_PIN,1);
+      WRITE(MISO_PIN,HIGH);
     #else
       OUT_WRITE(SS_PIN, HIGH);
     #endif
@@ -1957,7 +1957,6 @@ void disable_all_coolers() {
         max6675_temp |= SPDR;
       #endif
       if (i > 0) max6675_temp <<= 8; // shift left if not the last byte
-      max6675_temp <<= 8;
     }
 
     HAL::digitalWrite(MAX6675_SS, 1); // disable TT_MAX6675
@@ -2076,7 +2075,7 @@ static void set_current_temp_raw() {
 
 /**
  * Timer 0 is shared with millies
- *  - Manage PWM to all the heaters and fan
+ *  - Manage PWM to all the heaters, coolers and fan
  *  - Update the raw temperature values
  *  - Check new temperature values for MIN/MAX errors
  *  - Step the babysteps value for each axis towards 0
@@ -2092,6 +2091,7 @@ static void set_current_temp_raw() {
   static unsigned char pwm_count = _BV(SOFT_PWM_SCALE);
   #ifdef __SAM3X8E__
     static int temp_read = 0;
+    static bool first_start = true;
   #endif
 
   // Static members for each heater
@@ -2131,6 +2131,17 @@ static void set_current_temp_raw() {
   #endif
 
   #ifdef __SAM3X8E__
+    // Initialize some variables only at start!
+    if (first_start) {
+ 	    for (uint8_t i = 0; i < 7; i++) {
+        for (int j = 0; j < MEDIAN_COUNT; j++) raw_median_temp[i][j] = RAW_MEDIAN_TEMP_DEFAULT;
+        max_temp[i] = 0;
+        min_temp[i] = RAW_MIN_TEMP_DEFAULT;
+      }
+      first_start = false;
+      SERIAL_EM("First start for temperature finished.");
+    }
+
     HAL_timer_isr_status (TEMP_TIMER_COUNTER, TEMP_TIMER_CHANNEL);
   #endif
 
@@ -2206,6 +2217,7 @@ static void set_current_temp_raw() {
       if (soft_pwm_fan < pwm_count) WRITE_FAN(0);
     #endif
 
+    // 488.28 Hz (or 1:976.56, 2:1953.12, 3:3906.25, 4:7812.5, 5:7812.5 6:15625, 6:15625 7:31250)
     pwm_count += _BV(SOFT_PWM_SCALE);
     pwm_count &= 0x7f;
 

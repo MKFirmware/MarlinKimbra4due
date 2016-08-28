@@ -60,7 +60,7 @@
 
 // do not use program space memory with Due
 #define PROGMEM
-#define PGM_P const char *
+#define PGM_P const char*
 #undef PSTR
 #define PSTR(s) s
 #undef pgm_read_byte_near
@@ -79,6 +79,7 @@
 //#define pgm_read_dword(addr) (*(const unsigned long *)(addr))
 #undef pgm_read_dword_near
 #define pgm_read_dword_near(addr) pgm_read_dword(addr)
+#define strncpy_P(dest, src, num) strncpy((dest), (src), (num))
 
 /**
  * Defines & Macros

@@ -46,65 +46,97 @@
  * _Nbr_16timers indicates how many 16 bit timers are available.
  */
 
-/**
- * SAM Only definitions
- * --------------------
- */
+#ifdef __SAM3X8E__
+  /**
+   * SAM Only definitions
+   * --------------------
+   */
 
-// For SAM3X:
-//#define _useTimer1
-//#define _useTimer2
-#define _useTimer3
-//#define _useTimer4
-#define _useTimer5
+  // For SAM3X:
+  //#define _useTimer1
+  //#define _useTimer2
+  #define _useTimer3
+  //#define _useTimer4
+  #define _useTimer5
 
-/*
-  TC0, chan 0 => TC0_Handler
-  TC0, chan 1 => TC1_Handler
-  TC0, chan 2 => TC2_Handler
-  TC1, chan 0 => TC3_Handler
-  TC1, chan 1 => TC4_Handler
-  TC1, chan 2 => TC5_Handler
-  TC2, chan 0 => TC6_Handler
-  TC2, chan 1 => TC7_Handler
-  TC2, chan 2 => TC8_Handler
- */
+  /*
+    TC0, chan 0 => TC0_Handler
+    TC0, chan 1 => TC1_Handler
+    TC0, chan 2 => TC2_Handler
+    TC1, chan 0 => TC3_Handler
+    TC1, chan 1 => TC4_Handler
+    TC1, chan 2 => TC5_Handler
+    TC2, chan 0 => TC6_Handler
+    TC2, chan 1 => TC7_Handler
+    TC2, chan 2 => TC8_Handler
+   */
 
-#if defined (_useTimer1)
-#define TC_FOR_TIMER1       TC1
-#define CHANNEL_FOR_TIMER1  0
-#define ID_TC_FOR_TIMER1    ID_TC3
-#define IRQn_FOR_TIMER1     TC3_IRQn
-#define HANDLER_FOR_TIMER1  TC3_Handler
-#endif
-#if defined (_useTimer2)
-#define TC_FOR_TIMER2       TC1
-#define CHANNEL_FOR_TIMER2  1
-#define ID_TC_FOR_TIMER2    ID_TC4
-#define IRQn_FOR_TIMER2     TC4_IRQn
-#define HANDLER_FOR_TIMER2  TC4_Handler
-#endif
-#if defined (_useTimer3)
-#define TC_FOR_TIMER3       TC1
-#define CHANNEL_FOR_TIMER3  2
-#define ID_TC_FOR_TIMER3    ID_TC5
-#define IRQn_FOR_TIMER3     TC5_IRQn
-#define HANDLER_FOR_TIMER3  TC5_Handler
-#endif
-#if defined (_useTimer4)
-#define TC_FOR_TIMER4       TC0
-#define CHANNEL_FOR_TIMER4  2
-#define ID_TC_FOR_TIMER4    ID_TC2
-#define IRQn_FOR_TIMER4     TC2_IRQn
-#define HANDLER_FOR_TIMER4  TC2_Handler
-#endif
-#if defined (_useTimer5)
-#define TC_FOR_TIMER5       TC0
-#define CHANNEL_FOR_TIMER5  0
-#define ID_TC_FOR_TIMER5    ID_TC0
-#define IRQn_FOR_TIMER5     TC0_IRQn
-#define HANDLER_FOR_TIMER5  TC0_Handler
-#endif
+  #if defined (_useTimer1)
+    #define TC_FOR_TIMER1       TC1
+    #define CHANNEL_FOR_TIMER1  0
+    #define ID_TC_FOR_TIMER1    ID_TC3
+    #define IRQn_FOR_TIMER1     TC3_IRQn
+    #define HANDLER_FOR_TIMER1  TC3_Handler
+  #endif
+  #if defined (_useTimer2)
+    #define TC_FOR_TIMER2       TC1
+    #define CHANNEL_FOR_TIMER2  1
+    #define ID_TC_FOR_TIMER2    ID_TC4
+    #define IRQn_FOR_TIMER2     TC4_IRQn
+    #define HANDLER_FOR_TIMER2  TC4_Handler
+  #endif
+  #if defined (_useTimer3)
+    #define TC_FOR_TIMER3       TC1
+    #define CHANNEL_FOR_TIMER3  2
+    #define ID_TC_FOR_TIMER3    ID_TC5
+    #define IRQn_FOR_TIMER3     TC5_IRQn
+    #define HANDLER_FOR_TIMER3  TC5_Handler
+  #endif
+  #if defined (_useTimer4)
+    #define TC_FOR_TIMER4       TC0
+    #define CHANNEL_FOR_TIMER4  2
+    #define ID_TC_FOR_TIMER4    ID_TC2
+    #define IRQn_FOR_TIMER4     TC2_IRQn
+    #define HANDLER_FOR_TIMER4  TC2_Handler
+  #endif
+  #if defined (_useTimer5)
+    #define TC_FOR_TIMER5       TC0
+    #define CHANNEL_FOR_TIMER5  0
+    #define ID_TC_FOR_TIMER5    ID_TC0
+    #define IRQn_FOR_TIMER5     TC0_IRQn
+    #define HANDLER_FOR_TIMER5  TC0_Handler
+  #endif
 
-typedef enum { _timer3, _timer5, _Nbr_16timers } timer16_Sequence_t ;
+  typedef enum { _timer3, _timer5, _Nbr_16timers } timer16_Sequence_t ;
 
+#else // !__SAM3X8E__
+
+  /**
+   * AVR Only definitions
+   * --------------------
+   */
+
+  // Say which 16 bit timers can be used and in what order
+  #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
+    #define _useTimer5
+    #define _useTimer3
+    #define _useTimer4
+    typedef enum { _timer5, _timer3, _timer4, _Nbr_16timers } timer16_Sequence_t;
+
+  #elif defined(__AVR_ATmega32U4__)
+    #define _useTimer3
+    typedef enum { _timer3, _Nbr_16timers } timer16_Sequence_t;
+
+  #elif defined(__AVR_AT90USB646__) || defined(__AVR_AT90USB1286__)
+    #define _useTimer3
+    typedef enum { _timer3, _Nbr_16timers } timer16_Sequence_t;
+
+  #elif defined(__AVR_ATmega128__) ||defined(__AVR_ATmega1281__)||defined(__AVR_ATmega2561__)
+    #define _useTimer3
+    typedef enum { _timer3, _Nbr_16timers } timer16_Sequence_t;
+
+  #else  // everything else
+    typedef enum { _Nbr_16timers } timer16_Sequence_t;
+  #endif
+
+#endif

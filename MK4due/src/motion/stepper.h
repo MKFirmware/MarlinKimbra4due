@@ -107,7 +107,7 @@ class Stepper {
       static unsigned short OCR1A_nominal;
     #endif
 
-    static volatile long endstops_trigsteps[3];
+    static volatile long endstops_trigsteps[XYZ];
     static volatile long endstops_stepsTotal, endstops_stepsDone;
 
     #if PIN_EXISTS(MOTOR_CURRENT_PWM_XY)
