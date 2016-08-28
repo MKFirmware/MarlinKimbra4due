@@ -1430,6 +1430,8 @@ static void set_axis_is_at_home(AxisEnum axis) {
     SERIAL_SMV(INFO, "<<< set_axis_is_at_home(", axis_codes[axis]);
     SERIAL_EM(")");
   }
+
+  axis_known_position[axis] = axis_homed[axis] = true;
 }
 
 /**
@@ -1464,8 +1466,10 @@ inline void line_to_z(float zPosition) {
 inline void line_to_destination(float fr_mm_s) {
   planner.buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], fr_mm_s, active_extruder, active_driver);
 }
-
 inline void line_to_destination() { line_to_destination(feedrate_mm_s); }
+
+inline void set_current_to_destination() { memcpy(current_position, destination, sizeof(current_position)); }
+inline void set_destination_to_current() { memcpy(destination, current_position, sizeof(destination)); }
 
 /**
  * sync_plan_position
@@ -1489,8 +1493,6 @@ inline void sync_plan_position() {
 #endif
 
 inline void sync_plan_position_e() { planner.set_e_position_mm(current_position[E_AXIS]); }
-inline void set_current_to_destination() { memcpy(current_position, destination, sizeof(current_position)); }
-inline void set_destination_to_current() { memcpy(destination, current_position, sizeof(destination)); }
 
 //
 // Prepare to do endstop or probe moves
@@ -1785,7 +1787,7 @@ void do_blocking_move_to_z(const float &z, const float &fr_mm_s/*=0.0*/) {
     #endif
 
     do_blocking_move_to(oldXpos, oldYpos, current_position[Z_AXIS]); // return to position before deploy
-    endstops.enable_z_probe( deploy );
+    endstops.enable_z_probe(deploy);
     return false;
   }
 
@@ -1907,12 +1909,12 @@ void do_blocking_move_to_z(const float &z, const float &fr_mm_s/*=0.0*/) {
  */
 
 static void do_homing_move(AxisEnum axis, float where, float fr_mm_s = 0.0) {
-  float old_feedrate_mm_s = feedrate_mm_s;
+  current_position[axis] = 0;
+  sync_plan_position();
   current_position[axis] = where;
-  feedrate_mm_s = (fr_mm_s != 0.0) ? fr_mm_s : homing_feedrate_mm_s[axis];
-  planner.buffer_line(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS], feedrate_mm_s, active_extruder, active_driver);
+  planner.buffer_line(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS], (fr_mm_s != 0.0) ? fr_mm_s : homing_feedrate_mm_s[axis], active_extruder, active_driver);
   stepper.synchronize();
-  feedrate_mm_s = old_feedrate_mm_s;
+  endstops.hit_on_purpose();
 }
 
 #define HOMEAXIS(LETTER) homeaxis(LETTER##_AXIS)
@@ -1921,7 +1923,7 @@ static void homeaxis(AxisEnum axis) {
   #define HOMEAXIS_DO(LETTER) \
     ((LETTER##_MIN_PIN > -1 && LETTER##_HOME_DIR==-1) || (LETTER##_MAX_PIN > -1 && LETTER##_HOME_DIR==1))
 
-  if (!(axis == X_AXIS ? HOMEAXIS_DO(X) : axis == Y_AXIS ? HOMEAXIS_DO(Y) : axis == Z_AXIS ? HOMEAXIS_DO(Z) : 0)) return;
+  if (!(axis == X_AXIS ? HOMEAXIS_DO(X) : axis == Y_AXIS ? HOMEAXIS_DO(Y) : axis == Z_AXIS ? HOMEAXIS_DO(Z) : false)) return;
 
   if (DEBUGGING(INFO)) {
     SERIAL_SMV(INFO, ">>> homeaxis(", axis_codes[axis]);
@@ -1939,16 +1941,12 @@ static void homeaxis(AxisEnum axis) {
   #endif
 
   // Homing Z towards the bed? Deploy the Z probe or endstop.
-  #if HAS(BED_PROBE)
+  #if HAS(BED_PROBE) 
     if (axis == Z_AXIS && axis_home_dir < 0) {
       if (DEBUGGING(INFO)) SERIAL_SM(INFO, "> ");
       if (DEPLOY_PROBE()) return;
     }
   #endif
-
-  // Set the axis position as setup for the move
-  current_position[axis] = 0;
-  sync_plan_position();
 
   // Set a flag for Z motor locking
   #if ENABLED(Z_DUAL_ENDSTOPS)
@@ -1962,9 +1960,7 @@ static void homeaxis(AxisEnum axis) {
     do_homing_move(axis, 1.5 * max_length(axis) * axis_home_dir);
   #endif
 
-  // Set the axis position as setup for the move
-  current_position[axis] = 0;
-  sync_plan_position();
+  if (DEBUGGING(INFO)) SERIAL_LMV(INFO, "> 1st Home", current_position[axis]);
 
   // Move away from the endstop by the axis HOME_BUMP_MM
   do_homing_move(axis, -home_bump_mm(axis) * axis_home_dir);
@@ -1972,11 +1968,7 @@ static void homeaxis(AxisEnum axis) {
   // Move slowly towards the endstop until triggered
   do_homing_move(axis, 2 * home_bump_mm(axis) * axis_home_dir, get_homing_bump_feedrate(axis));
 
-  // reset current_position to 0 to reflect hitting endpoint
-  current_position[axis] = 0;
-  sync_plan_position();
-
-  if (DEBUGGING(INFO)) DEBUG_INFO_POS("TRIGGER ENDSTOP", current_position);
+  if (DEBUGGING(INFO)) SERIAL_LMV(INFO, "> 2nd Home", current_position[axis]);
 
   #if ENABLED(Z_DUAL_ENDSTOPS)
     if (axis == Z_AXIS) {
@@ -1999,29 +1991,30 @@ static void homeaxis(AxisEnum axis) {
     } // Z_AXIS
   #endif
 
+  // Delta has already moved all three towers up in G28
+  // so here it re-homes each tower in turn.
+  // Delta homing treats the axes as normal linear axes.
   #if MECH(DELTA)
     // retrace by the amount specified in endstop_adj
-    if (endstop_adj[axis] * axis_home_dir < 0) {
+    if (endstop_adj[axis] * Z_HOME_DIR < 0) {
       if (DEBUGGING(INFO)) {
-        destination[axis] = endstop_adj[axis];
-        SERIAL_LMV(INFO, "endstop_adj = ", endstop_adj[axis]);
-        DEBUG_INFO_POS("", destination);
+        SERIAL_LMV(INFO, "endstop_adj = ", endstop_adj[axis] * Z_HOME_DIR);
+        DEBUG_INFO_POS("", current_position);
       }
       do_homing_move(axis, endstop_adj[axis]);
     }
+
+  #else
+
+    // Set the axis position to its home position (plus home offsets)
+    set_axis_is_at_home(axis);
+    sync_plan_position();
+
+    destination[axis] = current_position[axis];
+
+    if (DEBUGGING(INFO)) DEBUG_INFO_POS("AFTER set_axis_is_at_home", current_position);
+
   #endif
-
-  // Set the axis position to its home position (plus home offsets)
-  set_axis_is_at_home(axis);
-
-  SYNC_PLAN_POSITION_KINEMATIC();
-
-  if (DEBUGGING(INFO)) DEBUG_INFO_POS("AFTER set_axis_is_at_home", current_position);
-
-  destination[axis] = current_position[axis];
-  endstops.hit_on_purpose(); // clear endstop hit flags
-  axis_known_position[axis] = true;
-  axis_homed[axis] = true;
 
   // Put away the Z probe with a function
   #if HAS(BED_PROBE)
@@ -2118,22 +2111,30 @@ static void homeaxis(AxisEnum axis) {
 
   void home_delta_axis() {
 
-    // Pretend the current position is 0,0,0
-    current_position[X_AXIS] = current_position[Y_AXIS] = current_position[Z_AXIS] = 0.0;
+    // Init the current position of all carriages to 0,0,0
+    memset(current_position, 0, sizeof(current_position));
     sync_plan_position();
 
     // Move all carriages up together until the first endstop is hit.
     current_position[X_AXIS] = current_position[Y_AXIS] = current_position[Z_AXIS] = 3.0 * max_length[Z_AXIS];
-    feedrate_mm_s = 1.732 * homing_feedrate_mm_s[X_AXIS];
+    feedrate_mm_s = homing_feedrate_mm_s[X_AXIS];
     line_to_current_position();
     stepper.synchronize();
     endstops.hit_on_purpose(); // clear endstop hit flags
-    current_position[X_AXIS] = current_position[Y_AXIS] = current_position[Z_AXIS] = 0.0;
 
-    // take care of back off and re home now we are all at the top
-    HOMEAXIS(X);
-    HOMEAXIS(Y);
-    HOMEAXIS(Z);
+    memset(current_position, 0, sizeof(current_position));
+
+    // At least one carriage has reached the top.
+    // Now back off and re-home each carriage separately.
+    HOMEAXIS(A);
+    HOMEAXIS(B);
+    HOMEAXIS(C);
+
+    // Set all carriages to their home positions
+    // Do this here all at once for Delta, because
+    // XYZ isn't ABC. Applying this per-tower would
+    // give the impression that they are the same.
+    LOOP_XYZ(i) set_axis_is_at_home((AxisEnum)i);
 
     SYNC_PLAN_POSITION_KINEMATIC();
 
@@ -2956,7 +2957,7 @@ static void homeaxis(AxisEnum axis) {
       delta[TOWER_2] += offset;
       delta[TOWER_3] += offset;
 
-      if (DEBUGGING(DEBUG)) {
+      if (DEBUGGING(ALL)) {
         SERIAL_SMV(DEB, "grid_x=", grid_x);
         SERIAL_MV(" grid_y=", grid_y);
         SERIAL_MV(" floor_x=", floor_x);
@@ -4001,7 +4002,7 @@ inline void gcode_G28() {
              * enough to reach Z_SAFE_HOMING XY positions.
              * Just make sure the planner is in sync.
              */
-            sync_plan_position();
+            SYNC_PLAN_POSITION_KINEMATIC();
 
             /**
              * Set the Z probe (or just the nozzle) destination to the safe
@@ -4060,9 +4061,7 @@ inline void gcode_G28() {
 
   #endif // !DELTA (gcode_G28)
 
-  if (DEBUGGING(INFO)) SERIAL_LM(INFO, "endstops.not_homing()");
   endstops.not_homing();
-  endstops.hit_on_purpose(); // clear endstop hit flags
 
   // Enable mesh leveling again
   #if ENABLED(MESH_BED_LEVELING)
@@ -4107,7 +4106,7 @@ inline void gcode_G28() {
 
   if(come_back) {
     #if MECH(DELTA)
-      feedrate_mm_s = 1.732 * homing_feedrate_mm_s[X_AXIS];
+      feedrate_mm_s = homing_feedrate_mm_s[X_AXIS];
       memcpy(destination, lastpos, sizeof(destination));
       prepare_move_to_destination();
       feedrate_mm_s = old_feedrate_mm_s;
@@ -4388,6 +4387,38 @@ inline void gcode_G28() {
     if (DEBUGGING(INFO)) {
       SERIAL_LM(INFO, ">>> gcode_G29");
       DEBUG_INFO_POS("", current_position);
+      SERIAL_SM(INFO, "Probe: ");
+      #if ENABLED(Z_PROBE_FIX_MOUNTED)
+        SERIAL_EM("Z_PROBE_FIX_MOUNTED");
+      #elif ENABLED(BLTOUCH)
+        SERIAL_EM("BLTOUCH");
+      #elif ENABLED(Z_PROBE_SLED)
+        SERIAL_EM("Z_PROBE_SLED");
+      #elif HAS(Z_SERVO_ENDSTOP)
+        SERIAL_EM("SERVO PROBE");
+      #endif
+      SERIAL_SMV(INFO, "Probe Offset X:", X_PROBE_OFFSET_FROM_NOZZLE);
+      SERIAL_MV(" Y:", Y_PROBE_OFFSET_FROM_NOZZLE);
+      SERIAL_MV(" Z:", zprobe_zoffset);
+      #if (X_PROBE_OFFSET_FROM_NOZZLE > 0)
+        SERIAL_M(" (Right");
+      #elif (X_PROBE_OFFSET_FROM_NOZZLE < 0)
+        SERIAL_M(" (Left");
+      #else
+        SERIAL_M(" (");
+      #endif
+      #if (Y_PROBE_OFFSET_FROM_NOZZLE > 0)
+        SERIAL_M("-Back");
+      #elif (Y_PROBE_OFFSET_FROM_NOZZLE < 0)
+        SERIAL_M("-Front");
+      #endif
+      if (zprobe_zoffset < 0)
+        SERIAL_M(" & Below");
+      else if (zprobe_zoffset > 0)
+        SERIAL_M(" & Above");
+      else
+        SERIAL_M(" & Same Z as");
+      SERIAL_EM(" Nozzle)");
     }
 
     // Don't allow auto-levelling without homing first
@@ -4755,7 +4786,42 @@ inline void gcode_G28() {
    */
   inline void gcode_G29() {
 
-    if (DEBUGGING(INFO)) SERIAL_LM(INFO, ">>> gcode_G29");
+    if (DEBUGGING(INFO)) {
+      SERIAL_LM(INFO, ">>> gcode_G29");
+      DEBUG_INFO_POS("", current_position);
+      SERIAL_SM(INFO, "Probe: ");
+      #if ENABLED(Z_PROBE_FIX_MOUNTED)
+        SERIAL_EM("Z_PROBE_FIX_MOUNTED");
+      #elif ENABLED(BLTOUCH)
+        SERIAL_EM("BLTOUCH");
+      #elif ENABLED(Z_PROBE_ALLEN_KEY)
+        SERIAL_EM("ALLEN KEY");
+      #elif HAS(Z_SERVO_ENDSTOP)
+        SERIAL_EM("SERVO PROBE");
+      #endif
+      SERIAL_SMV(INFO, "Probe Offset X:", X_PROBE_OFFSET_FROM_NOZZLE);
+      SERIAL_MV(" Y:", Y_PROBE_OFFSET_FROM_NOZZLE);
+      SERIAL_MV(" Z:", zprobe_zoffset);
+      #if (X_PROBE_OFFSET_FROM_NOZZLE > 0)
+        SERIAL_M(" (Right");
+      #elif (X_PROBE_OFFSET_FROM_NOZZLE < 0)
+        SERIAL_M(" (Left");
+      #else
+        SERIAL_M(" (");
+      #endif
+      #if (Y_PROBE_OFFSET_FROM_NOZZLE > 0)
+        SERIAL_M("-Back");
+      #elif (Y_PROBE_OFFSET_FROM_NOZZLE < 0)
+        SERIAL_M("-Front");
+      #endif
+      if (zprobe_zoffset < 0)
+        SERIAL_M(" & Below");
+      else if (zprobe_zoffset > 0)
+        SERIAL_M(" & Above");
+      else
+        SERIAL_M(" & Same Z as");
+      SERIAL_EM(" Nozzle)");
+    }
 
     if (code_seen('D')) {
       print_bed_level();
@@ -4917,7 +4983,7 @@ inline void gcode_G28() {
           else
             dr_adjusted = false;
 
-          if (DEBUGGING(DEBUG)) {
+          if (DEBUGGING(ALL)) {
             SERIAL_LMV(DEB, "bed_level_c = ", bed_level_c, 4);
             SERIAL_LMV(DEB, "bed_level_x = ", bed_level_x, 4);
             SERIAL_LMV(DEB, "bed_level_y = ", bed_level_y, 4);
@@ -4954,7 +5020,7 @@ inline void gcode_G28() {
           calibration_report();
         }
 
-        if (DEBUGGING(DEBUG)) {
+        if (DEBUGGING(ALL)) {
           SERIAL_LMV(DEB, "bed_level_c = ", bed_level_c, 4);
           SERIAL_LMV(DEB, "bed_level_x = ", bed_level_x, 4);
           SERIAL_LMV(DEB, "bed_level_y = ", bed_level_y, 4);
@@ -6188,7 +6254,7 @@ inline void gcode_M111() {
   const static char str_debug_4[]   = MSG_DEBUG_ERRORS;
   const static char str_debug_8[]   = MSG_DEBUG_DRYRUN;
   const static char str_debug_16[]  = MSG_DEBUG_COMMUNICATION;
-  const static char str_debug_32[]  = MSG_DEBUG_DEBUG;
+  const static char str_debug_32[]  = MSG_DEBUG_ALL;
 
   const static char* const debug_strings[] = {
     str_debug_1, str_debug_2, str_debug_4, str_debug_8, str_debug_16, str_debug_32
@@ -9627,7 +9693,7 @@ static void report_current_position() {
       int steps = max(1, int(delta_segments_per_second * seconds));
       float inv_steps = 1.0 / steps;
 
-      if (DEBUGGING(DEBUG)) {
+      if (DEBUGGING(ALL)) {
         SERIAL_SMV(DEB, "mm=", cartesian_mm);
         SERIAL_MV(" seconds=", seconds);
         SERIAL_EMV(" steps=", steps);
@@ -9671,7 +9737,7 @@ static void report_current_position() {
       #endif
 
       /*
-      if (DEBUGGING(DEBUG)) {
+      if (DEBUGGING(ALL)) {
         DEBUG_INFO_POS("prepare_kinematic_move_to", target);
         DEBUG_INFO_POS("prepare_kinematic_move_to", delta);
       }
@@ -10060,13 +10126,10 @@ void plan_arc(
   void handle_status_leds(void) {
     if (ELAPSED(millis(), next_status_led_update_ms)) {
       next_status_led_update_ms += 500; // Update every 0.5s
-      float max_temp =
+      float max_temp = 0.0;
         #if HAS_TEMP_BED
-          MAX3(max_temp, degTargetBed(), degBed())
-        #else
-          0.0
+          max_temp = MAX3(max_temp, degTargetBed(), degBed());
         #endif
-      ;
       for (int8_t h = 0; h < HOTENDS; ++h)
         max_temp = MAX3(max_temp, degHotend(h), degTargetHotend(h));
       bool new_led = (max_temp > 55.0) ? true : (max_temp < 54.0) ? false : red_led;

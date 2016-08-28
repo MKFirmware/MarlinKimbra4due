@@ -179,6 +179,9 @@
 // its trigger-point if hardware endstops are active.
 //#define Z_PROBE_FIX_MOUNTED
 
+// The BLTouch probe emulates a servo probe.
+//#define BLTOUCH
+
 // Enable if you have a Z probe mounted on a sled like those designed by Charles Bell.
 //#define Z_PROBE_SLED
 // The extra distance the X axis must travel to pick up the sled.

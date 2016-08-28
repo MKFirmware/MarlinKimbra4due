@@ -216,7 +216,7 @@
 #define MSG_DEBUG_ERRORS                     "ERRORS"
 #define MSG_DEBUG_DRYRUN                     "DRYRUN"
 #define MSG_DEBUG_COMMUNICATION              "COMMUNICATION"
-#define MSG_DEBUG_DEBUG                      "DEBUG"
+#define MSG_DEBUG_ALL                        "ALL"
 
 //other
 #define MSG_BED_LEVELLING_BED                "Bed"

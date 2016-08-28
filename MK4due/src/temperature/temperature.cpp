@@ -1494,7 +1494,7 @@ void tp_init() {
       OUT_WRITE(SCK_PIN, LOW);
       OUT_WRITE(MOSI_PIN, HIGH);
       SET_INPUT(MISO_PIN);
-      WRITE(MISO_PIN,1);
+      WRITE(MISO_PIN,HIGH);
     #else
       OUT_WRITE(SS_PIN, HIGH);
     #endif
@@ -1595,7 +1595,7 @@ void tp_init() {
   #endif
 
   // Wait for temperature measurement to settle
-  HAL::delayMilliseconds(500);
+  HAL::delayMilliseconds(250);
 
   #define TEMP_MIN_ROUTINE(NR) \
     minttemp[NR] = HEATER_ ## NR ## _MINTEMP; \
@@ -1957,7 +1957,6 @@ void disable_all_coolers() {
         max6675_temp |= SPDR;
       #endif
       if (i > 0) max6675_temp <<= 8; // shift left if not the last byte
-      max6675_temp <<= 8;
     }
 
     HAL::digitalWrite(MAX6675_SS, 1); // disable TT_MAX6675
@@ -2076,7 +2075,7 @@ static void set_current_temp_raw() {
 
 /**
  * Timer 0 is shared with millies
- *  - Manage PWM to all the heaters and fan
+ *  - Manage PWM to all the heaters, coolers and fan
  *  - Update the raw temperature values
  *  - Check new temperature values for MIN/MAX errors
  *  - Step the babysteps value for each axis towards 0
@@ -2218,6 +2217,7 @@ static void set_current_temp_raw() {
       if (soft_pwm_fan < pwm_count) WRITE_FAN(0);
     #endif
 
+    // 488.28 Hz (or 1:976.56, 2:1953.12, 3:3906.25, 4:7812.5, 5:7812.5 6:15625, 6:15625 7:31250)
     pwm_count += _BV(SOFT_PWM_SCALE);
     pwm_count &= 0x7f;
 
