@@ -128,7 +128,7 @@ class Stepper {
     static volatile signed char count_direction[NUM_AXIS];
 
     #if ENABLED(COLOR_MIXING_EXTRUDER)
-      static long counter_m[DRIVER_EXTRUDERS];
+      static long counter_M[DRIVER_EXTRUDERS];
       #define MIXING_STEPPERS_LOOP(VAR) \
         for (uint8_t VAR = 0; VAR < DRIVER_EXTRUDERS; VAR++) \
           if (current_block->mix_event_count[VAR])
@@ -271,7 +271,7 @@ class Stepper {
 
         NOMORE(step_rate, MAX_STEP_FREQUENCY);
 
-        #if ENABLED(ENABLE_HIGH_SPEED_STEPPING)
+        #ifndef __SAM3X8E__ || ENABLED(ENABLE_HIGH_SPEED_STEPPING)
           if(step_rate > (2 * DOUBLE_STEP_FREQUENCY)) { // If steprate > 2*DOUBLE_STEP_FREQUENCY >> step 4 times
             step_rate >>= 2;
             step_loops = 4;
