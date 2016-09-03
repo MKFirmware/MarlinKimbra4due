@@ -262,7 +262,7 @@ void Endstops::update() {
       { // -direction
         #if ENABLED(DUAL_X_CARRIAGE)
           // with 2 x-carriages, endstops are only checked in the homing direction for the active extruder
-          if ((stepper.current_block->active_driver == 0 && X_HOME_DIR == -1) || (stepper.current_block->active_driver != 0 && X2_HOME_DIR == -1))
+          if ((stepper.TOOL_E_INDEX == 0 && X_HOME_DIR == -1) || (stepper.TOOL_E_INDEX != 0 && X2_HOME_DIR == -1))
         #endif
           {
             #if HAS(X_MIN)
@@ -273,7 +273,7 @@ void Endstops::update() {
       else { // +direction
         #if ENABLED(DUAL_X_CARRIAGE)
           // with 2 x-carriages, endstops are only checked in the homing direction for the active extruder
-          if ((stepper.current_block->active_driver == 0 && X_HOME_DIR == 1) || (stepper.current_block->active_driver != 0 && X2_HOME_DIR == 1))
+          if ((stepper.TOOL_E_INDEX == 0 && X_HOME_DIR == 1) || (stepper.TOOL_E_INDEX != 0 && X2_HOME_DIR == 1))
         #endif
           {
             #if HAS(X_MAX)

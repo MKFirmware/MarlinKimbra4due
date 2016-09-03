@@ -581,7 +581,7 @@ uint8_t bestClock(double frequency, uint32_t& retRC){
 // thanks for that work
 // http://forum.arduino.cc/index.php?topic=297397.0
 
-#if ENABLED(ADVANCE) || ENABLED(ADVANCE_LPC)
+#if ENABLED(ADVANCE) || ENABLED(LIN_ADVANCE)
   TcChannel *extruderChannel = (ADVANCE_EXTRUDER_TIMER_COUNTER->TC_CHANNEL + ADVANCE_EXTRUDER_TIMER_CHANNEL);
 #endif
 TcChannel* stepperChannel = (STEP_TIMER_COUNTER->TC_CHANNEL + STEP_TIMER_CHANNEL);
@@ -611,7 +611,7 @@ void HAL_step_timer_start() {
   NVIC_EnableIRQ(irq); // enable Nested Vector Interrupt Controller
 }
 
-#if ENABLED(ADVANCE) || ENABLED(ADVANCE_LPC)
+#if ENABLED(ADVANCE) || ENABLED(LIN_ADVANCE)
   void HAL_advance_extruder_timer_start() {
     // Get the ISR from table
     Tc *tc = ADVANCE_EXTRUDER_TIMER_COUNTER;

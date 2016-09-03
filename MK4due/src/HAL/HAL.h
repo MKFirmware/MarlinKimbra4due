@@ -308,7 +308,7 @@ uint8_t eeprom_read_byte(uint8_t* pos);
 #define ENABLE_STEPPER_DRIVER_INTERRUPT()	HAL_timer_enable_interrupt (STEP_TIMER_NUM)
 #define DISABLE_STEPPER_DRIVER_INTERRUPT()	HAL_timer_disable_interrupt (STEP_TIMER_NUM)
 
-#if ENABLED(ADVANCE) || ENABLED(ADVANCE_LPC)
+#if ENABLED(ADVANCE) || ENABLED(LIN_ADVANCE)
   #define ENABLE_ADVANCE_EXTRUDER_INTERRUPT()	HAL_timer_enable_interrupt (ADVANCE_EXTRUDER_TIMER_NUM)
   #define DISABLE_ADVANCE_EXTRUDER_INTERRUPT()	HAL_timer_disable_interrupt (ADVANCE_EXTRUDER_TIMER_NUM)
   void HAL_advance_extruder_timer_start(void);
