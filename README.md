@@ -2,6 +2,8 @@
 # MK4due 3D Printer Firmware for Arduino due
 ## Version 4.2.9
 
+Warning, this firmware was stopped. For the new version go to https://github.com/MagoKimbra/MK4duo
+
 ### Special thanks
 * Wurstnase
 * all Marlin8bit-developers.
