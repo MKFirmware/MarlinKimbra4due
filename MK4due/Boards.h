@@ -33,6 +33,7 @@
 *   5 BOARD_GEN6 - Gen6
 *  51 BOARD_GEN6_DELUXE - Gen6 deluxe
 * 502 BOARD_ALLIGATOR   - Alligator R2 ARM 32 Arduino DUE
+* 503 BOARD_ALLIGATOR_3 - Alligator R3 ARM 32 Arduino DUE
 *
 *   6 BOARD_SANGUINOLOLU_11 - Sanguinololu < 1.2
 *  62 BOARD_SANGUINOLOLU_12 - Sanguinololu 1.2 and above
@@ -110,6 +111,7 @@
 #define BOARD_GEN6              5     // Gen6
 #define BOARD_GEN6_DELUXE       51    // Gen6 deluxe
 #define BOARD_ALLIGATOR         502   // ALLIGATOR R2 ARM 32
+#define BOARD_ALLIGATOR_3       503   // ALLIGATOR R2 ARM 32
 
 #define BOARD_SANGUINOLOLU_11   6     // Sanguinololu < 1.2
 #define BOARD_SANGUINOLOLU_12   62    // Sanguinololu 1.2 and above

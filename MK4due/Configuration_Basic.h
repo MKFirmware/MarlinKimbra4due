@@ -98,7 +98,7 @@
  * See: https://github.com/MagoKimbra/MarlinKimbra/blob/master/Documentation/Hardware.md *
  *                                                                                       *
  *****************************************************************************************/
-#define MOTHERBOARD BOARD_ALLIGATOR
+#define MOTHERBOARD BOARD_ALLIGATOR_3
 /*****************************************************************************************/
 
 
