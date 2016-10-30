@@ -110,8 +110,8 @@
 
 #define BOARD_GEN6              5     // Gen6
 #define BOARD_GEN6_DELUXE       51    // Gen6 deluxe
-#define BOARD_ALLIGATOR         502   // ALLIGATOR R2 ARM 32
-#define BOARD_ALLIGATOR_3       503   // ALLIGATOR R2 ARM 32
+#define BOARD_ALLIGATOR         502   // ALLIGATOR R2 ARM 32bit board
+#define BOARD_ALLIGATOR_3       503   // ALLIGATOR R3 ARM 32bit board
 
 #define BOARD_SANGUINOLOLU_11   6     // Sanguinololu < 1.2
 #define BOARD_SANGUINOLOLU_12   62    // Sanguinololu 1.2 and above

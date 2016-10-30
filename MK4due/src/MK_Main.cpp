@@ -298,7 +298,7 @@ static uint8_t target_extruder;
   FilamentChangeMenuResponse filament_change_menu_response;
 #endif
 
-#if MB(ALLIGATOR)
+#if MB(ALLIGATOR) || MB(ALLIGATOR_3)
   float motor_current[XYZ + DRIVER_EXTRUDERS];
 #endif
 
@@ -538,12 +538,22 @@ bool enqueue_and_echo_command(const char* cmd, bool say_ok/*=false*/) {
   return false;
 }
 
-#if MB(ALLIGATOR)
+#if MB(ALLIGATOR) || MB(ALLIGATOR_3)
   void setup_alligator_board() {
-    // Init Expansion Port Voltage logic Selector
-    SET_OUTPUT(EXP_VOLTAGE_LEVEL_PIN);
-    WRITE(EXP_VOLTAGE_LEVEL_PIN, UI_VOLTAGE_LEVEL);
-    ExternalDac::begin(); // Initialize ExternalDac
+    ExternalDac::begin();
+	 SET_INPUT(MOTOR_FAULT_PIN);
+	 #if MB(ALLIGATOR_3)
+		SET_INPUT(MOTOR_FAULT_PIGGY_PIN);
+		SET_INPUT(FTDI_COM_RESET_PIN);
+		SET_INPUT(ESP_WIFI_MODULE_RESET_PIN);
+		SET_OUTPUT(EXP1_OUT_ENABLE_PIN);
+		SET_OUTPUT(EXP1_VOLTAGE_SELECT);
+	 #elif MB(ALLIGATOR)
+		// Init Expansion Port Voltage logic Selector
+		SET_OUTPUT(EXP_VOLTAGE_LEVEL_PIN);
+		WRITE(EXP_VOLTAGE_LEVEL_PIN, UI_VOLTAGE_LEVEL);
+	#endif
+	 
     #if HAS(BUZZER)
       buzz(10,10);
     #endif
@@ -703,7 +713,7 @@ bool enqueue_and_echo_command(const char* cmd, bool say_ok/*=false*/) {
  *    • status LEDs
  */
 void setup() {
-  #if MB(ALLIGATOR)
+  #if MB(ALLIGATOR) || MB(ALLIGATOR_3)
     setup_alligator_board(); // Initialize Alligator Board
   #endif
   #if HAS(KILL)
@@ -791,6 +801,11 @@ void setup() {
       flow_firstread = false;
     #endif
     flow_init();
+  #endif
+	
+  #if MB(ALLIGATOR_3)
+		// Enable output on Expsansion#1 
+		WRITE(EXP1_OUT_ENABLE_PIN,HIGH);
   #endif
 
   #if ENABLED(COLOR_MIXING_EXTRUDER) && MIXING_VIRTUAL_TOOLS > 1
@@ -7594,7 +7609,7 @@ inline void gcode_M400() { stepper.synchronize(); }
         }
         SERIAL_M("],");
 
-        #if MB(ALLIGATOR)
+        #if MB(ALLIGATOR) || MB(ALLIGATOR_3)
           SERIAL_M("\"currents\":[");
           SERIAL_V(motor_current[X_AXIS]);
           SERIAL_M(",");
@@ -7613,6 +7628,8 @@ inline void gcode_M400() { stepper.synchronize(); }
           SERIAL_M("RAMPS");
         #elif MB(ALLIGATOR)
           SERIAL_M("ALLIGATOR");
+		  #elif MB(ALLIGATOR_3)
+          SERIAL_M("ALLIGATOR R3");
         #elif MB(RADDS) || MB(RAMPS_FD_V1) || MB(RAMPS_FD_V2) || MB(SMART_RAMPS) || MB(RAMPS4DUE)
           SERIAL_M("Arduino due");
         #elif MB(ULTRATRONICS)
@@ -8241,7 +8258,7 @@ inline void gcode_M503() {
   }
 #endif
 
-#if MB(ALLIGATOR)
+#if MB(ALLIGATOR) || MB(ALLIGATOR_3)
   /**
    * M906: Set motor currents
    */
@@ -9490,7 +9507,7 @@ void process_next_command() {
           gcode_M905(); break;
       #endif
 
-      #if MB(ALLIGATOR)
+      #if MB(ALLIGATOR) || MB(ALLIGATOR_3)
         case 906: // M906 Set motor currents XYZ T0-4 E
           gcode_M906(); break;
       #endif

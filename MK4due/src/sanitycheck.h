@@ -824,7 +824,7 @@
       #endif
     #endif
   #endif
-  #if MB(ALLIGATOR)
+  #if MB(ALLIGATOR) || MB(ALLIGATOR_3)
     #if DISABLED(UI_VOLTAGE_LEVEL)
       #error DEPENDENCY ERROR: Missing setting UI_VOLTAGE_LEVEL
     #endif

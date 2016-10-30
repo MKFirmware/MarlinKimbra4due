@@ -210,12 +210,12 @@ void HAL::resetHardware() {
   // --------------------------------------------------------------------------
   // hardware SPI
   // --------------------------------------------------------------------------
-  #if MB(ALLIGATOR)
+  #if MB(ALLIGATOR) || MB(ALLIGATOR_3)
     bool spiInitMaded = false;
   #endif
 
   void HAL::spiBegin() {
-#if MB(ALLIGATOR)
+#if MB(ALLIGATOR) || MB(ALLIGATOR_3)
     if(spiInitMaded == false) {
 #endif
       // Configre SPI pins
@@ -239,7 +239,7 @@ void HAL::resetHardware() {
       SPI_Configure(SPI0, ID_SPI0, SPI_MR_MSTR | SPI_MR_MODFDIS | SPI_MR_PS);
       SPI_Enable(SPI0);
 
-      #if MB(ALLIGATOR)
+      #if MB(ALLIGATOR) || MB(ALLIGATOR_3)
         SET_OUTPUT(DAC0_SYNC);
         #if EXTRUDERS > 1
           SET_OUTPUT(DAC1_SYNC);
@@ -253,25 +253,25 @@ void HAL::resetHardware() {
         WRITE(SPI_EEPROM2_CS, HIGH );
         WRITE(SPI_FLASH_CS, HIGH );
         WRITE(SDSS, HIGH );
-      #endif // MB(ALLIGATOR)
+      #endif // MB(ALLIGATOR) || MB(ALLIGATOR_3)
       PIO_Configure(
         g_APinDescription[SPI_PIN].pPort,
         g_APinDescription[SPI_PIN].ulPinType,
         g_APinDescription[SPI_PIN].ulPin,
         g_APinDescription[SPI_PIN].ulPinConfiguration);
       spiInit(1);
-#if MB(ALLIGATOR)
+#if MB(ALLIGATOR) || MB(ALLIGATOR_3)
       spiInitMaded = true;
     }
 #endif
   }
 
   void HAL::spiInit(uint8_t spiClock) {
-#if MB(ALLIGATOR)
+#if MB(ALLIGATOR) || MB(ALLIGATOR_3)
     if(spiInitMaded == false) {
 #endif
       if(spiClock > 4) spiClock = 1;
-      #if MB(ALLIGATOR)
+      #if MB(ALLIGATOR) || MB(ALLIGATOR_3)
         // Set SPI mode 1, clock, select not active after transfer, with delay between transfers  
         SPI_ConfigureNPCS(SPI0, SPI_CHAN_DAC,
                           SPI_CSR_CSAAT | SPI_CSR_SCBR(spiDueDividors[spiClock]) |
@@ -280,14 +280,14 @@ void HAL::resetHardware() {
         SPI_ConfigureNPCS(SPI0, SPI_CHAN_EEPROM1, SPI_CSR_NCPHA |
                           SPI_CSR_CSAAT | SPI_CSR_SCBR(spiDueDividors[spiClock]) |
                           SPI_CSR_DLYBCT(1));
-      #endif//MB(ALLIGATOR)
+      #endif//MB(ALLIGATOR) || MB(ALLIGATOR_3)
 
       // Set SPI mode 0, clock, select not active after transfer, with delay between transfers
       SPI_ConfigureNPCS(SPI0, SPI_CHAN, SPI_CSR_NCPHA |
                         SPI_CSR_CSAAT | SPI_CSR_SCBR(spiDueDividors[spiClock]) |
                         SPI_CSR_DLYBCT(1));
       SPI_Enable(SPI0);
-#if MB(ALLIGATOR)
+#if MB(ALLIGATOR) || MB(ALLIGATOR_3)
       spiInitMaded = true;
     }
 #endif
@@ -414,16 +414,16 @@ static bool eeprom_initialised = false;
 static uint8_t eeprom_device_address = 0x50;
 
 static void eeprom_init(void) {
-  #if MB(ALLIGATOR)
+  #if MB(ALLIGATOR) || MB(ALLIGATOR_3)
   #else
     if (!eeprom_initialised) {
       Wire.begin();
       eeprom_initialised = true;
     }
-  #endif// MB(ALLIGATOR)
+  #endif//MB(ALLIGATOR) || MB(ALLIGATOR_3)
 }
 
-#if MB(ALLIGATOR)
+#if MB(ALLIGATOR) || MB(ALLIGATOR_3)
   static void eprBurnValue(unsigned int pos, int size, unsigned char * newvalue) {
     uint8_t eeprom_temp[3];
 
@@ -468,7 +468,7 @@ static void eeprom_init(void) {
 #endif
 
 void eeprom_write_byte(unsigned char *pos, unsigned char value) {
-  #if MB(ALLIGATOR)
+  #if MB(ALLIGATOR) || MB(ALLIGATOR_3)
     eprBurnValue((unsigned) pos, 1, &value);
   #else
 
@@ -485,11 +485,11 @@ void eeprom_write_byte(unsigned char *pos, unsigned char value) {
     // wait for write cycle to complete
     // this could be done more efficiently with "acknowledge polling"
     HAL::delayMilliseconds(5);
-  #endif// MB(ALLIGATOR)
+  #endif// MB(ALLIGATOR) || MB(ALLIGATOR_3)
 }
 
 unsigned char eeprom_read_byte(unsigned char *pos) {
-  #if MB(ALLIGATOR)
+  #if MB(ALLIGATOR) || MB(ALLIGATOR_3)
     return eprGetValue((unsigned) pos);
   #else
     byte data = 0xFF;
@@ -505,7 +505,7 @@ unsigned char eeprom_read_byte(unsigned char *pos) {
     if (Wire.available())
       data = Wire.read();
     return data;
-  #endif// MB(ALLIGATOR)
+  #endif// MB(ALLIGATOR) || MB(ALLIGATOR_3)
 }
 
 // --------------------------------------------------------------------------
