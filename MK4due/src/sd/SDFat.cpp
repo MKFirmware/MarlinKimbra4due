@@ -1224,7 +1224,7 @@ bool SdBaseFile::open(SdBaseFile* dirFile, const uint8_t *dname, uint8_t oflag, 
   cbFilename = strlen(Filename);
 
   // Write Long File Name VFAT entries to file
-  for(uint8_t iBlk=cVFATNeeded;iBlk>0;iBlk--) {
+  for (uint8_t iBlk = cVFATNeeded; iBlk > 0; iBlk--) {
     vfat_t *VFAT = (vfat_t *)p;
     uint8_t n;
 
