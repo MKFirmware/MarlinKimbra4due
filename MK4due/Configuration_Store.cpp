@@ -352,7 +352,7 @@ void Config_StoreSettings() {
     EEPROM_WRITE(IDLE_OOZING_enabled);
   #endif
 
-  #if MB(ALLIGATOR)
+  #if MB(ALLIGATOR) || MB(ALLIGATOR_3)
     EEPROM_WRITE(motor_current);
   #endif
 
@@ -526,7 +526,7 @@ void Config_RetrieveSettings() {
       EEPROM_READ(IDLE_OOZING_enabled);
     #endif
 
-    #if MB(ALLIGATOR)
+    #if MB(ALLIGATOR) || MB(ALLIGATOR_3)
       EEPROM_READ(motor_current);
     #endif
 
@@ -569,7 +569,7 @@ void Config_ResetDefault() {
     float tmp12[] = HOTEND_OFFSET_Z;
   #endif
 
-  #if MB(ALLIGATOR)
+  #if MB(ALLIGATOR) || MB(ALLIGATOR_3)
     float tmp13[] = MOTOR_CURRENT;
     for (int8_t i = 0; i < 3 + DRIVER_EXTRUDERS; i++)
       motor_current[i] = tmp13[i];
@@ -956,7 +956,7 @@ void Config_PrintSettings(bool forReplay) {
   else
     CONFIG_MSG_START("  M200 D0");
 
-  #if MB(ALLIGATOR)
+  #if MB(ALLIGATOR) || MB(ALLIGATOR_3)
     CONFIG_MSG_START("Motor current:");
     SERIAL_SMV(CFG, "  M906 X", motor_current[X_AXIS]);
     SERIAL_MV(" Y", motor_current[Y_AXIS]);
@@ -968,7 +968,7 @@ void Config_PrintSettings(bool forReplay) {
         SERIAL_EMV(" E", motor_current[E_AXIS + i]);
       }
     #endif // DRIVER_EXTRUDERS > 1
-  #endif // ALLIGATOR
+  #endif //MB(ALLIGATOR) || MB(ALLIGATOR_3)
 
   ConfigSD_PrintSettings(forReplay);
 

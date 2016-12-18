@@ -1630,12 +1630,12 @@ void Stepper::digipot_init() {
     TCCR5B = (TCCR5B & ~(_BV(CS50) | _BV(CS51) | _BV(CS52))) | _BV(CS50);
   #endif
 
-  #if MB(ALLIGATOR)
+  #if MB(ALLIGATOR) || MB(ALLIGATOR_3)
     set_driver_current();
-  #endif // MB(ALLIGATOR)
+  #endif // MB(ALLIGATOR) || MB(ALLIGATOR_3)
 }
 
-#if MB(ALLIGATOR)
+#if MB(ALLIGATOR) || MB(ALLIGATOR_3)
   void Stepper::set_driver_current() {
     uint8_t digipot_motor = 0;
     for (uint8_t i = 0; i < 3 + E_STEPPERS; i++) {
@@ -1720,7 +1720,7 @@ void Stepper::microstep_mode(uint8_t driver, uint8_t stepping_mode) {
     case 4: microstep_ms(driver,  MICROSTEP4); break;
     case 8: microstep_ms(driver,  MICROSTEP8); break;
     case 16: microstep_ms(driver, MICROSTEP16); break;
-    #if MB(ALLIGATOR)
+    #if MB(ALLIGATOR) || MB(ALLIGATOR_3)
       case 32: microstep_ms(driver, MICROSTEP32); break;
     #endif
   }
