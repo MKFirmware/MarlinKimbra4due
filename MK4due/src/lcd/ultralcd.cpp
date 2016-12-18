@@ -641,8 +641,7 @@ void kill_screen(const char* lcd_msg) {
     }
 
     static void lcd_sdcard_stop() {
-      card.sdprinting = false;
-      card.closeFile();
+      card.stopPrint();
       clear_command_queue();
       quickstop_stepper();
       print_job_counter.stop();
@@ -652,10 +651,10 @@ void kill_screen(const char* lcd_msg) {
     }
 
     static void lcd_sdcard_stop_save() {
-      card.sdprinting = false;
-      print_job_counter.stop();
+      card.stopPrint(true);
+      clear_command_queue();
       quickstop_stepper();
-      card.closeFile(true);
+      print_job_counter.stop();
       autotempShutdown();
       wait_for_heatup = false;
     }
@@ -2252,7 +2251,7 @@ void kill_screen(const char* lcd_msg) {
       float focus = LASER_FOCAL_HEIGHT - f_length;
       char cmd[20];
 
-      sprintf_P(cmd, PSTR("G0 Z%s F150"), ftostr52(focus));
+      sprintf_P(cmd, PSTR("G0 Z%s F150"), ftostr52sign(focus));
       enqueue_and_echo_commands_P(cmd);
     }
 
